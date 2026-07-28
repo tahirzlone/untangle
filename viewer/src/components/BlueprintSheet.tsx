@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ReactFlow, type Edge, type Node } from '@xyflow/react';
+import { Position, ReactFlow, type Edge, type Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import type { Workflow } from '../graph/types';
 import { layoutWorkflow, type LaidOutGraph } from '../graph/layout';
@@ -33,6 +33,21 @@ export function BlueprintSheet({ workflow }: { workflow: Workflow }) {
     id: n.id,
     type: 'blueprint',
     position: { x: n.x, y: n.y },
+    // Dimensions are known ahead of measurement — ELK laid the graph out
+    // against exactly these numbers. Supplying them means the first paint has
+    // correct bounds (no measure round-trip, no hidden nodes) and the edge
+    // layer renders immediately instead of waiting on a ResizeObserver tick.
+    width: n.width,
+    height: n.height,
+    // Handle geometry, likewise known ahead of measurement: BlueprintNode puts
+    // a target at top-centre and a source at bottom-centre. React Flow prefers
+    // measured bounds when it has them (`internals.handleBounds || toHandleBounds`),
+    // so this only fills the gap before the first ResizeObserver tick — without
+    // it RF declines to render the edge layer at all.
+    handles: [
+      { type: 'target', position: Position.Top, x: n.width / 2, y: 0 },
+      { type: 'source', position: Position.Bottom, x: n.width / 2, y: n.height },
+    ],
     data: { node: n.node, index: i },
     draggable: false,
     connectable: false,

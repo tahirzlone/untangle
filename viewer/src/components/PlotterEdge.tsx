@@ -1,4 +1,4 @@
-import type { EdgeProps } from '@xyflow/react';
+import { EdgeLabelRenderer, type EdgeProps } from '@xyflow/react';
 import { labelAnchor, pointsToPath, wrapLabel } from '../graph/path';
 import type { EdgeKind } from '../graph/types';
 import './edge.css';
@@ -6,18 +6,14 @@ import './edge.css';
 export function PlotterEdgePath({
   points,
   kind,
-  label,
   index,
 }: {
   points: { x: number; y: number }[];
   kind: EdgeKind;
-  label?: string;
   index: number;
 }) {
   const d = pointsToPath(points);
   if (!d) return null;
-  const anchor = labelAnchor(points);
-  const lines = label ? wrapLabel(label) : [];
   return (
     <g className="bp-edge-group" style={{ ['--i' as string]: index }}>
       <path
@@ -27,20 +23,37 @@ export function PlotterEdgePath({
         markerEnd="url(#fp-arrow)"
         pathLength={1}
       />
-      {lines.length > 0 ? (
-        <text
-          className="bp-edge-label"
-          textAnchor={anchor.vertical ? 'start' : 'middle'}
-          y={anchor.vertical ? anchor.y + 3 - (lines.length - 1) * 5 : anchor.y - 7 - (lines.length - 1) * 10}
-        >
-          {lines.map((line, i) => (
-            <tspan key={i} x={anchor.vertical ? anchor.x + 8 : anchor.x} dy={i === 0 ? 0 : 10}>
-              {line}
-            </tspan>
-          ))}
-        </text>
-      ) : null}
     </g>
+  );
+}
+
+/**
+ * The checker's tag, stapled over the sheet. Rendered as HTML through
+ * EdgeLabelRenderer so it layers ABOVE the node layer — no in-SVG placement
+ * can win, because React Flow paints nodes above the edge SVG.
+ */
+export function EdgeTag({
+  lines,
+  kind,
+  anchor,
+}: {
+  lines: string[];
+  kind: EdgeKind;
+  anchor: { x: number; y: number; vertical: boolean };
+}) {
+  const transform = anchor.vertical
+    ? `translate(0, -50%) translate(${anchor.x + 8}px, ${anchor.y}px)`
+    : `translate(-50%, -100%) translate(${anchor.x}px, ${anchor.y - 6}px)`;
+  return (
+    <div
+      className={`bp-edge-tag${kind === 'retry' ? ' bp-edge-tag--retry' : ''}`}
+      style={{ transform }}
+      data-testid="edge-tag"
+    >
+      {lines.map((l, i) => (
+        <span key={i}>{l}</span>
+      ))}
+    </div>
   );
 }
 
@@ -49,5 +62,15 @@ export function PlotterEdge(props: EdgeProps) {
     | { points: { x: number; y: number }[]; kind: EdgeKind; label?: string; index: number }
     | undefined;
   if (!data) return null;
-  return <PlotterEdgePath points={data.points} kind={data.kind} label={data.label} index={data.index} />;
+  const lines = data.label ? wrapLabel(data.label) : [];
+  return (
+    <>
+      <PlotterEdgePath points={data.points} kind={data.kind} index={data.index} />
+      {lines.length > 0 ? (
+        <EdgeLabelRenderer>
+          <EdgeTag lines={lines} kind={data.kind} anchor={labelAnchor(data.points)} />
+        </EdgeLabelRenderer>
+      ) : null}
+    </>
+  );
 }
