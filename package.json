@@ -1,0 +1,16 @@
+{
+  "name": "flowprint",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Blueprint your Claude workflows — graph how Claude would break down a task, then watch skills, plugins, and MCPs simplify it.",
+  "scripts": {
+    "test": "vitest run --passWithNoTests",
+    "validate": "node scripts/validate.mjs"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "vitest": "^3.2.0"
+  }
+}
