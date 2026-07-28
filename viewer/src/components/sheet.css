@@ -1,0 +1,93 @@
+.bp-sheet {
+  position: absolute;
+  inset: 12px;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 calc(var(--grid-minor) - 1px), color-mix(in srgb, var(--blue-nonphoto) 36%, transparent) calc(var(--grid-minor) - 1px) var(--grid-minor)),
+    repeating-linear-gradient(90deg, transparent 0 calc(var(--grid-minor) - 1px), color-mix(in srgb, var(--blue-nonphoto) 36%, transparent) calc(var(--grid-minor) - 1px) var(--grid-minor)),
+    repeating-linear-gradient(0deg, transparent 0 calc(var(--grid-major) - 1px), color-mix(in srgb, var(--blue-nonphoto) 70%, transparent) calc(var(--grid-major) - 1px) var(--grid-major)),
+    repeating-linear-gradient(90deg, transparent 0 calc(var(--grid-major) - 1px), color-mix(in srgb, var(--blue-nonphoto) 70%, transparent) calc(var(--grid-major) - 1px) var(--grid-major)),
+    var(--paper);
+  animation: bp-sheet-in 0.4s ease-out backwards;
+}
+.bp-sheet--plotting {
+  display: grid;
+  place-items: center;
+  font-family: var(--font-anno);
+  color: var(--graphite);
+  letter-spacing: var(--track-caps);
+}
+.bp-defs { position: absolute; width: 0; height: 0; }
+.bp-canvas { position: absolute; inset: 28px 16px 16px 28px; }
+.bp-canvas .react-flow { background: transparent; }
+
+.bp-frame {
+  position: absolute;
+  inset: 22px 10px 10px 22px;
+  border: var(--rule-frame) solid var(--ink-strong);
+  outline: var(--rule-hair) solid var(--ink-strong);
+  outline-offset: 3px;
+  pointer-events: none;
+  animation: bp-sheet-in 0.4s ease-out 0.2s backwards;
+}
+
+.bp-zones {
+  position: absolute;
+  display: flex;
+  font-family: var(--font-anno);
+  font-size: 9px;
+  color: var(--graphite);
+  pointer-events: none;
+}
+.bp-zones--top { top: 6px; left: 22px; right: 10px; justify-content: space-around; }
+.bp-zones--side { top: 22px; bottom: 10px; left: 5px; flex-direction: column; justify-content: space-around; }
+
+.bp-titleblock {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 300px;
+  background: var(--paper);
+  border: var(--rule-frame) solid var(--ink-strong);
+  padding: 0;
+  pointer-events: none;
+}
+.bp-titleblock-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.03em;
+  color: var(--ink-strong);
+  padding: 6px 8px;
+  border-bottom: var(--rule-hair) solid var(--ink-strong);
+}
+.bp-titleblock-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  margin: 0;
+}
+.bp-titleblock-grid > div {
+  border-right: var(--rule-hair) solid var(--ink);
+  border-bottom: var(--rule-hair) solid var(--ink);
+  padding: 3px 6px;
+}
+.bp-titleblock-grid dt {
+  font-family: var(--font-anno);
+  font-size: 7px;
+  color: var(--graphite);
+  letter-spacing: var(--track-caps);
+}
+.bp-titleblock-grid dd {
+  margin: 0;
+  font-family: var(--font-anno);
+  font-size: 10px;
+  color: var(--ink-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bp-titleblock-kb { grid-column: span 3; }
+
+@keyframes bp-sheet-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .bp-sheet, .bp-frame { animation: none; }
+}
