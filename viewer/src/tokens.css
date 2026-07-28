@@ -1,0 +1,30 @@
+:root {
+  /* drafting-room palette */
+  --paper: #FAFAF7;
+  --paper-shade: #F0F0EA;
+  --blue-nonphoto: #9EC9E4;
+  --ink: #1D3A5C;
+  --ink-strong: #16293F;
+  --graphite: #5B6B7A;
+  --red-checker: #C4372B;
+
+  /* type */
+  --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --font-anno: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --font-body: system-ui, "Segoe UI", sans-serif;
+  --track-caps: 0.08em;
+
+  /* rules & weights */
+  --rule-hair: 1px;
+  --rule-pen: 1.5px;
+  --rule-frame: 2px;
+
+  /* motion */
+  --plot-edge-dur: 0.6s;
+  --plot-edge-stagger: 0.12s;
+  --stamp-dur: 0.28s;
+
+  /* grid */
+  --grid-minor: 8px;
+  --grid-major: 64px;
+}

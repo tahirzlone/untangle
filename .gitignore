@@ -3,3 +3,5 @@ out/*
 !out/.gitkeep
 *.log
 .superpowers/
+viewer/dist/
+*.tsbuildinfo

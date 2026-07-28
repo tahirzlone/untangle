@@ -1,0 +1,30 @@
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  background: var(--paper-shade);
+  color: var(--ink-strong);
+  font-family: var(--font-body);
+}
+.app-shell { height: 100%; display: flex; flex-direction: column; }
+.app-masthead {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 20px;
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--ink-strong);
+  padding: 12px 20px;
+  border-bottom: var(--rule-frame) solid var(--ink-strong);
+  background: var(--paper);
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.app-masthead .masthead-sub {
+  font-family: var(--font-anno);
+  font-size: 11px;
+  color: var(--graphite);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.app-main { flex: 1; min-height: 0; position: relative; }
