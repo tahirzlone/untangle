@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flowprint.dev/schema/workflow.schema.json",
+  "title": "Flowprint Workflow",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["meta", "nodes", "edges", "suggestions"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task", "title", "generatedAt", "model", "kbSource"],
+      "properties": {
+        "task": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "model": { "type": "string", "minLength": 1 },
+        "kbSource": { "enum": ["airtable", "none"] }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 3,
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "edges": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "#/$defs/edge" }
+    },
+    "suggestions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["nodeId", "airtableRecordId", "name", "url", "category", "claim", "effect"],
+        "properties": {
+          "nodeId": { "$ref": "#/$defs/nodeId" },
+          "airtableRecordId": { "type": "string", "pattern": "^rec[A-Za-z0-9]{14}$" },
+          "name": { "type": "string", "minLength": 1 },
+          "url": { "type": "string", "format": "uri" },
+          "category": { "enum": ["Claude Skill", "Claude Plugin", "MCP Server", "Connector", "Other"] },
+          "claim": { "type": "string", "minLength": 1 },
+          "install": { "type": "string" },
+          "effect": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["removeNodes", "mergeNodes", "newEdges", "metrics"],
+            "properties": {
+              "removeNodes": { "type": "array", "items": { "$ref": "#/$defs/nodeId" } },
+              "mergeNodes": { "type": "array", "items": { "$ref": "#/$defs/nodeId" } },
+              "replaceWith": { "$ref": "#/$defs/node" },
+              "newEdges": { "type": "array", "items": { "$ref": "#/$defs/edge" } },
+              "metrics": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["stepsSaved", "estTimeSavedMin", "estTokensSaved", "manualInterventionsRemoved"],
+                "properties": {
+                  "stepsSaved": { "type": "integer", "minimum": 0 },
+                  "estTimeSavedMin": { "type": "integer", "minimum": 0 },
+                  "estTokensSaved": { "type": "integer", "minimum": 0 },
+                  "manualInterventionsRemoved": { "type": "integer", "minimum": 0 }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nodeId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "kind", "description", "painLevel"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nodeId" },
+        "label": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "kind": { "enum": ["input", "process", "decision", "loop", "review", "output"] },
+        "description": { "type": "string", "minLength": 1 },
+        "painLevel": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "lane": { "type": "string" }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to", "kind"],
+      "properties": {
+        "from": { "$ref": "#/$defs/nodeId" },
+        "to": { "$ref": "#/$defs/nodeId" },
+        "label": { "type": "string", "maxLength": 60 },
+        "kind": { "enum": ["sequence", "branch", "retry"] }
+      }
+    }
+  }
+}

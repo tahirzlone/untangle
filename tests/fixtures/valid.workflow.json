@@ -1,0 +1,48 @@
+{
+  "meta": {
+    "task": "Send a weekly newsletter from my RSS reads",
+    "title": "Weekly RSS Newsletter",
+    "generatedAt": "2026-07-28T12:00:00Z",
+    "model": "claude-fable-5",
+    "kbSource": "none"
+  },
+  "nodes": [
+    { "id": "collect-feeds", "label": "Collect feed list", "kind": "input", "description": "Gather the RSS feed URLs and the sending schedule from the user.", "painLevel": 2 },
+    { "id": "fetch-articles", "label": "Fetch new articles", "kind": "process", "description": "Manually fetch each feed, parse XML, filter to the last 7 days.", "painLevel": 4 },
+    { "id": "summarize", "label": "Summarize articles", "kind": "process", "description": "Read each article and write a 2-sentence summary.", "painLevel": 3 },
+    { "id": "select-stories", "label": "Select top stories", "kind": "decision", "description": "Rank summaries and pick the 5 best for this issue.", "painLevel": 3 },
+    { "id": "draft-email", "label": "Draft the email", "kind": "process", "description": "Compose subject line and HTML body from the selected summaries.", "painLevel": 3 },
+    { "id": "human-review", "label": "Human review", "kind": "review", "description": "User proofreads the draft and requests edits.", "painLevel": 2 },
+    { "id": "send-issue", "label": "Send the issue", "kind": "output", "description": "Paste the final HTML into the newsletter service and hit send.", "painLevel": 2 }
+  ],
+  "edges": [
+    { "from": "collect-feeds", "to": "fetch-articles", "kind": "sequence" },
+    { "from": "fetch-articles", "to": "summarize", "kind": "sequence" },
+    { "from": "summarize", "to": "select-stories", "kind": "sequence" },
+    { "from": "select-stories", "to": "draft-email", "kind": "sequence", "label": "top 5" },
+    { "from": "draft-email", "to": "human-review", "kind": "sequence" },
+    { "from": "human-review", "to": "draft-email", "kind": "retry", "label": "edits requested" },
+    { "from": "human-review", "to": "send-issue", "kind": "sequence", "label": "approved" }
+  ],
+  "suggestions": [
+    {
+      "nodeId": "fetch-articles",
+      "airtableRecordId": "recABCDEFGHIJKLMN",
+      "name": "example/rss-mcp",
+      "url": "https://github.com/example/rss-mcp",
+      "category": "MCP Server",
+      "claim": "Fetches and filters feeds in one tool call instead of manual parsing.",
+      "install": "claude mcp add rss -- npx rss-mcp",
+      "effect": {
+        "removeNodes": ["summarize"],
+        "mergeNodes": ["fetch-articles"],
+        "replaceWith": { "id": "rss-digest", "label": "Fetch + digest via MCP", "kind": "process", "description": "One MCP call returns filtered, summarized articles.", "painLevel": 1 },
+        "newEdges": [
+          { "from": "collect-feeds", "to": "rss-digest", "kind": "sequence" },
+          { "from": "rss-digest", "to": "select-stories", "kind": "sequence" }
+        ],
+        "metrics": { "stepsSaved": 2, "estTimeSavedMin": 35, "estTokensSaved": 12000, "manualInterventionsRemoved": 1 }
+      }
+    }
+  ]
+}
