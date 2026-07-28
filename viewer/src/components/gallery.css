@@ -1,0 +1,96 @@
+.bp-gallery { position: absolute; inset: 0; overflow: auto; padding: 24px; }
+.bp-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.bp-card {
+  background: var(--paper);
+  border: var(--rule-pen) solid var(--ink-strong);
+  display: flex;
+  flex-direction: column;
+}
+.bp-card-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 0.03em;
+  color: var(--ink-strong);
+  padding: 10px 12px;
+  border-bottom: var(--rule-hair) solid var(--ink-strong);
+  min-height: 58px;
+}
+.bp-card-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; margin: 0; }
+.bp-card-meta > div { padding: 6px 12px; border-right: var(--rule-hair) solid var(--ink); }
+.bp-card-meta > div:last-child { border-right: none; }
+.bp-card-meta dt { font-family: var(--font-anno); font-size: 7px; color: var(--graphite); letter-spacing: var(--track-caps); }
+.bp-card-meta dd { margin: 0; font-family: var(--font-anno); font-size: 11px; color: var(--ink-strong); }
+.bp-card-pain { color: var(--red-checker); font-weight: 500; }
+.bp-card-open {
+  margin-top: auto;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: var(--track-caps);
+  color: var(--paper);
+  background: var(--ink-strong);
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+}
+.bp-card-open:hover { background: var(--ink); }
+.bp-card-open:focus-visible { outline: 2px solid var(--red-checker); outline-offset: 2px; }
+.bp-card--drop {
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-style: dashed;
+  color: var(--graphite);
+  font-family: var(--font-anno);
+  font-size: 11px;
+  letter-spacing: var(--track-caps);
+  min-height: 140px;
+  cursor: pointer;
+  text-align: center;
+  padding: 12px;
+}
+.bp-card-drop-sub { font-size: 9px; letter-spacing: 0; text-transform: none; }
+/* Visually hidden, NOT `hidden`: the browse control stays in the tab order. */
+.bp-card-drop-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.bp-card--drop:focus-within { outline: 2px solid var(--red-checker); outline-offset: 2px; }
+
+.bp-rejected {
+  position: absolute;
+  inset: 12px;
+  background: var(--paper);
+  border: var(--rule-frame) solid var(--red-checker);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px;
+}
+.bp-rejected-stamp {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 44px;
+  letter-spacing: 0.06em;
+  color: var(--red-checker);
+  border: 4px solid var(--red-checker);
+  padding: 4px 22px;
+  transform: rotate(-3deg);
+}
+.bp-rejected-sub { font-family: var(--font-anno); font-size: 11px; color: var(--graphite); letter-spacing: var(--track-caps); }
+.bp-rejected-notes {
+  font-family: var(--font-anno);
+  font-size: 11px;
+  color: var(--ink-strong);
+  max-width: 560px;
+  max-height: 40vh;
+  overflow: auto;
+}
+.bp-rejected-back { max-width: 260px; }

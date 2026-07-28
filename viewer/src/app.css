@@ -27,4 +27,13 @@ body {
   text-transform: none;
   letter-spacing: 0;
 }
+.masthead-link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.masthead-link:focus-visible { outline: 2px solid var(--red-checker); outline-offset: 2px; }
 .app-main { flex: 1; min-height: 0; position: relative; }
