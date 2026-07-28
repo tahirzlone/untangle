@@ -1,5 +1,5 @@
 import type { EdgeProps } from '@xyflow/react';
-import { pointsToPath } from '../graph/path';
+import { midpointOf, pointsToPath } from '../graph/path';
 import type { EdgeKind } from '../graph/types';
 import './edge.css';
 
@@ -16,7 +16,7 @@ export function PlotterEdgePath({
 }) {
   const d = pointsToPath(points);
   if (!d) return null;
-  const mid = points[Math.floor(points.length / 2)];
+  const mid = midpointOf(points);
   return (
     <g className="bp-edge-group" style={{ ['--i' as string]: index }}>
       <path
