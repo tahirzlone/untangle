@@ -27,6 +27,8 @@ Document shape (Phase 1 — no knowledge base yet):
 - `nodes`, `edges` per the rules above
 - `suggestions`: `[]` (always empty until the Airtable knowledge base is linked in Phase 3)
 
+Node and edge field names and constraints (required properties, label length caps): see `schema/workflow.schema.json` — read it before authoring.
+
 ## Validation loop (mandatory)
 
 1. Run: `node scripts/validate.mjs out/<slug>.workflow.json`
