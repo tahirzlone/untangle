@@ -70,6 +70,22 @@
   text-align: center;
   align-items: center;
   padding: 14px 34px;
+  border: none;
+  background: var(--ink);
+  position: relative;
+}
+.bp-node--decision::before {
+  content: '';
+  position: absolute;
+  inset: 2.5px;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  background:
+    linear-gradient(color-mix(in srgb, var(--red-checker) calc(var(--pain, 1) * 9%), transparent),
+                    color-mix(in srgb, var(--red-checker) calc(var(--pain, 1) * 9%), transparent)),
+    var(--paper);
+}
+.bp-node--decision > * {
+  position: relative;
 }
 .bp-node--decision .bp-node-desc { display: none; }
 .bp-node--loop { border-style: double; border-width: 4px; }
