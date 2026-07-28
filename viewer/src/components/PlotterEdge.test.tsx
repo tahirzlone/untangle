@@ -21,3 +21,19 @@ it('renders sequence edges solid without a label element', () => {
   expect(path.classList.contains('bp-edge--retry')).toBe(false);
   expect(container.querySelector('.bp-edge-label')).toBeNull();
 });
+
+it('wraps long labels into multiple tspans beside a vertical run', () => {
+  const { container } = render(
+    <svg>
+      <PlotterEdgePath
+        points={[{ x: 10, y: 0 }, { x: 10, y: 200 }]}
+        kind="retry"
+        label="flaky selector / timing race — fix and re-run"
+        index={1}
+      />
+    </svg>,
+  );
+  const tspans = container.querySelectorAll('text.bp-edge-label tspan');
+  expect(tspans.length).toBeGreaterThanOrEqual(2);
+  expect(container.querySelector('text.bp-edge-label')!.getAttribute('text-anchor')).toBe('start');
+});

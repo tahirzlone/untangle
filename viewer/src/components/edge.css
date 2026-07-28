@@ -17,6 +17,11 @@
   font-size: 9px;
   font-style: italic;
   fill: var(--graphite);
+  /* paper halo: stroke is painted under the fill so crossing
+     edge strokes never strike through the glyphs */
+  stroke: var(--paper);
+  stroke-width: 3px;
+  paint-order: stroke;
 }
 @keyframes bp-plot {
   to { stroke-dashoffset: 0; }

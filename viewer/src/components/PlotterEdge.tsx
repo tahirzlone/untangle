@@ -1,5 +1,5 @@
 import type { EdgeProps } from '@xyflow/react';
-import { midpointOf, pointsToPath } from '../graph/path';
+import { labelAnchor, pointsToPath, wrapLabel } from '../graph/path';
 import type { EdgeKind } from '../graph/types';
 import './edge.css';
 
@@ -16,7 +16,8 @@ export function PlotterEdgePath({
 }) {
   const d = pointsToPath(points);
   if (!d) return null;
-  const mid = midpointOf(points);
+  const anchor = labelAnchor(points);
+  const lines = label ? wrapLabel(label) : [];
   return (
     <g className="bp-edge-group" style={{ ['--i' as string]: index }}>
       <path
@@ -26,9 +27,17 @@ export function PlotterEdgePath({
         markerEnd="url(#fp-arrow)"
         pathLength={1}
       />
-      {label ? (
-        <text className="bp-edge-label" x={mid.x + 6} y={mid.y - 6}>
-          {label}
+      {lines.length > 0 ? (
+        <text
+          className="bp-edge-label"
+          textAnchor={anchor.vertical ? 'start' : 'middle'}
+          y={anchor.vertical ? anchor.y + 3 - (lines.length - 1) * 5 : anchor.y - 7 - (lines.length - 1) * 10}
+        >
+          {lines.map((line, i) => (
+            <tspan key={i} x={anchor.vertical ? anchor.x + 8 : anchor.x} dy={i === 0 ? 0 : 10}>
+              {line}
+            </tspan>
+          ))}
         </text>
       ) : null}
     </g>

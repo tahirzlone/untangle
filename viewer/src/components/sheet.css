@@ -17,7 +17,9 @@
   letter-spacing: var(--track-caps);
 }
 .bp-defs { position: absolute; width: 0; height: 0; }
-.bp-canvas { position: absolute; inset: 28px 16px 16px 28px; }
+/* bottom band is permanently reserved for the title block — fitView
+   scales into the remaining area, so the drawing is never occluded */
+.bp-canvas { position: absolute; inset: 28px 16px 128px 28px; }
 .bp-canvas .react-flow { background: transparent; }
 
 .bp-frame {
@@ -45,7 +47,7 @@
   position: absolute;
   right: 10px;
   bottom: 10px;
-  width: 300px;
+  width: min(300px, 42vw);
   background: var(--paper);
   border: var(--rule-frame) solid var(--ink-strong);
   padding: 0;
