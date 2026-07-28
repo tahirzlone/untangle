@@ -1,0 +1,32 @@
+.bp-edge {
+  stroke: var(--ink);
+  stroke-width: var(--rule-pen);
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: bp-plot var(--plot-edge-dur) ease-in-out forwards;
+  animation-delay: calc(0.5s + var(--i, 0) * var(--plot-edge-stagger));
+}
+.bp-edge--branch { stroke-dasharray: 1; }
+.bp-edge--retry {
+  stroke: var(--red-checker);
+  animation-name: bp-plot-dashed;
+}
+.bp-edge-label {
+  font-family: var(--font-anno);
+  font-size: 9px;
+  font-style: italic;
+  fill: var(--graphite);
+}
+@keyframes bp-plot {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes bp-plot-dashed {
+  to { stroke-dashoffset: 0; stroke-dasharray: 0.04 0.02; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bp-edge { animation: none; stroke-dashoffset: 0; }
+  /* normalized units: pathLength=1 makes the whole path 1 unit long,
+     so this matches the bp-plot-dashed end state instead of rendering solid */
+  .bp-edge--retry { stroke-dasharray: 0.04 0.02; }
+}
