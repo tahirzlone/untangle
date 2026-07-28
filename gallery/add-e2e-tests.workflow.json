@@ -1,0 +1,128 @@
+{
+  "meta": {
+    "task": "Add end-to-end tests to an existing web app",
+    "title": "Add E2E Tests to an Existing Web App",
+    "generatedAt": "2026-07-28T18:26:12Z",
+    "model": "claude-fable-5",
+    "kbSource": "none"
+  },
+  "nodes": [
+    {
+      "id": "gather-requirements",
+      "label": "Gather app details & critical flows",
+      "kind": "input",
+      "description": "Ask the user which flows matter most (login, signup, checkout...), how the app is started locally, which framework they prefer (Playwright, Cypress), whether test accounts and seed data exist, and which CI provider merges gate on. Several rounds of back-and-forth before anything can start.",
+      "painLevel": 2
+    },
+    {
+      "id": "map-user-flows",
+      "label": "Map user flows from the codebase",
+      "kind": "process",
+      "description": "Read package.json, the router, and page components by hand to trace each critical journey screen by screen. No sitemap, no docs — just spelunking through the repo and writing down a test plan: URLs, form fields, expected outcomes per flow.",
+      "painLevel": 3
+    },
+    {
+      "id": "install-framework",
+      "label": "Install & configure test framework",
+      "kind": "process",
+      "description": "Pick the framework that fits the stack, npm install it, download browser binaries, generate the config file (baseURL, timeouts, retries, screenshot-on-failure), and add npm scripts so the suite is runnable.",
+      "painLevel": 2
+    },
+    {
+      "id": "boot-app-babysit",
+      "label": "Boot the app & babysit the dev server",
+      "kind": "process",
+      "description": "Start the dev server and database, seed test data, create throwaway test users, wait on ports, and keep the server alive between runs. Every new session repeats this ritual; a crashed server mid-suite means starting over and re-seeding.",
+      "painLevel": 4
+    },
+    {
+      "id": "hunt-selectors",
+      "label": "Hunt stable selectors in the DOM",
+      "kind": "process",
+      "description": "Load each page and inspect the rendered DOM by hand to find selectors that will survive a re-render. Most classes are hashed or utility soup, so this usually means editing the app's own components to sprinkle data-testid attributes — a change per element, per page.",
+      "painLevel": 4
+    },
+    {
+      "id": "write-specs",
+      "label": "Write a spec per critical flow",
+      "kind": "loop",
+      "description": "For each flow in the test plan: script the navigation, fill the forms, click through, assert the outcome. Heavy copy-paste of setup/teardown boilerplate between specs, adjusted slightly each time; auth state and fixtures re-plumbed per spec.",
+      "painLevel": 3
+    },
+    {
+      "id": "run-suite",
+      "label": "Run the full suite headless",
+      "kind": "process",
+      "description": "Run every spec against the local server and watch the output scroll by. Each full pass takes minutes; nothing else can safely touch the app state while it runs.",
+      "painLevel": 2
+    },
+    {
+      "id": "suite-green",
+      "label": "Suite green?",
+      "kind": "decision",
+      "description": "Read the run summary: all specs passing, or are there failures — and are the failures real bugs, broken selectors, or intermittent flakes?",
+      "painLevel": 1
+    },
+    {
+      "id": "debug-flaky",
+      "label": "Debug flaky selectors & timing races",
+      "kind": "process",
+      "description": "The worst part. Re-run single specs over and over to reproduce intermittent failures, compare failure screenshots against the live page, chase races with animations and late-loading data, swap brittle selectors, add and tune explicit waits. A single flake can burn a whole session across editor, terminal, and browser.",
+      "painLevel": 5
+    },
+    {
+      "id": "wire-ci",
+      "label": "Wire the suite into CI",
+      "kind": "process",
+      "description": "Author the CI workflow YAML by hand: install dependencies and browser binaries, cache them, boot the app inside the CI job, run the suite, and upload traces and screenshots as artifacts on failure. YAML indentation and CI-specific env vars invite silent mistakes.",
+      "painLevel": 3
+    },
+    {
+      "id": "watch-ci",
+      "label": "Push & babysit CI runs",
+      "kind": "process",
+      "description": "Push the branch, then wait out each CI run — minutes per attempt — refreshing the web UI and reading raw logs to see what happened. Every tweak means another push and another wait; feedback loops are measured in coffee breaks.",
+      "painLevel": 4
+    },
+    {
+      "id": "ci-green",
+      "label": "CI green?",
+      "kind": "decision",
+      "description": "Did the suite pass on the CI machine? Runs that were green locally routinely fail here: headless-only timing, slower hardware, cold caches, missing env vars.",
+      "painLevel": 2
+    },
+    {
+      "id": "human-review",
+      "label": "Human review of specs & CI setup",
+      "kind": "review",
+      "description": "A teammate reviews the specs, the data-testid changes to app code, and the CI workflow before anything merges. Wait for the review, answer questions, and address requested changes — the merge is gated on their approval, not on green checks alone.",
+      "painLevel": 2
+    },
+    {
+      "id": "e2e-delivered",
+      "label": "Merged e2e suite running in CI",
+      "kind": "output",
+      "description": "The e2e suite is merged and runs on every push: critical flows covered, failures block the merge, traces and screenshots attached to every red run.",
+      "painLevel": 1
+    }
+  ],
+  "edges": [
+    { "from": "gather-requirements", "to": "map-user-flows", "kind": "sequence" },
+    { "from": "map-user-flows", "to": "install-framework", "kind": "sequence" },
+    { "from": "install-framework", "to": "boot-app-babysit", "kind": "sequence" },
+    { "from": "boot-app-babysit", "to": "hunt-selectors", "kind": "sequence" },
+    { "from": "hunt-selectors", "to": "write-specs", "kind": "sequence" },
+    { "from": "write-specs", "to": "run-suite", "kind": "sequence" },
+    { "from": "run-suite", "to": "suite-green", "kind": "sequence" },
+    { "from": "suite-green", "to": "wire-ci", "kind": "branch", "label": "all green locally" },
+    { "from": "suite-green", "to": "debug-flaky", "kind": "branch", "label": "failures or flakes" },
+    { "from": "debug-flaky", "to": "run-suite", "kind": "retry", "label": "flaky selector / timing race — fix and re-run" },
+    { "from": "wire-ci", "to": "watch-ci", "kind": "sequence" },
+    { "from": "watch-ci", "to": "ci-green", "kind": "sequence" },
+    { "from": "ci-green", "to": "human-review", "kind": "branch", "label": "CI green" },
+    { "from": "ci-green", "to": "debug-flaky", "kind": "retry", "label": "CI-only flake: headless timing, slower machine" },
+    { "from": "human-review", "to": "write-specs", "kind": "retry", "label": "changes requested: more coverage, tighter asserts" },
+    { "from": "human-review", "to": "e2e-delivered", "kind": "sequence", "label": "approved — merge" }
+  ],
+  "suggestions": []
+}
