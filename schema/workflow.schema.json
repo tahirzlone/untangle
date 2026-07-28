@@ -38,7 +38,7 @@
           "nodeId": { "$ref": "#/$defs/nodeId" },
           "airtableRecordId": { "type": "string", "pattern": "^rec[A-Za-z0-9]{14}$" },
           "name": { "type": "string", "minLength": 1 },
-          "url": { "type": "string", "format": "uri" },
+          "url": { "type": "string", "pattern": "^https?://" },
           "category": { "enum": ["Claude Skill", "Claude Plugin", "MCP Server", "Connector", "Other"] },
           "claim": { "type": "string", "minLength": 1 },
           "install": { "type": "string" },

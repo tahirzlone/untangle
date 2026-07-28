@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { writeFileSync, mkdtempSync } from 'node:fs';
+import { writeFileSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -31,11 +31,27 @@ describe('validate CLI', () => {
     writeFileSync(bad, 'hello');
     const res = run(bad);
     expect(res.status).toBe(1);
+    expect(res.stderr).toContain('REJECTED');
   });
 
   it('exits 2 with usage when no file is given', () => {
     const res = run();
     expect(res.status).toBe(2);
     expect(res.stderr).toContain('usage');
+  });
+
+  it('exits 1 with "cannot read file" for a missing path', () => {
+    const res = run(join(tmpdir(), 'flowprint-does-not-exist', 'nope.workflow.json'));
+    expect(res.status).toBe(1);
+    expect(res.stderr).toContain('cannot read file');
+  });
+
+  it('accepts a valid file with a UTF-8 BOM', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'flowprint-'));
+    const bomFile = join(dir, 'bom.workflow.json');
+    writeFileSync(bomFile, '\uFEFF' + readFileSync(fixture, 'utf8'));
+    const res = run(bomFile);
+    expect(res.status).toBe(0);
+    expect(res.stdout).toContain('OK:');
   });
 });

@@ -8,9 +8,17 @@ if (!file) {
   process.exit(2);
 }
 
+let raw;
+try {
+  raw = readFileSync(file, 'utf8');
+} catch (err) {
+  console.error(`REJECTED: ${file} — cannot read file (${err.message})`);
+  process.exit(1);
+}
+
 let doc;
 try {
-  doc = JSON.parse(readFileSync(file, 'utf8'));
+  doc = JSON.parse(raw.replace(/^\uFEFF/, ''));
 } catch (err) {
   console.error(`REJECTED: ${file} — not valid JSON (${err.message})`);
   process.exit(1);

@@ -74,4 +74,10 @@ describe('workflow contract', () => {
     doc.meta.kbSource = 'csv';
     expect(validateWorkflow(doc).valid).toBe(false);
   });
+
+  it('rejects a suggestion url that is not http(s)', () => {
+    const doc = valid();
+    doc.suggestions[0].url = 'javascript:alert(1)';
+    expect(validateWorkflow(doc).valid).toBe(false);
+  });
 });

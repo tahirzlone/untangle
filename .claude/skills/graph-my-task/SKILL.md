@@ -31,7 +31,7 @@ Node and edge field names and constraints (required properties, label length cap
 
 ## Validation loop (mandatory)
 
-1. Run: `node scripts/validate.mjs out/<slug>.workflow.json`
+1. From the repo root, run: `node scripts/validate.mjs <path-you-wrote>` (e.g. `out/<slug>.workflow.json` or `gallery/<slug>.workflow.json`).
 2. If `REJECTED`, fix the listed errors and re-run. If it still fails after one fix attempt, STOP and show the user the errors instead of looping.
 3. Only report success after seeing `OK:`.
 

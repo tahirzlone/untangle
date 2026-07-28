@@ -4,7 +4,7 @@
     "title": "Weekly RSS Newsletter",
     "generatedAt": "2026-07-28T12:00:00Z",
     "model": "claude-fable-5",
-    "kbSource": "none"
+    "kbSource": "airtable"
   },
   "nodes": [
     { "id": "collect-feeds", "label": "Collect feed list", "kind": "input", "description": "Gather the RSS feed URLs and the sending schedule from the user.", "painLevel": 2 },
