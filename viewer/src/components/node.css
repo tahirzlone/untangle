@@ -7,7 +7,10 @@
 }
 
 /* Ports are part of the look now — visible rings, not hidden anchors.
-   Doubled-up selectors outrank React Flow's own .react-flow__handle rules. */
+   Doubled-up selector outranks React Flow's own .react-flow__handle rules.
+   No left/right offsets: RF already straddles the ring on the card edge with
+   `left/right: 0` + `translate(∓50%, -50%)`, which is size-agnostic — adding
+   our own -5px would shift it a second time. */
 .react-flow__handle.sg-port {
   width: 10px;
   height: 10px;
@@ -17,8 +20,6 @@
   min-width: 0;
   min-height: 0;
 }
-.react-flow__handle-left.sg-port { left: -5px; }
-.react-flow__handle-right.sg-port { right: -5px; }
 
 .sg-node {
   width: 100%;
@@ -62,7 +63,8 @@
 }
 
 .sg-desc {
-  font-family: var(--font-body);
+  /* the mock never loads a third face — descriptions ride Space Grotesk */
+  font-family: var(--font-display);
   font-size: 11px;
   line-height: 1.45;
   color: var(--dim);
