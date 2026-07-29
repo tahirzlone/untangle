@@ -1,4 +1,4 @@
-export function wrapLabel(label: string, maxChars = 24): string[] {
+export function wrapLabel(label: string, maxChars = 14): string[] {
   const words = label.split(' ');
   const lines: string[] = [];
   let current = '';

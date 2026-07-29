@@ -38,7 +38,7 @@
   font-style: italic;
   font-size: 9.5px;
   color: var(--dim);
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 2px 8px;

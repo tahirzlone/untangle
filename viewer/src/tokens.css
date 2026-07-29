@@ -5,8 +5,8 @@
   --surface: #131721;
   --surface-2: #1A1F2E;
   --line: #232A3B;
-  /* canvas dot-grid ink — one step above --line so the grid reads without
-     competing with borders drawn on it */
+  /* grid dot ink — sits between --surface-2 and --line so the grid reads
+     without competing with borders drawn on it */
   --dot: #1C2230;
   --text: #E6EAF2;
   --dim: #8A93A6;
