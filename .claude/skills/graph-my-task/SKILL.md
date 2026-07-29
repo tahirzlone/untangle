@@ -162,7 +162,7 @@ Fields:
 
 - **`removeNodes`** (required array, may be empty) — nodes the resource makes unnecessary outright.
 - **`mergeNodes`** (required array, may be empty) — nodes that collapse into `replaceWith`. Deleted exactly like `removeNodes`; the distinction is only how the UI narrates it. **A node id must never appear in both arrays.**
-- **`replaceWith`** (optional, a single full node: `id`, `label`, `kind`, `description`, `painLevel`) — the one step that stands in for what was removed. Its `id` must be new kebab-case and must not collide with any surviving node id. Its `painLevel` is the eased work, so it belongs at the bottom of the rubric (1–2) — a replacement as painful as what it replaced is not an improvement.
+- **`replaceWith`** (optional, a single full node: `id`, `label`, `kind`, `description`, `painLevel`) — the one step that stands in for what was removed. Its `id` must be new kebab-case, must not collide with any surviving node id, **and must not equal any OTHER suggestion's `replaceWith.id` — each replacement node id must be unique across the whole `suggestions` array.** (Two suggestions introducing the same id both validate, but once one is applied the other collides with the node it just created and is permanently un-appliable.) Its `painLevel` is the eased work, so it belongs at the bottom of the rubric (1–2) — a replacement as painful as what it replaced is not an improvement.
 - **`newEdges`** (required array, may be empty) — edges to add after the deletions. Every endpoint must be a surviving node id or `replaceWith.id`. **An endpoint this same effect deletes is a hard error.**
 - **`metrics`** (required) — `stepsSaved`, `estTimeSavedMin`, `estTokensSaved`, `manualInterventionsRemoved`, all integers ≥ 0.
 
@@ -173,7 +173,7 @@ Every effect must change the graph. An effect with empty `removeNodes`, empty `m
 
 Two traps to author around:
 
-- **Rewire what you cut.** Because step 3 drops every edge touching a deleted node, removing a node from the middle of the flow leaves its upstream and downstream disconnected. Supply `newEdges` reconnecting them (upstream → `replaceWith` → downstream, or upstream → downstream directly). Otherwise the graph splits and the patch is refused.
+- **Rewire what you cut.** Because step 3 drops every edge touching a deleted node, removing a node from the middle of the flow leaves its upstream and downstream disconnected. Supply `newEdges` reconnecting them (upstream → `replaceWith` → downstream, or upstream → downstream directly). **Nothing downstream checks connectivity** — no validator and no reducer will catch a missed rewire; the patch applies happily and strands an orphaned node on screen. YOU are the only gate: after authoring the effect, re-trace every surviving node and confirm it still has a path from the input node.
 - **Respect the size floor.** The schema requires **at least 3 nodes and at least 2 edges**, and the graph is re-validated AFTER the patch applies. Count it before you write it: `nodes − (removeNodes + mergeNodes) + (replaceWith ? 1 : 0) ≥ 3`, and surviving edges + `newEdges` ≥ 2. On a small graph, keep effects modest — one or two nodes. Never author an effect that would shrink the graph below the floor.
 
 Metrics, estimated **conservatively** — this number is on screen next to a real resource, so it has to survive scrutiny:
@@ -202,6 +202,8 @@ Walk the list; the validator catches most of it, but a caught error costs a roun
 - [ ] all `removeNodes` / `mergeNodes` ids exist; no id in both
 - [ ] no effect is a no-op — each one removes, merges, or substitutes at least one node
 - [ ] every `newEdges` endpoint is a surviving node id or `replaceWith.id`
+- [ ] every `replaceWith.id` is unique across the whole `suggestions` array (no two suggestions introduce the same replacement id)
+- [ ] every surviving node still has a path from the input node after each patch — you are the only connectivity check
 - [ ] post-patch counts still ≥ 3 nodes and ≥ 2 edges
 - [ ] `metrics` are four non-negative integers
 - [ ] `meta.kbSource` matches what you actually did
