@@ -177,7 +177,19 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const onNodeClick = useCallback((_: unknown, node: SignalRFNode) => {
     setSelected(node.data.node);
   }, []);
-  const closeDrawer = useCallback(() => setSelected(null), []);
+  /**
+   * Closing drops the ring with the panel.
+   *
+   * React Flow used to do half of this for us: Escape with focus on the card is
+   * one of its own selection keys. The drawer now takes focus when it opens (so
+   * the panel is reachable without tabbing past every other card), which puts
+   * that keystroke out of React Flow's reach — and a card still ringed with no
+   * panel open reads as a drawer that failed to close.
+   */
+  const closeDrawer = useCallback(() => {
+    setSelected(null);
+    setNodes((ns) => ns.map((n) => (n.selected ? { ...n, selected: false } : n)));
+  }, [setNodes]);
 
   /**
    * The same open, reached without a pointer.

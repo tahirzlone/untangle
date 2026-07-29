@@ -331,6 +331,51 @@ it('opens the drawer from the keyboard, with no pointer involved', async () => {
   expect(await screen.findByTestId('detail-drawer')).toHaveTextContent(VERIFY);
 });
 
+// Opening the panel is only half the route: focus has to arrive with it, or APPLY
+// sits one Tab per remaining card away. Closing hands focus back, so Enter → read
+// → Escape leaves the keyboard exactly where it started.
+it('hands focus to the panel on open and back to the card on close', async () => {
+  const { container } = render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+
+  const wrapper = container.querySelector<HTMLElement>(
+    '.react-flow__node[data-id="verify-browser"]',
+  )!;
+  wrapper.focus();
+  fireEvent.keyDown(wrapper, { key: 'Enter' });
+
+  const drawer = await screen.findByTestId('detail-drawer');
+  expect(drawer).toContainElement(document.activeElement as HTMLElement);
+  expect(document.activeElement).toBe(screen.getByTestId('drawer-close'));
+
+  fireEvent.keyDown(window, { key: 'Escape' });
+  await waitFor(() => {
+    expect(screen.queryByTestId('detail-drawer')).not.toBeInTheDocument();
+  });
+  expect(document.activeElement).toBe(wrapper);
+  expect(document.activeElement).toHaveAttribute('data-id', 'verify-browser');
+  // the ring goes with the panel: React Flow's own Escape-unselect is out of reach
+  // now that focus lives in the drawer, so the canvas drops the selection itself
+  expect(document.querySelectorAll('.sg-node--selected')).toHaveLength(0);
+});
+
+it('returns focus to the card when the panel is closed with its X', async () => {
+  const { container } = render(<GraphCanvas workflow={enriched} />);
+  const all = await cardsOf(enriched);
+
+  fireEvent.click(cardFor(SCAFFOLD, all));
+  await screen.findByTestId('detail-drawer');
+  expect(document.activeElement).toBe(screen.getByTestId('drawer-close'));
+
+  fireEvent.click(screen.getByTestId('drawer-close'));
+  await waitFor(() => {
+    expect(screen.queryByTestId('detail-drawer')).not.toBeInTheDocument();
+  });
+  expect(document.activeElement).toBe(
+    container.querySelector('.react-flow__node[data-id="scaffold-repo"]'),
+  );
+});
+
 it('takes Space as well as Enter', async () => {
   const { container } = render(<GraphCanvas workflow={enriched} />);
   await cardsOf(enriched);

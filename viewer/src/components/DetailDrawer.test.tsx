@@ -215,6 +215,47 @@ it('keeps the close control out of the scrolling region', () => {
   expect(scroll).toContainElement(screen.getByTestId('drawer-suggestions'));
 });
 
+// A panel announced as a dialog, labelled by the step it describes — and not a
+// modal one: the graph behind it stays draggable and clickable.
+it('announces itself as a dialog labelled by the step', () => {
+  const n = node();
+  render(<DetailDrawer node={n} onClose={() => {}} />);
+
+  const drawer = screen.getByRole('dialog', { name: n.label });
+  expect(drawer).toBe(screen.getByTestId('detail-drawer'));
+  expect(drawer).toHaveAttribute('aria-modal', 'false');
+});
+
+// A panel focus never enters is a panel a keyboard cannot reach: APPLY would be
+// one Tab per remaining card on the graph.
+it('takes focus on open, on the way out', () => {
+  render(<DetailDrawer node={node()} onClose={() => {}} />);
+  expect(document.activeElement).toBe(screen.getByTestId('drawer-close'));
+});
+
+// Clicking a second card while the panel is open is another open — focus follows
+// the panel's new subject rather than staying where the last one left it.
+it('re-takes focus when the panel changes subject', () => {
+  const { rerender } = render(<DetailDrawer node={node()} onClose={() => {}} />);
+  const x = screen.getByTestId('drawer-close');
+  x.blur();
+  expect(document.activeElement).not.toBe(x);
+
+  rerender(<DetailDrawer node={node({ id: 'other-step' })} onClose={() => {}} />);
+  expect(document.activeElement).toBe(x);
+});
+
+// Task 5's apply can consume the very node the drawer describes, so the card to
+// return focus to need not still be on the canvas.
+it('closes cleanly when the card it came from is gone', () => {
+  const onClose = vi.fn();
+  render(<DetailDrawer node={node()} onClose={onClose} />);
+
+  expect(document.querySelector('.react-flow__node')).toBeNull();
+  fireEvent.keyDown(window, { key: 'Escape' });
+  expect(onClose).toHaveBeenCalledTimes(1);
+});
+
 it('closes on the X button', () => {
   const onClose = vi.fn();
   render(<DetailDrawer node={node()} onClose={onClose} />);

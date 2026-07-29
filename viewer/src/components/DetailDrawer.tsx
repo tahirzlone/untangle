@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { Suggestion, SuggestionCategory, WorkflowNode } from '../graph/types';
 import { PainMeter } from './SignalNode';
 import './drawer.css';
@@ -111,23 +111,54 @@ export function DetailDrawer({
   canApply,
   onApply,
 }: DetailDrawerProps) {
-  // Escape is listened for on the window, not the panel: the click that opened
-  // the drawer leaves focus on the node card behind it, so a panel-scoped
-  // handler would never hear the key.
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  /**
+   * Opening puts focus in the panel, on the first thing in the header.
+   *
+   * Without this the keyboard route opens a drawer nobody can reach: focus stays
+   * on the card behind it, so APPLY is one Tab per remaining card away — N tabs on
+   * an N-node graph — and a screen reader is told nothing appeared at all.
+   *
+   * Keyed on the node, not on mount: clicking a second card while the panel is
+   * open is another open, and focus follows the panel's new subject.
+   */
+  useEffect(() => {
+    closeRef.current?.focus();
+  }, [node.id]);
+
+  /**
+   * Closing hands focus back where it came from — the card whose detail this was.
+   *
+   * Guarded because the card need not still be there: Task 5's apply can consume
+   * the very node the drawer is describing, and a focus call into a removed
+   * element would strand focus on <body> either way.
+   */
+  const closeAndRestore = useCallback(() => {
+    const card = document.querySelector<HTMLElement>(`.react-flow__node[data-id="${node.id}"]`);
+    onClose();
+    card?.focus();
+  }, [node.id, onClose]);
+
+  // Escape is listened for on the window, not the panel: it must close the drawer
+  // whether focus is inside it or back out on the canvas.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') closeAndRestore();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [closeAndRestore]);
 
   return (
     <aside
       className="sg-drawer"
       data-testid="detail-drawer"
-      role="complementary"
-      aria-label={`${node.label} detail`}
+      // A dialog, so its arrival is announced and its label is read — but not a
+      // modal one: the graph behind it stays draggable and clickable.
+      role="dialog"
+      aria-modal={false}
+      aria-label={node.label}
     >
       <div className="sg-drawer-head">
         <span className="sg-drawer-kind" data-testid="drawer-kind">
@@ -138,7 +169,8 @@ export function DetailDrawer({
           className="sg-drawer-x"
           data-testid="drawer-close"
           aria-label="Close detail"
-          onClick={onClose}
+          ref={closeRef}
+          onClick={closeAndRestore}
         >
           ✕
         </button>
