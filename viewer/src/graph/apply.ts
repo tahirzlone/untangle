@@ -67,7 +67,25 @@ function referencedNodeIds(s: Suggestion): string[] {
   return refs;
 }
 
+/**
+ * Opens a session on a workflow, refusing one whose suggestions collide.
+ *
+ * `airtableRecordId` is the reducer's identity key — apply looks a suggestion
+ * up by it, the removal filter drops it by it, and undo recomputes metrics by
+ * it. Two cards sharing a row id (the same MCP matched to two nodes) breaks all
+ * three: the filter deletes both on the first apply, so the second silently
+ * vanishes uncounted, and undo's id lookup can land on the other twin's metrics
+ * entirely. Later versions only ever drop suggestions, so guarding the entry
+ * point guards every version after it.
+ */
 export function createSession(wf: Workflow): GraphSession {
+  const seen = new Set<string>();
+  for (const s of wf.suggestions) {
+    if (seen.has(s.airtableRecordId)) {
+      throw new InvalidEffectError(`duplicate suggestion id ${s.airtableRecordId} on the graph`);
+    }
+    seen.add(s.airtableRecordId);
+  }
   return { versions: [wf], appliedIds: [], metrics: zeroMetrics() };
 }
 

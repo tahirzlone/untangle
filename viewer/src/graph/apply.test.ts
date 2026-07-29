@@ -29,6 +29,7 @@ const validateWorkflow = createValidator(schema);
 const rec = (c: string) => `rec${c.repeat(14)}`;
 const REC_A = rec('A');
 const REC_B = rec('B');
+const REC_C = rec('C');
 
 function nodes(): WorkflowNode[] {
   return [
@@ -97,7 +98,33 @@ function suggestionB(): Suggestion {
   };
 }
 
-function makeWorkflow(suggestions: Suggestion[] = [suggestionA(), suggestionB()]): Workflow {
+/**
+ * A suggestion that restructures nothing — a plugin that makes the review step
+ * cheaper without changing the shape of the work. It deletes no node, so the
+ * cascade can never account for its disappearance: only the reducer's own
+ * self-removal can take it out, and only a real idempotence guard can stop it
+ * being applied twice.
+ */
+function suggestionC(): Suggestion {
+  return {
+    nodeId: 'review',
+    airtableRecordId: REC_C,
+    name: 'review-lens',
+    url: 'https://example.com/review-lens',
+    category: 'Claude Plugin',
+    claim: 'Reads the draft back in one pass instead of three.',
+    effect: {
+      removeNodes: [],
+      mergeNodes: [],
+      newEdges: [],
+      metrics: { stepsSaved: 0, estTimeSavedMin: 6, estTokensSaved: 300, manualInterventionsRemoved: 1 },
+    },
+  };
+}
+
+function makeWorkflow(
+  suggestions: Suggestion[] = [suggestionA(), suggestionB(), suggestionC()],
+): Workflow {
   return {
     meta: {
       task: 'write a thing',
@@ -217,11 +244,40 @@ it('adds newEdges verbatim, labels and kinds intact', () => {
 it('removes the applied suggestion and leaves untouched ones alone', () => {
   const after = current(applySuggestion(createSession(makeWorkflow()), REC_A));
   const remaining = after.suggestions.map((s) => s.airtableRecordId);
-  expect(remaining).toEqual([REC_B]);
+  expect(remaining).toEqual([REC_B, REC_C]);
+});
+
+it('removes the applied suggestion itself when its effect deletes nothing', () => {
+  const wf = makeWorkflow();
+  const after = current(applySuggestion(createSession(wf), REC_C));
+  // The graph is untouched, so the cascade cannot be what removed the card:
+  // only the reducer dropping the suggestion it just applied explains this.
+  expect(ids(after)).toEqual(ids(wf));
+  expect(after.edges).toEqual(wf.edges);
+  expect(after.suggestions.map((s) => s.airtableRecordId)).toEqual([REC_A, REC_B]);
+});
+
+it('refuses a second apply of a suggestion that deleted nothing', () => {
+  const once = applySuggestion(createSession(makeWorkflow()), REC_C);
+  expect(current(once).nodes).toHaveLength(6); // nothing was consumed
+  const err = refusal(() => applySuggestion(once, REC_C));
+  expect(err.errors).toEqual([]);
+});
+
+it('refuses a workflow that carries the same Airtable row twice', () => {
+  // One MCP matched to two nodes. The schema permits it, but airtableRecordId is
+  // the reducer's identity key: the removal filter would drop both cards on the
+  // first apply, and undo would recompute metrics off the wrong twin.
+  const twin: Suggestion = { ...suggestionB(), airtableRecordId: REC_A };
+  const wf = makeWorkflow([suggestionA(), twin]);
+  expect(validateWorkflow(wf).valid).toBe(true);
+  const err = refusal(() => createSession(wf));
+  expect(err.message).toMatch(/duplicate/i);
+  expect(err.errors).toEqual([]);
 });
 
 it('cascades away a suggestion whose target node was deleted', () => {
-  const orphan = { ...suggestionB(), nodeId: 'draft', airtableRecordId: rec('C') };
+  const orphan = { ...suggestionB(), nodeId: 'draft', airtableRecordId: rec('D') };
   const after = current(applySuggestion(createSession(makeWorkflow([suggestionA(), orphan])), REC_A));
   expect(after.suggestions).toHaveLength(0);
 });
@@ -229,7 +285,7 @@ it('cascades away a suggestion whose target node was deleted', () => {
 it('cascades away a suggestion whose newEdges reference a deleted node', () => {
   const orphan: Suggestion = {
     ...suggestionB(),
-    airtableRecordId: rec('D'),
+    airtableRecordId: rec('E'),
     nodeId: 'review',
     effect: {
       ...suggestionB().effect,
@@ -244,7 +300,7 @@ it('cascades away a suggestion whose newEdges reference a deleted node', () => {
 it('cascades away a suggestion whose removeNodes reference a deleted node', () => {
   const orphan: Suggestion = {
     ...suggestionB(),
-    airtableRecordId: rec('E'),
+    airtableRecordId: rec('F'),
     nodeId: 'review',
     effect: { ...suggestionB().effect, removeNodes: ['research'], newEdges: [] },
   };
