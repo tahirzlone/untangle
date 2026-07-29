@@ -10,8 +10,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@fontsource/barlow-condensed": "^5.2.0",
-    "@fontsource/ibm-plex-mono": "^5.2.0",
+    "@fontsource/jetbrains-mono": "^5.2.0",
+    "@fontsource/space-grotesk": "^5.2.0",
     "@xyflow/react": "^12.4.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",

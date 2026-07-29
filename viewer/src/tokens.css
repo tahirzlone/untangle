@@ -1,30 +1,28 @@
 :root {
-  /* drafting-room palette */
-  --paper: #FAFAF7;
-  --paper-shade: #F0F0EA;
-  --blue-nonphoto: #9EC9E4;
-  --ink: #1D3A5C;
-  --ink-strong: #16293F;
-  --graphite: #5B6B7A;
-  --red-checker: #C4372B;
+  /* Signal palette — from approved mock VARIANT C */
+  --bg: #0B0E14;
+  --bg-deep: #06080D;
+  --surface: #131721;
+  --surface-2: #1A1F2E;
+  --line: #232A3B;
+  --text: #E6EAF2;
+  --dim: #8A93A6;
+  --accent: #A3E635;
+  --accent-soft: rgba(163, 230, 53, 0.13);
+  --ember: #F97316;
+  --ember-hot: #EF4444;
 
   /* type */
-  --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
-  --font-anno: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-anno: "JetBrains Mono", ui-monospace, Consolas, monospace;
   --font-body: system-ui, "Segoe UI", sans-serif;
-  --track-caps: 0.08em;
 
-  /* rules & weights */
-  --rule-hair: 1px;
-  --rule-pen: 1.5px;
-  --rule-frame: 2px;
+  /* geometry */
+  --radius-card: 12px;
+  --radius-chip: 999px;
 
   /* motion */
-  --plot-edge-dur: 0.6s;
-  --plot-edge-stagger: 0.12s;
-  --stamp-dur: 0.28s;
-
-  /* grid */
-  --grid-minor: 8px;
-  --grid-major: 64px;
+  --flow-dur: 0.6s;
+  --flow-stagger: 0.1s;
+  --card-in-dur: 0.3s;
 }

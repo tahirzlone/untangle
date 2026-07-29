@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Flowprint — Theme Variants</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  :root {
+    --bg: #0B0E14;
+    --surface: #131721;
+    --surface-2: #1A1F2E;
+    --line: #232A3B;
+    --text: #E6EAF2;
+    --dim: #8A93A6;
+    --ember: #F97316;
+    --ember-hot: #EF4444;
+  }
+  .v-ion    { --accent: #22D3EE; --accent-soft: rgba(34, 211, 238, 0.14); }
+  .v-volt   { --accent: #A78BFA; --accent-soft: rgba(167, 139, 250, 0.14); }
+  .v-signal { --accent: #A3E635; --accent-soft: rgba(163, 230, 53, 0.13); }
+
+  body { background: #06080D; color: var(--text); font-family: "Space Grotesk", system-ui, sans-serif; padding: 32px 24px 80px; }
+  h1 { font-size: 20px; letter-spacing: 0.02em; margin-bottom: 4px; }
+  .sub { color: var(--dim); font-family: "JetBrains Mono", monospace; font-size: 12px; margin-bottom: 36px; }
+
+  .variant { margin-bottom: 56px; }
+  .variant-tag {
+    display: inline-block; font-family: "JetBrains Mono", monospace; font-size: 12px;
+    letter-spacing: 0.12em; color: var(--accent); border: 1px solid var(--accent);
+    border-radius: 999px; padding: 4px 14px; margin-bottom: 12px;
+  }
+
+  .canvas {
+    position: relative; height: 540px; border-radius: 16px; overflow: hidden;
+    background:
+      radial-gradient(ellipse 900px 420px at 30% 0%, var(--accent-soft), transparent 60%),
+      radial-gradient(circle 1.2px at center, #1C2230 98%, transparent) 0 0 / 26px 26px,
+      var(--bg);
+    border: 1px solid var(--line);
+  }
+
+  .toolbar {
+    position: absolute; top: 0; left: 0; right: 0; height: 52px; z-index: 5;
+    display: flex; align-items: center; gap: 12px; padding: 0 20px;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .toolbar .wf-title { font-weight: 600; font-size: 14px; letter-spacing: 0.01em; }
+  .chip {
+    font-family: "JetBrains Mono", monospace; font-size: 10px; color: var(--dim);
+    border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 3px 10px;
+  }
+  .chip b { color: var(--accent); font-weight: 500; }
+  .chip .hot { color: var(--ember); }
+
+  .edges { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .edge { fill: none; stroke: var(--accent); stroke-width: 2; opacity: 0.75; }
+  .edge-dim { fill: none; stroke: color-mix(in srgb, var(--accent) 45%, var(--line)); stroke-width: 2; }
+  .edge-retry { fill: none; stroke: var(--ember); stroke-width: 2; stroke-dasharray: 7 5; opacity: 0.9; }
+  .flow-dot { fill: var(--accent); }
+
+  .node {
+    position: absolute; width: 252px; border-radius: 12px; z-index: 3;
+    background: linear-gradient(180deg, var(--surface-2), var(--surface));
+    border: 1px solid var(--line);
+    padding: 12px 14px 10px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+  }
+  .node::before, .node::after {
+    content: ""; position: absolute; top: 50%; width: 10px; height: 10px; border-radius: 50%;
+    background: var(--bg); border: 2px solid var(--accent); transform: translateY(-50%);
+  }
+  .node::before { left: -5px; }
+  .node::after { right: -5px; }
+  .node--start::before { display: none; }
+  .node--end::after { display: none; }
+
+  .node--hot {
+    border-color: color-mix(in srgb, var(--ember) 55%, var(--line));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--ember) 30%, transparent),
+                0 0 34px rgba(239, 68, 68, 0.28), 0 4px 18px rgba(0, 0, 0, 0.45);
+  }
+  .node--warm { box-shadow: 0 0 22px rgba(249, 115, 22, 0.12), 0 4px 18px rgba(0, 0, 0, 0.45); }
+
+  .node-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .icon {
+    width: 30px; height: 30px; border-radius: 8px; flex: none;
+    display: grid; place-items: center;
+    font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 500;
+    background: var(--accent-soft); color: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  .node--hot .icon { background: rgba(239, 68, 68, 0.14); color: var(--ember); border-color: rgba(239, 68, 68, 0.35); }
+  .label { font-weight: 600; font-size: 13.5px; line-height: 1.2; }
+  .desc { font-size: 11px; line-height: 1.45; color: var(--dim); margin-bottom: 9px; }
+
+  .node-foot { display: flex; align-items: center; justify-content: space-between; }
+  .kind {
+    font-family: "JetBrains Mono", monospace; font-size: 9px; letter-spacing: 0.14em;
+    color: var(--dim); text-transform: uppercase;
+  }
+  .meter { display: inline-flex; gap: 3px; }
+  .meter i { width: 9px; height: 4px; border-radius: 2px; background: var(--line); }
+  .meter[data-pain="1"] i:nth-child(-n+1), .meter[data-pain="2"] i:nth-child(-n+2) { background: color-mix(in srgb, var(--accent) 70%, var(--line)); }
+  .meter[data-pain="3"] i:nth-child(-n+3) { background: var(--ember); }
+  .meter[data-pain="4"] i:nth-child(-n+4) { background: var(--ember); }
+  .meter[data-pain="5"] i { background: var(--ember-hot); box-shadow: 0 0 6px rgba(239, 68, 68, 0.6); }
+
+  .edge-label {
+    position: absolute; z-index: 4; transform: translate(-50%, -50%);
+    font-family: "JetBrains Mono", monospace; font-style: italic; font-size: 9.5px;
+    color: var(--ember); background: color-mix(in srgb, var(--bg) 88%, transparent);
+    border: 1px solid color-mix(in srgb, var(--ember) 40%, transparent);
+    border-radius: 6px; padding: 2px 8px; white-space: nowrap;
+  }
+  .edge-label--cool { color: var(--dim); border-color: var(--line); }
+</style>
+</head>
+<body>
+  <h1>Flowprint — theme direction: pro dev-tool + signature glow</h1>
+  <p class="sub">same six nodes from your comic-story graph · left→right flow · three accent variants · pick one (or mix)</p>
+
+  <template id="cluster">
+    <div class="canvas">
+      <div class="toolbar">
+        <span class="wf-title">Comic-Book Story Webpage</span>
+        <span class="chip"><b>12</b> nodes</span>
+        <span class="chip">max pain <span class="hot">●●●●●</span></span>
+        <span class="chip">KB NOT LINKED</span>
+        <span class="chip" style="margin-left:auto">generated by <b>claude-fable-5</b></span>
+      </div>
+
+      <svg class="edges" aria-hidden="true">
+        <path class="edge" d="M 288 205 C 330 205, 330 155, 372 155" />
+        <path class="edge-dim" d="M 288 205 C 330 205, 330 285, 372 285" />
+        <path class="edge" d="M 624 155 C 668 155, 668 230, 712 230" />
+        <path class="edge-dim" d="M 624 285 C 668 285, 668 230, 712 230" />
+        <path class="edge" d="M 964 230 C 1006 230, 1006 230, 1048 230" />
+        <path class="edge-retry" d="M 1170 300 C 1170 390, 840 390, 838 300" />
+        <circle class="flow-dot" r="3"><animateMotion dur="3.2s" repeatCount="indefinite" path="M 288 205 C 330 205, 330 155, 372 155 L 624 155 C 668 155, 668 230, 712 230" /></circle>
+      </svg>
+
+      <div class="node node--start" style="left:36px; top:150px;">
+        <div class="node-head"><span class="icon">IN</span><span class="label">Gather story + seed image</span></div>
+        <p class="desc">Collect the user's story line, seed image, style preferences, and the API keys they had to sign up for by hand.</p>
+        <div class="node-foot"><span class="kind">input</span><span class="meter" data-pain="3"><i></i><i></i><i></i><i></i><i></i></span></div>
+      </div>
+
+      <div class="node" style="left:372px; top:100px;">
+        <div class="node-head"><span class="icon">PR</span><span class="label">Research generation APIs</span></div>
+        <p class="desc">Browse provider docs page by page — auth schemes, polling endpoints, rate limits — transcribed into notes by hand.</p>
+        <div class="node-foot"><span class="kind">process</span><span class="meter" data-pain="4"><i></i><i></i><i></i><i></i><i></i></span></div>
+      </div>
+
+      <div class="node" style="left:372px; top:250px;">
+        <div class="node-head"><span class="icon">PR</span><span class="label">Draft panel-by-panel script</span></div>
+        <p class="desc">Expand the one-line story into comic beats, captions, and dialogue anchored to the seed image's characters.</p>
+        <div class="node-foot"><span class="kind">process</span><span class="meter" data-pain="2"><i></i><i></i><i></i><i></i><i></i></span></div>
+      </div>
+
+      <div class="node node--hot" style="left:712px; top:172px;">
+        <div class="node-head"><span class="icon">LP</span><span class="label">Generate each comic panel</span></div>
+        <p class="desc">Hand-craft a prompt per panel restating characters, palette, and style in words — the only consistency tool available. Wait, download, repeat.</p>
+        <div class="node-foot"><span class="kind">loop</span><span class="meter" data-pain="5"><i></i><i></i><i></i><i></i><i></i></span></div>
+      </div>
+
+      <div class="node node--warm" style="left:1048px; top:172px;">
+        <div class="node-head"><span class="icon">DC</span><span class="label">Panels on-model?</span></div>
+        <p class="desc">Eyeball every panel against the seed image — same characters, outfits, palette? Text-only prompting drifts.</p>
+        <div class="node-foot"><span class="kind">decision</span><span class="meter" data-pain="3"><i></i><i></i><i></i><i></i><i></i></span></div>
+      </div>
+
+      <span class="edge-label" style="left:1005px; top:388px;">off-model — rewrite prompts, regenerate</span>
+    </div>
+  </template>
+
+  <section class="variant v-ion">
+    <span class="variant-tag">VARIANT A — ION CYAN</span>
+    <div class="mount"></div>
+  </section>
+
+  <section class="variant v-volt">
+    <span class="variant-tag">VARIANT B — VOLT VIOLET</span>
+    <div class="mount"></div>
+  </section>
+
+  <section class="variant v-signal">
+    <span class="variant-tag">VARIANT C — SIGNAL LIME</span>
+    <div class="mount"></div>
+  </section>
+
+  <script>
+    const tpl = document.getElementById('cluster');
+    for (const mount of document.querySelectorAll('.mount')) {
+      mount.appendChild(tpl.content.cloneNode(true));
+    }
+  </script>
+</body>
+</html>

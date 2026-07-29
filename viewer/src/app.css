@@ -1,8 +1,8 @@
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
 body {
-  background: var(--paper-shade);
-  color: var(--ink-strong);
+  background: var(--bg-deep);
+  color: var(--text);
   font-family: var(--font-body);
 }
 .app-shell { height: 100%; display: flex; flex-direction: column; }
@@ -10,20 +10,30 @@ body {
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 20px;
-  letter-spacing: var(--track-caps);
-  text-transform: uppercase;
-  color: var(--ink-strong);
+  letter-spacing: 0.02em;
+  color: var(--text);
   padding: 12px 20px;
-  border-bottom: var(--rule-frame) solid var(--ink-strong);
-  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
   display: flex;
   align-items: baseline;
   gap: 12px;
 }
+/* Signal mark: the lime square that stands in for a logo. A pseudo-element
+   keeps the accent purely presentational — the masthead text stays one node. */
+.app-masthead::before {
+  content: '';
+  align-self: center;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 14px var(--accent-soft);
+}
 .app-masthead .masthead-sub {
   font-family: var(--font-anno);
-  font-size: 11px;
-  color: var(--graphite);
+  font-size: 12px;
+  color: var(--dim);
   text-transform: none;
   letter-spacing: 0;
 }
@@ -35,5 +45,5 @@ body {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-.masthead-link:focus-visible { outline: 2px solid var(--red-checker); outline-offset: 2px; }
+.masthead-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .app-main { flex: 1; min-height: 0; position: relative; }

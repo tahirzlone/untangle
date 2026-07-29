@@ -6,8 +6,8 @@ export interface LaidOutNode { id: string; x: number; y: number; width: number; 
 export interface LaidOutEdge { id: string; from: string; to: string; kind: EdgeKind; label?: string; points: { x: number; y: number }[]; }
 export interface LaidOutGraph { nodes: LaidOutNode[]; edges: LaidOutEdge[]; width: number; height: number; }
 
-export const NODE_WIDTH = 248;
-export const NODE_HEIGHT = 112;
+export const NODE_WIDTH = 252;
+export const NODE_HEIGHT = 148;
 
 const elk = new ELK();
 
@@ -16,12 +16,10 @@ export async function layoutWorkflow(workflow: Workflow): Promise<LaidOutGraph> 
     id: 'root',
     layoutOptions: {
       'elk.algorithm': 'layered',
-      'elk.direction': 'DOWN',
-      'elk.edgeRouting': 'ORTHOGONAL',
-      'elk.layered.spacing.nodeNodeBetweenLayers': '72',
-      'elk.spacing.nodeNode': '48',
-      'elk.spacing.edgeNode': '24',
-      'elk.spacing.edgeEdge': '16',
+      'elk.direction': 'RIGHT',
+      'elk.edgeRouting': 'SPLINES',
+      'elk.layered.spacing.nodeNodeBetweenLayers': '90',
+      'elk.spacing.nodeNode': '56',
     },
     children: workflow.nodes.map((n) => ({
       id: n.id,

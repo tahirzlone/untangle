@@ -33,11 +33,11 @@ it('routes every edge with at least two points', async () => {
   }
 });
 
-it('flows top-down: the input node sits above the output node', async () => {
+it('flows left-to-right: the input node sits left of the output node', async () => {
   const g = await laidOutGallery();
   const input = g.nodes.find((n) => n.node.kind === 'input')!;
   const output = g.nodes.find((n) => n.node.kind === 'output')!;
-  expect(input.y).toBeLessThan(output.y);
+  expect(input.x).toBeLessThan(output.x);
 });
 
 it('preserves edge kind and label through layout', async () => {
