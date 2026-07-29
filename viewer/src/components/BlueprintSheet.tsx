@@ -3,13 +3,13 @@ import { Position, ReactFlow, type Edge, type Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import type { Workflow } from '../graph/types';
 import { layoutWorkflow, type LaidOutGraph } from '../graph/layout';
-import { BlueprintNode } from './BlueprintNode';
+import { SignalNode } from './SignalNode';
 import { PlotterEdge } from './PlotterEdge';
 import { TitleBlock } from './TitleBlock';
 import { ZoneRuler } from './ZoneRuler';
 import './sheet.css';
 
-const nodeTypes = { blueprint: BlueprintNode };
+const nodeTypes = { blueprint: SignalNode };
 const edgeTypes = { plotter: PlotterEdge };
 
 export function BlueprintSheet({ workflow }: { workflow: Workflow }) {
@@ -39,14 +39,15 @@ export function BlueprintSheet({ workflow }: { workflow: Workflow }) {
     // layer renders immediately instead of waiting on a ResizeObserver tick.
     width: n.width,
     height: n.height,
-    // Handle geometry, likewise known ahead of measurement: BlueprintNode puts
-    // a target at top-centre and a source at bottom-centre. React Flow prefers
-    // measured bounds when it has them (`internals.handleBounds || toHandleBounds`),
-    // so this only fills the gap before the first ResizeObserver tick — without
-    // it RF declines to render the edge layer at all.
+    // Handle geometry, likewise known ahead of measurement: SignalNode puts a
+    // target port at the left edge middle and a source port at the right edge
+    // middle (flow runs left→right). React Flow prefers measured bounds when it
+    // has them (`internals.handleBounds || toHandleBounds`), so this only fills
+    // the gap before the first ResizeObserver tick — without it RF declines to
+    // render the edge layer at all.
     handles: [
-      { type: 'target', position: Position.Top, x: n.width / 2, y: 0 },
-      { type: 'source', position: Position.Bottom, x: n.width / 2, y: n.height },
+      { type: 'target', position: Position.Left, x: 0, y: n.height / 2 },
+      { type: 'source', position: Position.Right, x: n.width, y: n.height / 2 },
     ],
     data: { node: n.node, index: i },
     draggable: false,

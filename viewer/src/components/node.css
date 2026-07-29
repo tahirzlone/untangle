@@ -1,100 +1,137 @@
-.bp-node-shell {
-  width: 248px;
-  height: 112px;
-  animation: bp-stamp var(--stamp-dur) ease-out backwards;
-  animation-delay: calc(0.9s + var(--i, 0) * 0.06s);
+/* Signal node card — visual spec: design/theme-variants.html, VARIANT C.
+   Card size is set inline from NODE_WIDTH/NODE_HEIGHT (graph/layout.ts) so the
+   dimensions ELK laid out against are never restated here. */
+.sg-node-shell {
+  animation: sg-card-in var(--card-in-dur) ease-out backwards;
+  animation-delay: calc(var(--i, 0) * var(--flow-stagger));
 }
-.bp-handle { opacity: 0; pointer-events: none; }
 
-.bp-node {
+/* Ports are part of the look now — visible rings, not hidden anchors.
+   Doubled-up selectors outrank React Flow's own .react-flow__handle rules. */
+.react-flow__handle.sg-port {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 2px solid var(--accent);
+  min-width: 0;
+  min-height: 0;
+}
+.react-flow__handle-left.sg-port { left: -5px; }
+.react-flow__handle-right.sg-port { right: -5px; }
+
+.sg-node {
   width: 100%;
   height: 100%;
-  background:
-    linear-gradient(color-mix(in srgb, var(--red-checker) calc(var(--pain, 1) * 9%), transparent),
-                    color-mix(in srgb, var(--red-checker) calc(var(--pain, 1) * 9%), transparent)),
-    var(--paper);
-  border: var(--rule-pen) solid var(--ink);
-  padding: 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
   overflow: hidden;
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: 12px 14px 10px;
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--bg-deep) 45%, transparent);
 }
 
-.bp-node-eyebrow {
+.sg-node-head {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.sg-icon {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
   font-family: var(--font-anno);
-  font-size: 9px;
-  color: var(--graphite);
+  font-size: 10px;
+  font-weight: 500;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
 }
-.bp-node-kind { letter-spacing: var(--track-caps); }
-.bp-node-ticks { display: inline-flex; gap: 2px; }
-.pain-tick {
-  display: inline-block;
-  width: 2px;
-  height: 9px;
-  background: var(--red-checker);
-  transform: skewX(-24deg);
-}
-
-.bp-node-label {
+.sg-label {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 16px;
-  line-height: 1.1;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: var(--ink-strong);
+  font-size: 13.5px;
+  line-height: 1.2;
+  color: var(--text);
 }
-.bp-node-desc {
+
+.sg-desc {
   font-family: var(--font-body);
-  font-size: 10px;
-  line-height: 1.3;
-  color: var(--graphite);
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--dim);
+  /* shorthand, not margin-bottom: the <p> would otherwise keep its UA
+     margin-block-start and shove the head row up. */
+  margin: 0 0 9px;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-/* kind variants — structure is information */
-.bp-node--input, .bp-node--output { border-radius: 56px; text-align: center; align-items: center; }
-.bp-node--output { background: var(--ink-strong); }
-.bp-node--output .bp-node-label { color: var(--paper); }
-.bp-node--output .bp-node-desc, .bp-node--output .bp-node-kind { color: var(--blue-nonphoto); }
-.bp-node--decision {
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-  justify-content: center;
-  text-align: center;
+.sg-foot {
+  margin-top: auto;
+  display: flex;
   align-items: center;
-  padding: 14px 34px;
-  border: none;
-  background: var(--ink);
-  position: relative;
+  justify-content: space-between;
 }
-.bp-node--decision::before {
-  content: '';
-  position: absolute;
-  inset: 2.5px;
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-  background:
-    linear-gradient(color-mix(in srgb, var(--red-checker) calc(var(--pain, 1) * 9%), transparent),
-                    color-mix(in srgb, var(--red-checker) calc(var(--pain, 1) * 9%), transparent)),
-    var(--paper);
+.sg-kind {
+  font-family: var(--font-anno);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
 }
-.bp-node--decision > * {
-  position: relative;
-}
-.bp-node--decision .bp-node-desc { display: none; }
-.bp-node--loop { border-style: double; border-width: 4px; }
-.bp-node--review { border-style: dashed; }
 
-@keyframes bp-stamp {
-  from { opacity: 0; transform: scale(1.12) rotate(-1deg); }
-  to { opacity: 1; transform: scale(1) rotate(0); }
+.sg-meter { display: inline-flex; gap: 3px; }
+.sg-meter-seg {
+  width: 9px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+}
+.sg-meter[data-pain="1"] .sg-meter-seg:nth-child(-n + 1),
+.sg-meter[data-pain="2"] .sg-meter-seg:nth-child(-n + 2) {
+  background: color-mix(in srgb, var(--accent) 70%, var(--line));
+}
+.sg-meter[data-pain="3"] .sg-meter-seg:nth-child(-n + 3),
+.sg-meter[data-pain="4"] .sg-meter-seg:nth-child(-n + 4) {
+  background: var(--ember);
+}
+.sg-meter[data-pain="5"] .sg-meter-seg {
+  background: var(--ember-hot);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--ember-hot) 60%, transparent);
+}
+
+/* Pain heat — the card itself signals, no kind shapes involved. */
+.sg-node--hot {
+  border-color: color-mix(in srgb, var(--ember) 55%, var(--line));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--ember) 30%, transparent),
+    0 0 34px color-mix(in srgb, var(--ember-hot) 28%, transparent),
+    0 4px 18px color-mix(in srgb, var(--bg-deep) 45%, transparent);
+}
+.sg-node--hot .sg-icon {
+  background: color-mix(in srgb, var(--ember-hot) 14%, transparent);
+  color: var(--ember);
+  border-color: color-mix(in srgb, var(--ember-hot) 35%, transparent);
+}
+.sg-node--warm {
+  box-shadow:
+    0 0 22px color-mix(in srgb, var(--ember) 12%, transparent),
+    0 4px 18px color-mix(in srgb, var(--bg-deep) 45%, transparent);
+}
+
+@keyframes sg-card-in {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .bp-node-shell { animation: none; }
+  .sg-node-shell { animation: none; }
 }

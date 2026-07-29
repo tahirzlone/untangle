@@ -12,7 +12,7 @@ const wf = (() => {
 it('renders the full sheet: title block, every node, zone rulers', async () => {
   render(<BlueprintSheet workflow={wf} />);
   await waitFor(() => {
-    expect(screen.getAllByTestId('bp-node')).toHaveLength(wf.nodes.length);
+    expect(screen.getAllByTestId('sg-node')).toHaveLength(wf.nodes.length);
   });
   expect(screen.getByText(wf.meta.title.toUpperCase())).toBeInTheDocument();
   expect(screen.getByText(/drawn by/i)).toBeInTheDocument();
@@ -25,7 +25,7 @@ it('renders the full sheet: title block, every node, zone rulers', async () => {
 it('plots every edge and staples a tag over each labelled one', async () => {
   const { container } = render(<BlueprintSheet workflow={wf} />);
   await waitFor(() => {
-    expect(screen.getAllByTestId('bp-node')).toHaveLength(wf.nodes.length);
+    expect(screen.getAllByTestId('sg-node')).toHaveLength(wf.nodes.length);
   });
 
   // the whole edge layer reaches the DOM through the real React Flow pipeline
