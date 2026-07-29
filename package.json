@@ -2,11 +2,16 @@
   "name": "flowprint",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
+  "engines": { "node": ">=20" },
   "type": "module",
   "description": "Blueprint your Claude workflows — graph how Claude would break down a task, then watch skills, plugins, and MCPs simplify it.",
   "scripts": {
     "test": "vitest run",
-    "validate": "node scripts/validate.mjs"
+    "validate": "node scripts/validate.mjs",
+    "test:viewer": "npm --prefix viewer test",
+    "dev:viewer": "npm --prefix viewer run dev",
+    "build:viewer": "npm --prefix viewer run build"
   },
   "devDependencies": {
     "ajv": "^8.17.1",
