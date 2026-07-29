@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { galleryEntries } from './gallery/galleryData';
 import { loadWorkflow } from './graph/load';
 import type { Workflow } from './graph/types';
@@ -30,7 +30,7 @@ export default function App() {
   // keeps its identity across re-renders (its layout effect is keyed on it).
   const [view, setView] = useState<View>({ mode: 'gallery' });
 
-  function handleFile(file: File) {
+  const handleFile = useCallback((file: File) => {
     readFileText(file).then(
       (text) => {
         let raw: unknown;
@@ -52,7 +52,30 @@ export default function App() {
         setView({ mode: 'rejected', errors: [`file: could not be read (${err.message})`] });
       },
     );
-  }
+  }, []);
+
+  // Drop is an app-wide affordance, not a gallery-only one. Without a window
+  // guard the browser takes the default action for a dropped file — it
+  // navigates away from the SPA to render the JSON — from every view except the
+  // gallery. Guarding at the window both stops that and makes drop work
+  // everywhere: on the sheet, on the rejection sheet, on the masthead.
+  useEffect(() => {
+    function onDragOver(ev: globalThis.DragEvent) {
+      ev.preventDefault();
+    }
+    function onDrop(ev: globalThis.DragEvent) {
+      if (ev.defaultPrevented) return; // GalleryIndex's own drop already handled it
+      ev.preventDefault();
+      const file = ev.dataTransfer?.files?.[0];
+      if (file) handleFile(file);
+    }
+    window.addEventListener('dragover', onDragOver);
+    window.addEventListener('drop', onDrop);
+    return () => {
+      window.removeEventListener('dragover', onDragOver);
+      window.removeEventListener('drop', onDrop);
+    };
+  }, [handleFile]);
 
   return (
     <div className="app-shell">

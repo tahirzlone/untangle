@@ -27,7 +27,9 @@
 .bp-card-meta > div:last-child { border-right: none; }
 .bp-card-meta dt { font-family: var(--font-anno); font-size: 7px; color: var(--graphite); letter-spacing: var(--track-caps); }
 .bp-card-meta dd { margin: 0; font-family: var(--font-anno); font-size: 11px; color: var(--ink-strong); }
-.bp-card-pain { color: var(--red-checker); font-weight: 500; }
+/* Qualified with `.bp-card-meta dd` deliberately: the bare class loses the
+   specificity contest with the `dd` rule above it and never paints red. */
+.bp-card-meta dd.bp-card-pain { color: var(--red-checker); font-weight: 500; }
 .bp-card-open {
   margin-top: auto;
   font-family: var(--font-display);
@@ -93,4 +95,7 @@
   max-height: 40vh;
   overflow: auto;
 }
-.bp-rejected-back { max-width: 260px; }
+/* margin-top: 0 undoes the `margin-top: auto` this button inherits from
+   .bp-card-open, which is a card footer there but would strand the Back button
+   at the bottom of the full-height rejection sheet here. */
+.bp-rejected-back { max-width: 260px; margin-top: 0; }

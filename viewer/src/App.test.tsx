@@ -43,3 +43,35 @@ it('opens a valid dropped file as a sheet', async () => {
   fireEvent.change(input, { target: { files: [good] } });
   await waitFor(() => expect(screen.getByTestId('sheet')).toBeInTheDocument());
 });
+
+// Drop is a window-level affordance, not a gallery-only one: without the app-wide
+// guard the browser navigates away from the SPA to render the dropped file.
+it('opens a valid file dropped while a sheet is already showing', async () => {
+  render(<App />);
+  fireEvent.click(screen.getAllByText('OPEN DRAWING')[0]);
+  await waitFor(() => expect(screen.getByTestId('sheet')).toBeInTheDocument());
+
+  const raw = (await import('../../gallery/add-e2e-tests.workflow.json')).default as Record<
+    string,
+    unknown
+  >;
+  const renamed = JSON.stringify({
+    ...raw,
+    meta: { ...(raw.meta as Record<string, unknown>), title: 'Dropped in sheet view' },
+  });
+  const good = new File([renamed], 'mine.workflow.json', { type: 'application/json' });
+  fireEvent.drop(document.body, { dataTransfer: { files: [good] } });
+
+  await waitFor(() => expect(screen.getByText('DROPPED IN SHEET VIEW')).toBeInTheDocument());
+  expect(screen.getByTestId('sheet')).toBeInTheDocument();
+});
+
+it('rejects an invalid file dropped while a sheet is already showing', async () => {
+  render(<App />);
+  fireEvent.click(screen.getAllByText('OPEN DRAWING')[0]);
+  await waitFor(() => expect(screen.getByTestId('sheet')).toBeInTheDocument());
+
+  const bad = new File(['{"meta":{}}'], 'bad.workflow.json', { type: 'application/json' });
+  fireEvent.drop(document.body, { dataTransfer: { files: [bad] } });
+  await waitFor(() => expect(screen.getByTestId('rejected-sheet')).toBeInTheDocument());
+});

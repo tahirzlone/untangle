@@ -2,6 +2,7 @@
 
 Vite + React static SPA that renders `*.workflow.json` files as blueprint drafting sheets.
 
+- `npm install` — first-time setup
 - `npm run dev` — dev server
 - `npm test` — vitest (jsdom)
 - `npm run build` — static build in `dist/` (relative base; deployable to GitHub Pages as-is)

@@ -1679,7 +1679,7 @@ Add to `app.css`:
 .masthead-link:focus-visible { outline: 2px solid var(--red-checker); outline-offset: 2px; }
 ```
 
-- [ ] **Step 10: Run to verify PASS** — `cd viewer; npm test` → 22 tests PASS.
+- [ ] **Step 10: Run to verify PASS** — `cd viewer; npm test` → 36 tests PASS.
 
 - [ ] **Step 11: Commit**
 
@@ -1750,7 +1750,7 @@ Design tokens live in `src/tokens.css` — all colors and type come from there. 
 
 Run each; all must succeed:
 - root: `npm test` → 19/19
-- `npm run test:viewer` → 22/22
+- `npm run test:viewer` → 36/36
 - `npm run build:viewer` → tsc + vite build succeed, `viewer/dist/` produced
 - `git status` → only intended files
 
@@ -1771,7 +1771,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 3. Drop `out/comic-story-webpage.workflow.json` onto the page → it renders as a sheet.
 4. Drop a broken JSON → DRAWING REJECTED sheet with notes, and Back returns to the index.
 5. OS-level reduced-motion on → no animations, final state immediate.
-6. Both suites green (19 root + 22 viewer); `npm run build:viewer` clean.
+6. Both suites green (19 root + 36 viewer); `npm run build:viewer` clean.
 
 ## Verification notes for the executor
 
