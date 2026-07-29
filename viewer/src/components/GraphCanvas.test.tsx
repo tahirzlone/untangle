@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import gallery from '../../../gallery/add-e2e-tests.workflow.json';
 import { loadWorkflow } from '../graph/load';
 import { GraphCanvas } from './GraphCanvas';
@@ -118,6 +118,56 @@ it('opens the detail drawer on the clicked node', async () => {
   expect(drawer).toHaveTextContent(target.label);
   expect(drawer).toHaveTextContent(target.description);
   expect(drawer).toHaveTextContent(target.kind);
+});
+
+/**
+ * One step of a press-slip-release-click gesture, with `event.view` populated.
+ *
+ * Real pointers slip, and React Flow hands `nodeClickDistance` to d3-drag, which
+ * swallows the trailing click of any gesture that travelled further. d3-drag
+ * works in mouse events, so the whole gesture is reachable from jsdom — with one
+ * catch: it binds its mousemove/mouseup listeners to `event.view` and hands that
+ * same window to `yesdrag`, which is what installs (or doesn't) the click guard.
+ * jsdom's MouseEvent constructor refuses a `view` member here, so it is defined
+ * on the instance instead. That field is the only thing supplied by hand;
+ * everything the assertions depend on is real d3-drag driving real React Flow.
+ */
+function mouse(
+  type: 'mouseDown' | 'mouseMove' | 'mouseUp' | 'click',
+  target: Element | Window,
+  x: number,
+) {
+  const event = createEvent[type](target, { clientX: x, clientY: 100, button: 0 });
+  Object.defineProperty(event, 'view', { value: window });
+  fireEvent(target, event);
+}
+
+function gesture(el: HTMLElement, dx: number) {
+  mouse('mouseDown', el, 100);
+  mouse('mouseMove', window, 100 + dx);
+  mouse('mouseUp', window, 100 + dx);
+  // synchronous: d3 tears its click guard down on the next tick
+  mouse('click', el, 100 + dx);
+}
+
+// Regression: at the 0 default a CDP pointer probe measured a 1px wobble killing
+// the click outright, so the headline interaction of the whole phase silently
+// no-opped on any real mouse. This test goes red again if the tolerance is
+// dropped; its sibling below holds the other end — a real drag stays silent.
+it('still opens the drawer when the click slips a few pixels', async () => {
+  render(<GraphCanvas workflow={wf} />);
+  const all = await cards();
+
+  gesture(cardFor(wf.nodes[0].label, all), 3);
+  expect(await screen.findByTestId('detail-drawer')).toHaveTextContent(wf.nodes[0].label);
+});
+
+it('stays silent when the gesture is a real drag', async () => {
+  render(<GraphCanvas workflow={wf} />);
+  const all = await cards();
+
+  gesture(cardFor(wf.nodes[0].label, all), 120);
+  expect(screen.queryByTestId('detail-drawer')).not.toBeInTheDocument();
 });
 
 it('rings the clicked card with the accent selection state', async () => {

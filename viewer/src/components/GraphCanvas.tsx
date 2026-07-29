@@ -111,10 +111,10 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     [laidOut, backPlan],
   );
 
-  // Drag and click share the same gesture, and React Flow already tells them
-  // apart: it hands d3-drag `nodeClickDistance` (0 by default), which swallows
-  // the trailing click of any gesture that moved. So a drag reshapes and stays
-  // silent; a press that goes nowhere opens the drawer. Nothing to reimplement.
+  // Drag and click share the same gesture; React Flow tells them apart by
+  // distance, and the tolerance is set on the ReactFlow element below — see the
+  // note on `nodeClickDistance`, which is load-bearing for this handler ever
+  // firing from a real mouse.
   const onNodeClick = useCallback((_: unknown, node: SignalRFNode) => {
     setSelected(node.data.node);
   }, []);
@@ -186,6 +186,16 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
           maxZoom={2}
           nodesDraggable
           elementsSelectable
+          // How far the pointer may slip and still count as a click. React Flow
+          // hands this to d3-drag's clickDistance, which swallows the trailing
+          // click of any gesture that travelled further. The default is 0 — and
+          // at 0, a CDP pointer probe showed a 1px wobble already killing the
+          // click, so on a real mouse or trackpad the drawer would open only by
+          // luck. 4px is under the width of a fingertip's tremor and still well
+          // inside "I did not mean to move that card": a gesture that short nudges
+          // the node imperceptibly AND opens the drawer, while a genuine drag
+          // stays silent.
+          nodeClickDistance={4}
           // reshaping the layout is not rewiring the workflow: cards move, the
           // graph's semantics do not
           nodesConnectable={false}
