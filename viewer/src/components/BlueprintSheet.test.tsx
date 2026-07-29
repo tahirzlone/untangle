@@ -29,7 +29,7 @@ it('plots every edge and staples a tag over each labelled one', async () => {
   });
 
   // the whole edge layer reaches the DOM through the real React Flow pipeline
-  expect(container.querySelectorAll('path.bp-edge')).toHaveLength(wf.edges.length);
+  expect(container.querySelectorAll('path.sg-edge')).toHaveLength(wf.edges.length);
 
   const labelled = wf.edges.filter((e) => e.label);
   const tags = screen.getAllByTestId('edge-tag');
@@ -44,7 +44,7 @@ it('plots every edge and staples a tag over each labelled one', async () => {
   expect(wrapped!.querySelectorAll('span').length).toBeGreaterThanOrEqual(2);
   expect(wrapped!.textContent).toContain('tighter');
 
-  // retry tags are marked so they can be inked in checker red
+  // retry tags are marked so they can be inked in ember
   const retryCount = labelled.filter((e) => e.kind === 'retry').length;
-  expect(tags.filter((t) => t.classList.contains('bp-edge-tag--retry'))).toHaveLength(retryCount);
+  expect(tags.filter((t) => t.classList.contains('sg-edge-tag--retry'))).toHaveLength(retryCount);
 });

@@ -4,13 +4,13 @@ import '@xyflow/react/dist/style.css';
 import type { Workflow } from '../graph/types';
 import { layoutWorkflow, type LaidOutGraph } from '../graph/layout';
 import { SignalNode } from './SignalNode';
-import { PlotterEdge } from './PlotterEdge';
+import { SignalEdge } from './SignalEdge';
 import { TitleBlock } from './TitleBlock';
 import { ZoneRuler } from './ZoneRuler';
 import './sheet.css';
 
 const nodeTypes = { blueprint: SignalNode };
-const edgeTypes = { plotter: PlotterEdge };
+const edgeTypes = { signal: SignalEdge };
 
 export function BlueprintSheet({ workflow }: { workflow: Workflow }) {
   const [laidOut, setLaidOut] = useState<LaidOutGraph | null>(null);
@@ -59,8 +59,10 @@ export function BlueprintSheet({ workflow }: { workflow: Workflow }) {
     id: e.id,
     source: e.from,
     target: e.to,
-    type: 'plotter',
-    data: { points: e.points, kind: e.kind, label: e.label, index: i },
+    type: 'signal',
+    // no points: SignalEdge curves between the ports React Flow reports, so
+    // ELK's spline sections are not carried into the render
+    data: { kind: e.kind, label: e.label, index: i },
   }));
 
   return (

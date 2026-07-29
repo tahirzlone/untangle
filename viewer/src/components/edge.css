@@ -1,48 +1,68 @@
-.bp-edge {
-  stroke: var(--ink);
-  stroke-width: var(--rule-pen);
-  stroke-linejoin: round;
+/* Signal edges — visual spec: design/theme-variants.html, VARIANT C
+   (.edge / .edge-dim / .edge-retry / .flow-dot / .edge-label). The curve itself
+   comes from React Flow's getBezierPath against the real ports, so this file
+   only carries ink and energy. */
+.sg-edge {
+  stroke: var(--accent);
+  stroke-width: 2;
+  opacity: 0.75;
+  stroke-linecap: round;
+  /* pathLength=1 normalizes every edge to a single unit, so one dash pair draws
+     any length of curve in the same beat */
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  animation: bp-plot var(--plot-edge-dur) ease-in-out forwards;
-  animation-delay: calc(0.5s + var(--i, 0) * var(--plot-edge-stagger));
+  animation: sg-draw var(--flow-dur) ease-in-out forwards;
+  animation-delay: calc(0.3s + var(--i, 0) * var(--flow-stagger));
 }
-.bp-edge--branch { stroke-dasharray: 1; }
-.bp-edge--retry {
-  stroke: var(--red-checker);
-  animation-name: bp-plot-dashed;
+/* branches read as the quieter path — the mock's .edge-dim */
+.sg-edge--branch {
+  stroke: color-mix(in srgb, var(--accent) 45%, var(--line));
 }
-/* annotation tags ride above the node layer — stated explicitly so the
-   intent survives any future change to React Flow's own stacking */
-.bp-canvas .react-flow__edgelabel-renderer { z-index: 5; }
+.sg-edge--retry {
+  stroke: var(--ember);
+  opacity: 0.9;
+  animation-name: sg-draw-dashed;
+}
 
-.bp-edge-tag {
+.sg-flow-dot {
+  fill: var(--accent);
+}
+
+/* chips ride above the node layer — stated explicitly so the intent survives
+   any future change to React Flow's own stacking */
+.bp-canvas .react-flow__edgelabel-renderer {
+  z-index: 5;
+}
+
+.sg-edge-tag {
   position: absolute;
-  font-family: var(--font-anno);
-  font-size: 9px;
-  font-style: italic;
-  color: var(--graphite);
-  background: var(--paper);
-  border: var(--rule-hair) solid color-mix(in srgb, var(--ink) 30%, transparent);
-  padding: 1px 4px;
   display: flex;
   flex-direction: column;
-  pointer-events: none;
+  font-family: var(--font-anno);
+  font-style: italic;
+  font-size: 9.5px;
+  color: var(--dim);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px 8px;
   white-space: nowrap;
+  pointer-events: none;
 }
-.bp-edge-tag--retry {
-  color: var(--red-checker);
-  border-color: color-mix(in srgb, var(--red-checker) 40%, transparent);
+.sg-edge-tag--retry {
+  color: var(--ember);
+  border-color: color-mix(in srgb, var(--ember) 40%, transparent);
 }
-@keyframes bp-plot {
+
+@keyframes sg-draw {
   to { stroke-dashoffset: 0; }
 }
-@keyframes bp-plot-dashed {
+@keyframes sg-draw-dashed {
   to { stroke-dashoffset: 0; stroke-dasharray: 0.04 0.02; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .bp-edge { animation: none; stroke-dashoffset: 0; }
-  /* normalized units: pathLength=1 makes the whole path 1 unit long,
-     so this matches the bp-plot-dashed end state instead of rendering solid */
-  .bp-edge--retry { stroke-dasharray: 0.04 0.02; }
+  .sg-edge { animation: none; stroke-dashoffset: 0; }
+  /* normalized units: pathLength=1 makes the whole curve 1 unit long, so this
+     matches the sg-draw-dashed end state instead of rendering solid */
+  .sg-edge--retry { stroke-dasharray: 0.04 0.02; }
 }
