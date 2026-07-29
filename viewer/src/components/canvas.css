@@ -1,0 +1,79 @@
+/* Signal graph canvas — visual spec: design/theme-variants.html, VARIANT C
+   (.canvas / .toolbar / .chip). The mock frames its demo in a rounded card;
+   here the canvas is the whole workspace, so it runs full-bleed inside
+   .app-main with no radius and no border. */
+.sg-canvas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 900px 420px at 30% 0%, var(--accent-soft), transparent 60%),
+    radial-gradient(circle 1.2px at center, var(--dot) 98%, transparent) 0 0 / 26px 26px,
+    var(--bg);
+}
+
+.sg-canvas--loading {
+  display: grid;
+  place-items: center;
+  font-family: var(--font-anno);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  color: var(--dim);
+  animation: sg-compiling 1.6s ease-in-out infinite;
+}
+
+.sg-defs { position: absolute; width: 0; height: 0; }
+
+.sg-toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.sg-wf-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.01em;
+  color: var(--text);
+}
+.sg-chip {
+  font-family: var(--font-anno);
+  font-size: 10px;
+  color: var(--dim);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-chip);
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+.sg-chip b { color: var(--accent); font-weight: 500; }
+.sg-chip-hot { color: var(--ember); }
+/* the provenance chip sits alone on the right */
+.sg-chip--end { margin-left: auto; }
+
+/* z-index: 0 gives the viewport its own stacking context, so React Flow's
+   internal layers (nodes, edge labels) resolve against each other and can
+   never climb over the toolbar. */
+.sg-viewport { position: absolute; inset: 52px 0 0 0; z-index: 0; }
+.sg-viewport .react-flow { background: transparent; }
+/* chips ride above the node layer — stated explicitly so the intent survives
+   any future change to React Flow's own stacking */
+.sg-viewport .react-flow__edgelabel-renderer { z-index: 5; }
+
+@keyframes sg-compiling {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sg-canvas--loading { animation: none; opacity: 1; }
+}

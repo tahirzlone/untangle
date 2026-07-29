@@ -28,12 +28,8 @@
   fill: var(--accent);
 }
 
-/* chips ride above the node layer — stated explicitly so the intent survives
-   any future change to React Flow's own stacking */
-.bp-canvas .react-flow__edgelabel-renderer {
-  z-index: 5;
-}
-
+/* the edge-label layer's stacking lives with the viewport that owns it —
+   see .sg-viewport in canvas.css */
 .sg-edge-tag {
   position: absolute;
   display: flex;

@@ -3,7 +3,7 @@ import type { Workflow } from '../graph/types';
 
 // Eager glob: every committed gallery drawing is validated and frozen into a
 // module-level array at import time. Entries are therefore referentially stable
-// for the life of the page — BlueprintSheet's layout effect keys off the
+// for the life of the page — GraphCanvas's layout effect keys off the
 // workflow object identity, so a fresh object per render would re-run ELK.
 const modules = import.meta.glob('../../../gallery/*.workflow.json', {
   eager: true,

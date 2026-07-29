@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { galleryEntries } from './gallery/galleryData';
 import { loadWorkflow } from './graph/load';
 import type { Workflow } from './graph/types';
-import { BlueprintSheet } from './components/BlueprintSheet';
+import { GraphCanvas } from './components/GraphCanvas';
 import { GalleryIndex } from './components/GalleryIndex';
 import { RejectedSheet } from './components/RejectedSheet';
 
@@ -26,7 +26,7 @@ function readFileText(file: File): Promise<string> {
 }
 
 export default function App() {
-  // The workflow lives in view state, so the object handed to BlueprintSheet
+  // The workflow lives in view state, so the object handed to GraphCanvas
   // keeps its identity across re-renders (its layout effect is keyed on it).
   const [view, setView] = useState<View>({ mode: 'gallery' });
 
@@ -93,7 +93,7 @@ export default function App() {
             onDropFile={handleFile}
           />
         )}
-        {view.mode === 'sheet' && <BlueprintSheet workflow={view.workflow} />}
+        {view.mode === 'sheet' && <GraphCanvas workflow={view.workflow} />}
         {view.mode === 'rejected' && (
           <RejectedSheet errors={view.errors} onBack={() => setView({ mode: 'gallery' })} />
         )}
