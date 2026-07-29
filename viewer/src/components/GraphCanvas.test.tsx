@@ -33,7 +33,7 @@ it('states the graph in the toolbar: title, counts, pain, KB, model', async () =
     expect(screen.getAllByTestId('sg-node')).toHaveLength(wf.nodes.length);
   });
 
-  // natural case — the title is the author's, not a drafting-office caption
+  // natural case — the title is the author's, not a filing-cabinet caption
   expect(screen.getByText(wf.meta.title)).toBeInTheDocument();
   expect(screen.getByText('KB NOT LINKED')).toBeInTheDocument();
 

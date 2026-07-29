@@ -98,6 +98,35 @@ it('staggers each edge by its index', () => {
   expect(container.querySelector('path.sg-edge')!.classList.contains('sg-edge--branch')).toBe(true);
 });
 
+// ELK reverses edges to break the retry cycles, so ordinary sequence edges come
+// back pointing right-to-left. Those get routed around the cards, not through them.
+const REVERSED = { ...PORTS, sourceX: 2317, sourceY: 284, targetX: 1038, targetY: 92.3 };
+
+it('loops a right-to-left edge below the rows instead of curving under the cards', () => {
+  const { container } = render(
+    <svg>
+      <SignalEdge {...({ ...REVERSED, data: { kind: 'sequence', index: 0 } } as EdgeProps)} />
+    </svg>,
+  );
+  const d = container.querySelector('path.sg-edge')!.getAttribute('d')!;
+  expect(d.startsWith('M2317,284')).toBe(true);
+  expect(d.endsWith('L1038,92.3')).toBe(true);
+  // an orthogonal loop with quadratic corners, never a cubic
+  expect(d).not.toContain('C');
+  expect(d.match(/Q/g)).toHaveLength(4);
+  // the long run clears the lower card row (284 + 148/2 = 358)
+  expect(d).toContain(',390');
+});
+
+it('withholds the flow dot on a back-edge even when it is a sequence edge', () => {
+  const { container } = render(
+    <svg>
+      <SignalEdge {...({ ...REVERSED, data: { kind: 'sequence', index: 0 } } as EdgeProps)} />
+    </svg>,
+  );
+  expect(container.querySelector('circle.sg-flow-dot')).toBeNull();
+});
+
 it('EdgeTag renders one span per wrapped line', () => {
   const { getByTestId } = render(
     <EdgeTag lines={['flaky selector /', 'timing race']} kind="retry" x={10} y={50} />,

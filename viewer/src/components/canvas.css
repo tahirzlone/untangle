@@ -70,10 +70,14 @@
    any future change to React Flow's own stacking */
 .sg-viewport .react-flow__edgelabel-renderer { z-index: 5; }
 
+/* The wait is a signal, not a fade: the caption warms toward the accent and
+   back. `color: var(--x)` resolves to a concrete color before interpolation, so
+   these tokens animate as smoothly as literals would. */
 @keyframes sg-compiling {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+  0%, 100% { color: var(--dim); text-shadow: none; }
+  50% { color: var(--accent); text-shadow: 0 0 12px var(--accent-soft); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sg-canvas--loading { animation: none; opacity: 1; }
+  /* no animation-name means the base `color: var(--dim)` above stands */
+  .sg-canvas--loading { animation: none; }
 }

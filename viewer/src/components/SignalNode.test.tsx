@@ -64,9 +64,10 @@ it('carries no kind-shaped variant classes — every card is uniform', () => {
   for (const kind of KINDS) {
     const { unmount } = render(<SignalNodeBody node={node({ kind, painLevel: 1 })} />);
     const el = screen.getByTestId('sg-node');
+    // the exact-match above already forbids every legacy and kind-shaped class;
+    // this keeps the failure message pointed at the thing under test
     expect(el.className).toBe('sg-node');
     expect(el.className).not.toContain(`--${kind}`);
-    expect(el.className).not.toContain('bp-node');
     unmount();
   }
 });

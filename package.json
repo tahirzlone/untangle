@@ -5,7 +5,7 @@
   "license": "MIT",
   "engines": { "node": ">=20" },
   "type": "module",
-  "description": "Blueprint your Claude workflows — graph how Claude would break down a task, then watch skills, plugins, and MCPs simplify it.",
+  "description": "Map your Claude workflows — graph how Claude would break down a task, then watch skills, plugins, and MCPs simplify it.",
   "scripts": {
     "test": "vitest run",
     "validate": "node scripts/validate.mjs",

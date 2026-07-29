@@ -8,7 +8,7 @@ import { RejectedSheet } from './components/RejectedSheet';
 
 type View =
   | { mode: 'gallery' }
-  | { mode: 'sheet'; workflow: Workflow }
+  | { mode: 'graph'; workflow: Workflow }
   | { mode: 'rejected'; errors: string[] };
 
 const BOM = 0xfeff;
@@ -45,7 +45,7 @@ export default function App() {
           return;
         }
         const res = loadWorkflow(raw);
-        if (res.ok) setView({ mode: 'sheet', workflow: res.workflow });
+        if (res.ok) setView({ mode: 'graph', workflow: res.workflow });
         else setView({ mode: 'rejected', errors: res.errors });
       },
       (err: Error) => {
@@ -57,8 +57,8 @@ export default function App() {
   // Drop is an app-wide affordance, not a gallery-only one. Without a window
   // guard the browser takes the default action for a dropped file — it
   // navigates away from the SPA to render the JSON — from every view except the
-  // gallery. Guarding at the window both stops that and makes drop work
-  // everywhere: on the sheet, on the rejection sheet, on the masthead.
+  // index. Guarding at the window both stops that and makes drop work
+  // everywhere: on the graph canvas, on the rejection panel, on the masthead.
   useEffect(() => {
     function onDragOver(ev: globalThis.DragEvent) {
       ev.preventDefault();
@@ -82,18 +82,18 @@ export default function App() {
       <header className="app-masthead">
         Flowprint{' '}
         <button className="masthead-sub masthead-link" onClick={() => setView({ mode: 'gallery' })}>
-          drawing index
+          graph index
         </button>
       </header>
       <main className="app-main">
         {view.mode === 'gallery' && (
           <GalleryIndex
             entries={galleryEntries}
-            onOpen={(workflow) => setView({ mode: 'sheet', workflow })}
+            onOpen={(workflow) => setView({ mode: 'graph', workflow })}
             onDropFile={handleFile}
           />
         )}
-        {view.mode === 'sheet' && <GraphCanvas workflow={view.workflow} />}
+        {view.mode === 'graph' && <GraphCanvas workflow={view.workflow} />}
         {view.mode === 'rejected' && (
           <RejectedSheet errors={view.errors} onBack={() => setView({ mode: 'gallery' })} />
         )}

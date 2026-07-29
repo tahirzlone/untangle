@@ -3,6 +3,7 @@ import { Position, ReactFlow, type Edge, type Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import type { Workflow } from '../graph/types';
 import { layoutWorkflow, type LaidOutGraph } from '../graph/layout';
+import { planBackEdges } from '../graph/backEdge';
 import { SignalNode } from './SignalNode';
 import { SignalEdge } from './SignalEdge';
 import './canvas.css';
@@ -57,6 +58,11 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     selectable: false,
   }));
 
+  // Reversed edges need to know about cards they never touch, so their return
+  // route is planned here — the one place that can see the whole layout — and
+  // handed to SignalEdge as data.
+  const backPlan = planBackEdges(laidOut.nodes, laidOut.edges);
+
   const edges: Edge[] = laidOut.edges.map((e, i) => ({
     id: e.id,
     source: e.from,
@@ -64,7 +70,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     type: 'signal',
     // no points: SignalEdge curves between the ports React Flow reports, so
     // ELK's spline sections are not carried into the render
-    data: { kind: e.kind, label: e.label, index: i },
+    data: { kind: e.kind, label: e.label, index: i, back: backPlan.get(e.id) },
   }));
 
   const { meta } = workflow;
