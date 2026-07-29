@@ -13,22 +13,44 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 22px 24px;
-  overflow-y: auto;
+  /* the panel itself does not scroll — its body does, so the header stays put */
+  overflow: hidden;
   background: var(--surface);
   border-left: 1px solid var(--line);
   box-shadow: -20px 0 44px color-mix(in srgb, var(--bg-deep) 55%, transparent);
   animation: sg-drawer-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+/* The row that never moves. A suggestion list can run longer than the panel, and
+   a close control that scrolls away with the cards leaves the panel looking like
+   it has no way out. */
+.sg-drawer-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 24px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* min-height: 0 is what actually lets this scroll — a flex child's automatic
+   minimum size is its content, so without it the body grows the panel instead. */
+.sg-drawer-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 18px 24px 22px;
+}
+
 .sg-drawer-x {
-  position: absolute;
-  top: 14px;
-  right: 14px;
   width: 26px;
   height: 26px;
+  flex: none;
   display: grid;
   place-items: center;
   padding: 0;
@@ -96,6 +118,134 @@
   line-height: 1.5;
   color: var(--dim);
   margin: 4px 0 0;
+}
+
+/* Suggestions — one card per matched Airtable row. */
+.sg-sug-list {
+  /* the body centres nothing and stretches nothing, so the list claims the width
+     for itself and its cards inherit it */
+  align-self: stretch;
+  margin-top: 6px;
+}
+
+.sg-sug-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.sg-sug-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+
+/* The category, in the ink its Airtable select wears. Neutral by default so an
+   unrecognised category still reads as a chip rather than as nothing. */
+.sg-sug-cat {
+  flex: none;
+  font-family: var(--font-anno);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bg-deep);
+  background: var(--cat-other);
+  border-radius: var(--radius-chip);
+  padding: 2px 8px;
+}
+.sg-sug-cat--skill { background: var(--cat-skill); }
+.sg-sug-cat--plugin { background: var(--cat-plugin); }
+.sg-sug-cat--mcp { background: var(--cat-mcp); }
+.sg-sug-cat--other { background: var(--cat-other); }
+
+.sg-sug-name {
+  font-family: var(--font-anno);
+  font-size: 11px;
+  color: var(--accent);
+  text-decoration: none;
+  /* repo names are long and the panel is 360px — wrap rather than overflow */
+  overflow-wrap: anywhere;
+}
+.sg-sug-name:hover {
+  text-decoration: underline;
+}
+.sg-sug-name:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.sg-sug-claim {
+  font-family: var(--font-display);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  margin: 0;
+}
+
+/* The install line is meant to be taken away: one click selects the whole
+   command, so nothing is copied half-formed. */
+.sg-sug-install {
+  box-sizing: border-box;
+  width: 100%;
+  font-family: var(--font-anno);
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 8px;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+/* Same weight and colour as OPEN GRAPH in the gallery: the accent-filled button
+   is the theme's one "this does the thing" control. */
+.sg-sug-apply {
+  width: 100%;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--bg-deep);
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  padding: 9px 12px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.sg-sug-apply:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 85%, var(--text));
+}
+.sg-sug-apply:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* A patch the reducer refuses: the control stays where it is and stops being
+   accent, so the card reads as "not this one" rather than as broken chrome. */
+.sg-sug-apply:disabled {
+  color: var(--dim);
+  background: var(--line);
+  cursor: default;
+}
+
+.sg-sug-invalid {
+  align-self: center;
+  font-family: var(--font-anno);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--dim);
 }
 
 /* Enters from the edge it lives on. Mount-only, so it never plays backwards. */

@@ -1,5 +1,5 @@
 import { Handle, Position } from '@xyflow/react';
-import type { NodeKind, WorkflowNode } from '../graph/types';
+import type { NodeKind, Suggestion, WorkflowNode } from '../graph/types';
 import { NODE_HEIGHT, NODE_WIDTH } from '../graph/layout';
 import './node.css';
 
@@ -38,31 +38,54 @@ export function PainMeter({ pain }: { pain: WorkflowNode['painLevel'] }) {
   );
 }
 
+/**
+ * The card, plus the pip that says the KB has something to say about it.
+ *
+ * The pip is a SIBLING of the card, not a child: it straddles the top-right
+ * corner, and the card clips its own overflow to keep its rounded border. Both
+ * are positioned against `.sg-node-shell`, which is exactly the card's box.
+ */
 export function SignalNodeBody({
   node,
   selected = false,
+  suggestions = [],
 }: {
   node: WorkflowNode;
   selected?: boolean;
+  suggestions?: Suggestion[];
 }) {
   return (
-    <div
-      className={`sg-node${PAIN_CLASS[node.painLevel] ?? ''}${selected ? ' sg-node--selected' : ''}`}
-      data-testid="sg-node"
-      data-kind={node.kind}
-      data-pain={node.painLevel}
-      title={node.description}
-    >
-      <div className="sg-node-head">
-        <span className="sg-icon" aria-hidden="true">{KIND_ABBR[node.kind]}</span>
-        <span className="sg-label">{node.label}</span>
+    <>
+      {suggestions.length > 0 ? (
+        <span
+          className="sg-badge"
+          data-testid="sg-badge"
+          // role="img" is what makes the label win over the bare digit inside —
+          // "2" on its own tells a screen reader nothing about what there are two of
+          role="img"
+          aria-label={`${suggestions.length} suggestion${suggestions.length === 1 ? '' : 's'}`}
+        >
+          {suggestions.length}
+        </span>
+      ) : null}
+      <div
+        className={`sg-node${PAIN_CLASS[node.painLevel] ?? ''}${selected ? ' sg-node--selected' : ''}`}
+        data-testid="sg-node"
+        data-kind={node.kind}
+        data-pain={node.painLevel}
+        title={node.description}
+      >
+        <div className="sg-node-head">
+          <span className="sg-icon" aria-hidden="true">{KIND_ABBR[node.kind]}</span>
+          <span className="sg-label">{node.label}</span>
+        </div>
+        <p className="sg-desc">{node.description}</p>
+        <div className="sg-foot">
+          <span className="sg-kind">{node.kind}</span>
+          <PainMeter pain={node.painLevel} />
+        </div>
       </div>
-      <p className="sg-desc">{node.description}</p>
-      <div className="sg-foot">
-        <span className="sg-kind">{node.kind}</span>
-        <PainMeter pain={node.painLevel} />
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -80,7 +103,7 @@ export function SignalNode({
   selected,
   isConnectable,
 }: {
-  data: { node: WorkflowNode; index: number };
+  data: { node: WorkflowNode; index: number; suggestions?: Suggestion[] };
   selected?: boolean;
   isConnectable?: boolean;
 }) {
@@ -98,7 +121,7 @@ export function SignalNode({
         className="sg-port"
         isConnectable={isConnectable ?? false}
       />
-      <SignalNodeBody node={data.node} selected={selected} />
+      <SignalNodeBody node={data.node} selected={selected} suggestions={data.suggestions} />
       <Handle
         type="source"
         position={Position.Right}

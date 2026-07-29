@@ -2,8 +2,33 @@
    Card size is set inline from NODE_WIDTH/NODE_HEIGHT (graph/layout.ts) so the
    dimensions ELK laid out against are never restated here. */
 .sg-node-shell {
+  /* the pip hangs off the corner from here — the shell is the card's box, and
+     the card itself clips, so the anchor has to be the shell */
+  position: relative;
   animation: sg-card-in var(--card-in-dur) ease-out backwards;
   animation-delay: calc(var(--i, 0) * var(--flow-stagger));
+}
+
+/* How many suggestions the KB matched to this step. Sits half off the corner, so
+   it reads as attached to the card rather than printed on it. */
+.sg-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  /* over the neighbouring card's shadow, under the drawer */
+  z-index: 2;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-family: var(--font-anno);
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--bg-deep);
+  background: var(--accent);
+  animation: sg-badge-pulse 2s ease-in-out infinite;
 }
 
 /* Ports are part of the look now — visible rings, not hidden anchors.
@@ -145,6 +170,13 @@
   from { opacity: 0; transform: translateX(-12px); }
   to { opacity: 1; transform: translateX(0); }
 }
+/* Breathes rather than blinks: opacity only, so nothing reflows and the count
+   stays legible at every point of the cycle. */
+@keyframes sg-badge-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .sg-node-shell { animation: none; }
+  .sg-node-shell,
+  .sg-badge { animation: none; }
 }

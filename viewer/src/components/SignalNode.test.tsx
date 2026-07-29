@@ -1,8 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import { SignalNodeBody } from './SignalNode';
-import type { NodeKind, WorkflowNode } from '../graph/types';
+import enriched from '../test/fixtures/enriched.workflow.json';
+import type { NodeKind, Suggestion, WorkflowNode } from '../graph/types';
 
 const KINDS: NodeKind[] = ['input', 'process', 'decision', 'loop', 'review', 'output'];
+
+/** Real rows off the enriched fixture — the pip counts what the KB matched. */
+const matched = (nodeId: string): Suggestion[] =>
+  (enriched.suggestions as Suggestion[]).filter((s) => s.nodeId === nodeId);
 
 const node = (over: Partial<WorkflowNode> = {}): WorkflowNode => ({
   id: 'test-node',
@@ -58,6 +63,34 @@ it('marks pain 5 hot, pain 4 warm, and leaves pain 3 unglowed', () => {
   rerender(<SignalNodeBody node={node({ painLevel: 3 })} />);
   expect(screen.getByTestId('sg-node').className).not.toContain('--hot');
   expect(screen.getByTestId('sg-node').className).not.toContain('--warm');
+});
+
+it('pips the card with how many suggestions matched it', () => {
+  const two = matched('verify-browser');
+  expect(two).toHaveLength(2);
+
+  const { rerender } = render(<SignalNodeBody node={node()} suggestions={two} />);
+  expect(screen.getByTestId('sg-badge')).toHaveTextContent('2');
+
+  rerender(<SignalNodeBody node={node()} suggestions={matched('research-docs')} />);
+  expect(screen.getByTestId('sg-badge')).toHaveTextContent('1');
+});
+
+// Most nodes match nothing, and a pip reading "0" would be a claim about the KB
+// that the KB never made.
+it('wears no pip when nothing matched it', () => {
+  const { rerender } = render(<SignalNodeBody node={node()} />);
+  expect(screen.queryByTestId('sg-badge')).not.toBeInTheDocument();
+
+  rerender(<SignalNodeBody node={node()} suggestions={[]} />);
+  expect(screen.queryByTestId('sg-badge')).not.toBeInTheDocument();
+});
+
+// The pip straddles the card's corner, so it cannot live inside the card — the
+// card clips its own overflow to keep its rounded border. Sibling, not child.
+it('hangs the pip outside the clipped card', () => {
+  render(<SignalNodeBody node={node()} suggestions={matched('verify-browser')} />);
+  expect(screen.getByTestId('sg-node')).not.toContainElement(screen.getByTestId('sg-badge'));
 });
 
 it('carries no kind-shaped variant classes — every card is uniform', () => {

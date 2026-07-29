@@ -1,13 +1,19 @@
 import { createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import gallery from '../../../gallery/add-e2e-tests.workflow.json';
+import enrichedDoc from '../test/fixtures/enriched.workflow.json';
 import { loadWorkflow } from '../graph/load';
+import type { Workflow } from '../graph/types';
 import { GraphCanvas } from './GraphCanvas';
 
-const wf = (() => {
-  const res = loadWorkflow(gallery);
-  if (!res.ok) throw new Error('fixture invalid');
+function fixture(raw: unknown, what: string): Workflow {
+  const res = loadWorkflow(raw);
+  if (!res.ok) throw new Error(`${what} fixture invalid: ${res.errors.join('; ')}`);
   return res.workflow;
-})();
+}
+
+const wf = fixture(gallery, 'gallery');
+/** The KB-matched graph: two suggestions on one node, one patch the reducer refuses. */
+const enriched = fixture(enrichedDoc, 'enriched');
 
 const maxPain = wf.nodes.reduce((m, n) => Math.max(m, n.painLevel), 0);
 
@@ -19,12 +25,14 @@ const maxPain = wf.nodes.reduce((m, n) => Math.max(m, n.painLevel), 0);
  */
 const LAYOUT_WAIT = { timeout: 5000 };
 
-async function cards(): Promise<HTMLElement[]> {
+async function cardsOf(graph: Workflow): Promise<HTMLElement[]> {
   await waitFor(() => {
-    expect(screen.getAllByTestId('sg-node')).toHaveLength(wf.nodes.length);
+    expect(screen.getAllByTestId('sg-node')).toHaveLength(graph.nodes.length);
   }, LAYOUT_WAIT);
   return screen.getAllByTestId('sg-node');
 }
+
+const cards = () => cardsOf(wf);
 
 function cardFor(label: string, all: HTMLElement[]): HTMLElement {
   const card = all.find((el) => el.textContent?.includes(label));
@@ -276,4 +284,117 @@ it('replans the back-edge floors from live positions when a node moves', async (
   await waitFor(() => {
     expect(backPaths()).not.toEqual(before);
   });
+});
+
+// ---------------------------------------------------------------------------
+// Suggestions on the graph
+// ---------------------------------------------------------------------------
+
+const VERIFY = 'Verify it by hand in the browser';
+const SCAFFOLD = 'Scaffold the module & wire it up';
+
+it('pips only the cards the KB matched, with the count it matched', async () => {
+  const { container } = render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+
+  const pip = (id: string) =>
+    container.querySelector(`.react-flow__node[data-id="${id}"] [data-testid="sg-badge"]`);
+
+  expect(pip('verify-browser')).toHaveTextContent('2');
+  expect(pip('research-docs')).toHaveTextContent('1');
+  expect(pip('scaffold-repo')).toHaveTextContent('1');
+  expect(pip('write-code')).toBeNull();
+  expect(pip('gather-brief')).toBeNull();
+  expect(screen.getAllByTestId('sg-badge')).toHaveLength(3);
+});
+
+it('leaves every card bare on a graph with no KB behind it', async () => {
+  render(<GraphCanvas workflow={wf} />);
+  await cards();
+  expect(screen.queryByTestId('sg-badge')).not.toBeInTheDocument();
+});
+
+// The drawer is the only route to a suggestion, so it cannot be mouse-only.
+// React Flow already focuses cards and selects them on Enter/Space; what it does
+// not do is tell us about it, so the canvas listens for the same keys.
+it('opens the drawer from the keyboard, with no pointer involved', async () => {
+  const { container } = render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+
+  const wrapper = container.querySelector<HTMLElement>(
+    '.react-flow__node[data-id="verify-browser"]',
+  )!;
+  wrapper.focus();
+  expect(document.activeElement).toBe(wrapper);
+
+  fireEvent.keyDown(wrapper, { key: 'Enter' });
+  expect(await screen.findByTestId('detail-drawer')).toHaveTextContent(VERIFY);
+});
+
+it('takes Space as well as Enter', async () => {
+  const { container } = render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+
+  const wrapper = container.querySelector<HTMLElement>(
+    '.react-flow__node[data-id="gather-brief"]',
+  )!;
+  wrapper.focus();
+  fireEvent.keyDown(wrapper, { key: ' ' });
+  expect(await screen.findByTestId('detail-drawer')).toHaveTextContent(
+    'Gather the brief & acceptance criteria',
+  );
+});
+
+it('ignores the keys when the focus is not on a card', async () => {
+  render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+
+  const reset = screen.getByTestId('reset-layout');
+  reset.focus();
+  fireEvent.keyDown(reset, { key: 'Enter' });
+  expect(screen.queryByTestId('detail-drawer')).not.toBeInTheDocument();
+});
+
+// Two rows can upgrade the same step; the canvas dry-runs each patch on its own,
+// so neither sibling is dimmed by the other's existence.
+it('finds both siblings on one node appliable', async () => {
+  render(<GraphCanvas workflow={enriched} />);
+  const all = await cardsOf(enriched);
+
+  fireEvent.click(cardFor(VERIFY, all));
+  await screen.findByTestId('detail-drawer');
+
+  const buttons = screen.getAllByTestId('sg-sug-apply');
+  expect(buttons).toHaveLength(2);
+  for (const b of buttons) expect(b).toBeEnabled();
+  expect(screen.queryByTestId('sg-sug-invalid')).not.toBeInTheDocument();
+});
+
+// The fixture's scaffold patch passes the schema and still breaks the graph: it
+// deletes the step, then wires an edge back into it. The reducer refuses, the dry
+// run hears the refusal, and the card says so rather than offering a button that
+// throws.
+it('marks the patch the reducer refuses as invalid', async () => {
+  render(<GraphCanvas workflow={enriched} />);
+  const all = await cardsOf(enriched);
+
+  fireEvent.click(cardFor(SCAFFOLD, all));
+  await screen.findByTestId('detail-drawer');
+
+  expect(screen.getByTestId('sg-sug-apply')).toBeDisabled();
+  expect(screen.getByTestId('sg-sug-invalid')).toHaveTextContent('PATCH INVALID');
+});
+
+// Task 5 owns the morph. Until it lands, pressing APPLY is inert — pinned so a
+// half-wired handler cannot quietly mutate the graph in the meantime.
+it('leaves the graph alone when APPLY is pressed — the morph is Task 5', async () => {
+  render(<GraphCanvas workflow={enriched} />);
+  const all = await cardsOf(enriched);
+
+  fireEvent.click(cardFor(VERIFY, all));
+  await screen.findByTestId('detail-drawer');
+
+  fireEvent.click(screen.getAllByTestId('sg-sug-apply')[0]);
+  expect(screen.getAllByTestId('sg-node')).toHaveLength(enriched.nodes.length);
+  expect(screen.getAllByTestId('sg-badge')).toHaveLength(3);
 });

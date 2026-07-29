@@ -15,6 +15,15 @@
   --ember: #F97316;
   --ember-hot: #EF4444;
 
+  /* Suggestion categories — one ink per kind of resource, mirroring the select
+     colours the Airtable rows already wear, so a card in the drawer reads the
+     same colour as its row in the KB. Categories outside the three Claude ones
+     (Connector, Other) share the neutral. */
+  --cat-skill: #C084FC;
+  --cat-plugin: #F472B6;
+  --cat-mcp: #2DD4BF;
+  --cat-other: #94A3B8;
+
   /* type */
   --font-display: "Space Grotesk", system-ui, sans-serif;
   --font-anno: "JetBrains Mono", ui-monospace, Consolas, monospace;

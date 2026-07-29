@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { Position, ReactFlow, useNodesState, type Edge, type Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import type { Workflow, WorkflowNode } from '../graph/types';
+import type { Suggestion, Workflow, WorkflowNode } from '../graph/types';
+import { applySuggestion, createSession, type GraphSession } from '../graph/apply';
 import { layoutWorkflow, NODE_HEIGHT, NODE_WIDTH, type LaidOutGraph } from '../graph/layout';
 import { planBackEdges, type BackEdgePlan } from '../graph/backEdge';
 import { DetailDrawer } from './DetailDrawer';
@@ -12,12 +13,20 @@ import './canvas.css';
 const nodeTypes = { signal: SignalNode };
 const edgeTypes = { signal: SignalEdge };
 
+/** Shared by every card the KB matched nothing to, so no empty array is rebuilt. */
+const NO_SUGGESTIONS: Suggestion[] = [];
+
 /** The data every SignalNode carries; also how a click finds its workflow node. */
 interface SignalNodeData extends Record<string, unknown> {
   node: WorkflowNode;
   index: number;
+  /** The rows matched to this step — the card's pip counts them. */
+  suggestions: Suggestion[];
 }
 type SignalRFNode = Node<SignalNodeData>;
+
+/** Keys that open a focused card's detail, matching React Flow's own selection keys. */
+const OPEN_KEYS = ['Enter', ' '];
 
 /**
  * ELK's answer, turned into React Flow's starting positions.
@@ -25,7 +34,10 @@ type SignalRFNode = Node<SignalNodeData>;
  * After this the positions belong to React Flow: the user drags them wherever
  * they like and RESET LAYOUT is what runs this again.
  */
-function toRFNodes(laidOut: LaidOutGraph): SignalRFNode[] {
+function toRFNodes(
+  laidOut: LaidOutGraph,
+  matched: Map<string, Suggestion[]>,
+): SignalRFNode[] {
   return laidOut.nodes.map((n, i) => ({
     id: n.id,
     type: 'signal',
@@ -46,7 +58,7 @@ function toRFNodes(laidOut: LaidOutGraph): SignalRFNode[] {
       { type: 'target', position: Position.Left, x: 0, y: n.height / 2 },
       { type: 'source', position: Position.Right, x: n.width, y: n.height / 2 },
     ],
-    data: { node: n.node, index: i },
+    data: { node: n.node, index: i, suggestions: matched.get(n.id) ?? NO_SUGGESTIONS },
     // draggable/selectable are deliberately unset per node: leaving them
     // undefined is what lets the canvas-level flags below govern all of them.
   }));
@@ -59,17 +71,64 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   // bumped by RESET LAYOUT — re-running the effect is the whole mechanism
   const [layoutRun, setLayoutRun] = useState(0);
 
+  // The KB's answer, indexed by the step it answers about. Two rows can match the
+  // same step, so this is a list per node, not one entry per node.
+  const matched = useMemo(() => {
+    const byNode = new Map<string, Suggestion[]>();
+    for (const s of workflow.suggestions) {
+      const list = byNode.get(s.nodeId);
+      if (list) list.push(s);
+      else byNode.set(s.nodeId, [s]);
+    }
+    return byNode;
+  }, [workflow]);
+
+  /**
+   * Would the reducer accept this patch? Answered by running it, on a session
+   * nobody keeps: a suggestion can satisfy the schema and still describe a graph
+   * that cannot exist, and the only honest test of that is the reducer itself.
+   *
+   * Every question is asked of the same untouched session, so siblings on one
+   * node are judged independently — applying one would delete the other, but
+   * neither dry run ever commits.
+   *
+   * Task 5 replaces this with the live session the canvas owns.
+   */
+  const canApply = useMemo(() => {
+    let base: GraphSession | null = null;
+    try {
+      base = createSession(workflow);
+    } catch {
+      // A graph the reducer will not even open (colliding row ids) has nothing
+      // appliable on it — every card says so rather than the canvas throwing.
+      base = null;
+    }
+    return (airtableRecordId: string): boolean => {
+      if (!base) return false;
+      try {
+        applySuggestion(base, airtableRecordId);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+  }, [workflow]);
+
+  // Task 5 owns the morph: this is where applySuggestion's result becomes the
+  // graph on screen. Until then the button is wired and deliberately inert.
+  const onApply = useCallback((_airtableRecordId: string) => {}, []);
+
   useEffect(() => {
     let live = true;
     layoutWorkflow(workflow).then((g) => {
       if (!live) return;
       setLaidOut(g);
-      setNodes(toRFNodes(g));
+      setNodes(toRFNodes(g, matched));
     });
     return () => {
       live = false;
     };
-  }, [workflow, layoutRun, setNodes]);
+  }, [workflow, layoutRun, setNodes, matched]);
 
   // Where the cards actually are, right now — after every drag, not where ELK
   // first put them. The back-edge plan below is only honest if it reads this.
@@ -119,6 +178,32 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     setSelected(node.data.node);
   }, []);
   const closeDrawer = useCallback(() => setSelected(null), []);
+
+  /**
+   * The same open, reached without a pointer.
+   *
+   * React Flow already makes each card focusable and already selects it on
+   * Enter/Space — what it does not do is call `onNodeClick`, which is the only
+   * thing that opens the drawer. So the graph pane listens for those keys as they
+   * bubble and reads the focused card's `data-id`, which React Flow stamps on
+   * every node wrapper. Reading the DOM is the honest route here: the keystroke
+   * lands on React Flow's element, not on ours, so the id has to come from it.
+   */
+  const onPaneKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLDivElement>) => {
+      if (!OPEN_KEYS.includes(e.key)) return;
+      const focused = document.activeElement;
+      const wrapper = focused instanceof Element ? focused.closest('.react-flow__node') : null;
+      const id = wrapper?.getAttribute('data-id');
+      if (!id) return;
+      const node = nodes.find((n) => n.id === id)?.data.node;
+      if (!node) return;
+      // Space would otherwise scroll the pane out from under the drawer
+      e.preventDefault();
+      setSelected(node);
+    },
+    [nodes],
+  );
   // Selection is dropped here rather than left to the rebuild the effect will
   // do: ELK is async, and a ring that lingers until it answers reads as a button
   // that did nothing.
@@ -171,7 +256,9 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
           generated by <b>{meta.model}</b>
         </span>
       </div>
-      <div className="sg-viewport">
+      {/* The pane is a listening post for keys aimed at the focusable cards inside
+          it — it takes no focus of its own and adds no keyboard trap. */}
+      <div className="sg-viewport" onKeyDown={onPaneKeyDown}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -202,7 +289,15 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
           proOptions={{ hideAttribution: true }}
         />
       </div>
-      {selected ? <DetailDrawer node={selected} onClose={closeDrawer} /> : null}
+      {selected ? (
+        <DetailDrawer
+          node={selected}
+          onClose={closeDrawer}
+          suggestions={matched.get(selected.id) ?? NO_SUGGESTIONS}
+          canApply={canApply}
+          onApply={onApply}
+        />
+      ) : null}
     </div>
   );
 }

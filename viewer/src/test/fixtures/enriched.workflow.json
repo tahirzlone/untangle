@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "task": "Ship a small feature end to end, from brief to release",
+    "title": "Ship a Feature End to End",
+    "generatedAt": "2026-07-29T14:02:00Z",
+    "model": "claude-fable-5",
+    "kbSource": "airtable"
+  },
+  "nodes": [
+    {
+      "id": "gather-brief",
+      "label": "Gather the brief & acceptance criteria",
+      "kind": "input",
+      "description": "Ask what the feature must do, who it is for, and what counts as done. Several rounds of clarification before any code can be written.",
+      "painLevel": 2
+    },
+    {
+      "id": "research-docs",
+      "label": "Research the libraries & read the docs",
+      "kind": "process",
+      "description": "Open a dozen tabs of API references, changelogs, and issue threads by hand, then copy the relevant snippets somewhere they can be found again. Half the pages are stale and the version that matters is never the one indexed.",
+      "painLevel": 3
+    },
+    {
+      "id": "scaffold-repo",
+      "label": "Scaffold the module & wire it up",
+      "kind": "process",
+      "description": "Create the files, imports, config entries, and boilerplate the codebase already expects for a module of this shape, then hook the new module into the router and the build.",
+      "painLevel": 2
+    },
+    {
+      "id": "write-code",
+      "label": "Write the feature, one slice at a time",
+      "kind": "loop",
+      "description": "Implement a slice, run it, read the error, adjust. Repeats until the behaviour matches the brief; every slice re-reads the same surrounding code.",
+      "painLevel": 4
+    },
+    {
+      "id": "verify-browser",
+      "label": "Verify it by hand in the browser",
+      "kind": "process",
+      "description": "Start the dev server, click through the flow, watch the console, resize the window, and check the states nobody remembers to check. Every fix means walking the whole path again from the top, and a missed console error ships.",
+      "painLevel": 5
+    },
+    {
+      "id": "ship-release",
+      "label": "Open the PR & cut the release",
+      "kind": "output",
+      "description": "Write the description, attach the evidence, get the review, merge, and tag. The evidence is screenshots taken by hand during the previous step.",
+      "painLevel": 2
+    }
+  ],
+  "edges": [
+    { "from": "gather-brief", "to": "research-docs", "kind": "sequence" },
+    { "from": "research-docs", "to": "scaffold-repo", "kind": "sequence" },
+    { "from": "scaffold-repo", "to": "write-code", "kind": "sequence" },
+    { "from": "write-code", "to": "verify-browser", "kind": "sequence" },
+    { "from": "verify-browser", "to": "ship-release", "kind": "sequence", "label": "all green" },
+    { "from": "verify-browser", "to": "write-code", "kind": "retry", "label": "defect found" }
+  ],
+  "suggestions": [
+    {
+      "nodeId": "research-docs",
+      "airtableRecordId": "recA7kQ2mZ9pLxT4b",
+      "name": "firecrawl-mcp",
+      "url": "https://github.com/firecrawl/firecrawl-mcp-server",
+      "category": "MCP Server",
+      "claim": "Reads the live docs for you and answers from the page, so the tab-hoarding round trip disappears.",
+      "install": "claude mcp add firecrawl -- npx -y firecrawl-mcp",
+      "effect": {
+        "removeNodes": ["research-docs"],
+        "mergeNodes": [],
+        "replaceWith": {
+          "id": "research-mcp",
+          "label": "Pull the docs in-session",
+          "kind": "process",
+          "description": "Ask for the API surface and get the current page back inline, cited, without leaving the session.",
+          "painLevel": 1
+        },
+        "newEdges": [
+          { "from": "gather-brief", "to": "research-mcp", "kind": "sequence" },
+          { "from": "research-mcp", "to": "scaffold-repo", "kind": "sequence" }
+        ],
+        "metrics": {
+          "stepsSaved": 1,
+          "estTimeSavedMin": 25,
+          "estTokensSaved": 4000,
+          "manualInterventionsRemoved": 1
+        }
+      }
+    },
+    {
+      "nodeId": "verify-browser",
+      "airtableRecordId": "recB3nR8vY6wJdK2q",
+      "name": "chrome-devtools-mcp",
+      "url": "https://github.com/ChromeDevTools/chrome-devtools-mcp",
+      "category": "MCP Server",
+      "claim": "Drives the real browser and reads the console itself, so the click-through and the missed error both stop being yours.",
+      "install": "claude mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest",
+      "effect": {
+        "removeNodes": [],
+        "mergeNodes": ["verify-browser"],
+        "replaceWith": {
+          "id": "verify-devtools",
+          "label": "Verify in a driven browser",
+          "kind": "review",
+          "description": "The flow is walked, the console is read, and the screenshots are captured in one pass — including the states nobody remembers.",
+          "painLevel": 1
+        },
+        "newEdges": [
+          { "from": "write-code", "to": "verify-devtools", "kind": "sequence" },
+          { "from": "verify-devtools", "to": "ship-release", "kind": "sequence", "label": "all green" },
+          { "from": "verify-devtools", "to": "write-code", "kind": "retry", "label": "defect found" }
+        ],
+        "metrics": {
+          "stepsSaved": 1,
+          "estTimeSavedMin": 40,
+          "estTokensSaved": 9000,
+          "manualInterventionsRemoved": 3
+        }
+      }
+    },
+    {
+      "nodeId": "verify-browser",
+      "airtableRecordId": "recC9tS5uH1zXfM7e",
+      "name": "browser-verify plugin",
+      "url": "https://github.com/anthropics/claude-code",
+      "category": "Claude Plugin",
+      "claim": "Records the click-through once and replays it on every change, so the walk from the top happens without you.",
+      "effect": {
+        "removeNodes": ["verify-browser"],
+        "mergeNodes": [],
+        "replaceWith": {
+          "id": "verify-replay",
+          "label": "Replay the recorded walk-through",
+          "kind": "review",
+          "description": "The recorded path runs on every change and reports the first state that differs, with the evidence attached.",
+          "painLevel": 2
+        },
+        "newEdges": [
+          { "from": "write-code", "to": "verify-replay", "kind": "sequence" },
+          { "from": "verify-replay", "to": "ship-release", "kind": "sequence", "label": "all green" },
+          { "from": "verify-replay", "to": "write-code", "kind": "retry", "label": "defect found" }
+        ],
+        "metrics": {
+          "stepsSaved": 1,
+          "estTimeSavedMin": 30,
+          "estTokensSaved": 6000,
+          "manualInterventionsRemoved": 2
+        }
+      }
+    },
+    {
+      "nodeId": "scaffold-repo",
+      "airtableRecordId": "recD2vT6yG4kQnP8s",
+      "name": "scaffold-module skill",
+      "url": "https://github.com/anthropics/skills",
+      "category": "Claude Skill",
+      "claim": "Writes the boilerplate a module of this shape always needs — but this patch is malformed on purpose: it deletes the step and then wires an edge back into it.",
+      "install": "/plugin install scaffold-module",
+      "effect": {
+        "removeNodes": ["scaffold-repo"],
+        "mergeNodes": [],
+        "newEdges": [{ "from": "research-docs", "to": "scaffold-repo", "kind": "sequence" }],
+        "metrics": {
+          "stepsSaved": 1,
+          "estTimeSavedMin": 15,
+          "estTokensSaved": 3000,
+          "manualInterventionsRemoved": 1
+        }
+      }
+    }
+  ]
+}
