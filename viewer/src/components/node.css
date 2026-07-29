@@ -130,6 +130,17 @@
     0 4px 18px color-mix(in srgb, var(--bg-deep) 45%, transparent);
 }
 
+/* The card whose detail is open. Written last so its ring wins over the heat
+   shadows above without either of them being restated — pain still colours the
+   meter and the icon, selection owns the border. */
+.sg-node--selected {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 2px var(--accent-soft),
+    0 0 30px color-mix(in srgb, var(--accent) 18%, transparent),
+    0 4px 18px color-mix(in srgb, var(--bg-deep) 45%, transparent);
+}
+
 @keyframes sg-card-in {
   from { opacity: 0; transform: translateX(-12px); }
   to { opacity: 1; transform: translateX(0); }

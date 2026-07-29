@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import gallery from '../../../gallery/add-e2e-tests.workflow.json';
 import { loadWorkflow } from '../graph/load';
 import { GraphCanvas } from './GraphCanvas';
@@ -10,6 +10,27 @@ const wf = (() => {
 })();
 
 const maxPain = wf.nodes.reduce((m, n) => Math.max(m, n.painLevel), 0);
+
+/**
+ * Waits out the async ELK pass and hands back the painted cards. The generous
+ * timeout is for the layout, not for flakiness: a whole ELK run sits between the
+ * render and the first card, and on a loaded machine that outlasts the 1s
+ * default long before anything is actually wrong.
+ */
+const LAYOUT_WAIT = { timeout: 5000 };
+
+async function cards(): Promise<HTMLElement[]> {
+  await waitFor(() => {
+    expect(screen.getAllByTestId('sg-node')).toHaveLength(wf.nodes.length);
+  }, LAYOUT_WAIT);
+  return screen.getAllByTestId('sg-node');
+}
+
+function cardFor(label: string, all: HTMLElement[]): HTMLElement {
+  const card = all.find((el) => el.textContent?.includes(label));
+  if (!card) throw new Error(`no card for ${label}`);
+  return card;
+}
 
 it('lays out and renders every node on the canvas', async () => {
   render(<GraphCanvas workflow={wf} />);
@@ -69,4 +90,140 @@ it('hangs nothing off the root but the defs, the toolbar, and the viewport', asy
     'sg-toolbar',
     'sg-viewport',
   ]);
+});
+
+// React Flow 12 stamps `draggable` (and its own `nopan`) onto the node wrapper
+// exactly when that node may be dragged — see NodeWrapper's class list. Pinning
+// the emitted class is how we hold `nodesDraggable` on without reaching into
+// React Flow's store.
+it('hands every card to React Flow as draggable and selectable', async () => {
+  const { container } = render(<GraphCanvas workflow={wf} />);
+  await cards();
+
+  expect(container.querySelectorAll('.react-flow__node.draggable')).toHaveLength(wf.nodes.length);
+  expect(container.querySelectorAll('.react-flow__node.selectable')).toHaveLength(wf.nodes.length);
+  // reshaping the layout is not rewiring the workflow — ports stay inert
+  expect(container.querySelectorAll('.react-flow__handle.connectable')).toHaveLength(0);
+});
+
+it('opens the detail drawer on the clicked node', async () => {
+  const target = wf.nodes.find((n) => n.painLevel === 5)!;
+  render(<GraphCanvas workflow={wf} />);
+  const all = await cards();
+
+  expect(screen.queryByTestId('detail-drawer')).not.toBeInTheDocument();
+  fireEvent.click(cardFor(target.label, all));
+
+  const drawer = await screen.findByTestId('detail-drawer');
+  expect(drawer).toHaveTextContent(target.label);
+  expect(drawer).toHaveTextContent(target.description);
+  expect(drawer).toHaveTextContent(target.kind);
+});
+
+it('rings the clicked card with the accent selection state', async () => {
+  const target = wf.nodes[0];
+  render(<GraphCanvas workflow={wf} />);
+  const all = await cards();
+
+  fireEvent.click(cardFor(target.label, all));
+  await waitFor(() => {
+    expect(cardFor(target.label, screen.getAllByTestId('sg-node')).className).toContain(
+      'sg-node--selected',
+    );
+  });
+  expect(document.querySelectorAll('.sg-node--selected')).toHaveLength(1);
+});
+
+it('closes the drawer on Escape', async () => {
+  render(<GraphCanvas workflow={wf} />);
+  const all = await cards();
+
+  fireEvent.click(cardFor(wf.nodes[0].label, all));
+  await screen.findByTestId('detail-drawer');
+
+  fireEvent.keyDown(window, { key: 'Escape' });
+  await waitFor(() => {
+    expect(screen.queryByTestId('detail-drawer')).not.toBeInTheDocument();
+  });
+});
+
+it('closes the drawer when the canvas behind it is clicked', async () => {
+  const { container } = render(<GraphCanvas workflow={wf} />);
+  const all = await cards();
+
+  fireEvent.click(cardFor(wf.nodes[0].label, all));
+  await screen.findByTestId('detail-drawer');
+
+  fireEvent.click(container.querySelector('.react-flow__pane')!);
+  await waitFor(() => {
+    expect(screen.queryByTestId('detail-drawer')).not.toBeInTheDocument();
+  });
+});
+
+it('offers RESET LAYOUT, which puts a moved node back and drops the selection', async () => {
+  const { container } = render(<GraphCanvas workflow={wf} />);
+  const all = await cards();
+
+  const reset = screen.getByTestId('reset-layout');
+  expect(reset).toHaveTextContent('RESET LAYOUT');
+
+  const moved = wf.nodes[0];
+  const wrapper = container.querySelector<HTMLElement>(`.react-flow__node[data-id="${moved.id}"]`)!;
+  const pristine = wrapper.style.transform;
+
+  const card = cardFor(moved.label, all);
+  fireEvent.click(card);
+  await screen.findByTestId('detail-drawer');
+  for (let i = 0; i < 5; i++) {
+    fireEvent.keyDown(card, { key: 'ArrowDown', shiftKey: true });
+  }
+  await waitFor(() => {
+    expect(wrapper.style.transform).not.toBe(pristine);
+  });
+
+  fireEvent.click(reset);
+  await waitFor(() => {
+    expect(screen.queryByTestId('detail-drawer')).not.toBeInTheDocument();
+  });
+  // the graph comes back exactly as ELK first drew it, with nothing selected —
+  // a second full layout pass, so it waits on the layout budget
+  await waitFor(() => {
+    expect(
+      container.querySelector<HTMLElement>(`.react-flow__node[data-id="${moved.id}"]`)!.style
+        .transform,
+    ).toBe(pristine);
+  }, LAYOUT_WAIT);
+  await cards();
+  expect(document.querySelectorAll('.sg-node--selected')).toHaveLength(0);
+});
+
+// The return lanes are planned against the cards they must clear, so their input
+// is the LIVE node positions — not the frozen ELK result. Push a card down and
+// the floor under the run has to follow it. React Flow's own keyboard nudge is
+// the honest way to move a node here: it runs the same position pipeline a mouse
+// drag does, without asking jsdom to fake pointer capture.
+it('replans the back-edge floors from live positions when a node moves', async () => {
+  const { container } = render(<GraphCanvas workflow={wf} />);
+  const all = await cards();
+
+  // back-edge routes are the only ones built from quadratic corners
+  const backPaths = () =>
+    [...container.querySelectorAll<SVGPathElement>('path.sg-edge')]
+      .map((p) => p.getAttribute('d') ?? '')
+      .filter((d) => d.includes('Q'));
+
+  const before = backPaths();
+  expect(before.length).toBeGreaterThan(0);
+
+  const card = cardFor(wf.nodes.find((n) => n.id === 'debug-flaky')!.label, all);
+  fireEvent.click(card);
+  for (let i = 0; i < 40; i++) {
+    fireEvent.keyDown(card, { key: 'ArrowDown', shiftKey: true });
+  }
+
+  // the card now hangs far below every other row, so every run crossing its
+  // column has to drop under it
+  await waitFor(() => {
+    expect(backPaths()).not.toEqual(before);
+  });
 });

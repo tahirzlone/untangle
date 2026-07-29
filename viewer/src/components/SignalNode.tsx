@@ -19,7 +19,11 @@ const PAIN_CLASS: Partial<Record<WorkflowNode['painLevel'], string>> = {
 
 const METER_SEGMENTS = 5;
 
-function PainMeter({ pain }: { pain: WorkflowNode['painLevel'] }) {
+/**
+ * Five segments filled to the level — the same readout on the card and in the
+ * detail drawer, so a node's heat reads identically wherever it is stated.
+ */
+export function PainMeter({ pain }: { pain: WorkflowNode['painLevel'] }) {
   return (
     <span
       className="sg-meter"
@@ -34,10 +38,16 @@ function PainMeter({ pain }: { pain: WorkflowNode['painLevel'] }) {
   );
 }
 
-export function SignalNodeBody({ node }: { node: WorkflowNode }) {
+export function SignalNodeBody({
+  node,
+  selected = false,
+}: {
+  node: WorkflowNode;
+  selected?: boolean;
+}) {
   return (
     <div
-      className={`sg-node${PAIN_CLASS[node.painLevel] ?? ''}`}
+      className={`sg-node${PAIN_CLASS[node.painLevel] ?? ''}${selected ? ' sg-node--selected' : ''}`}
       data-testid="sg-node"
       data-kind={node.kind}
       data-pain={node.painLevel}
@@ -56,7 +66,24 @@ export function SignalNodeBody({ node }: { node: WorkflowNode }) {
   );
 }
 
-export function SignalNode({ data }: { data: { node: WorkflowNode; index: number } }) {
+/**
+ * `selected` and `isConnectable` arrive as props from React Flow — it owns both,
+ * so the card reads them rather than keeping second copies in `data`.
+ *
+ * Forwarding `isConnectable` to the ports matters: a Handle defaults to
+ * connectable on its own, so without this the ports would keep advertising
+ * themselves (and swallowing pointer events) even though the canvas has
+ * `nodesConnectable={false}`.
+ */
+export function SignalNode({
+  data,
+  selected,
+  isConnectable,
+}: {
+  data: { node: WorkflowNode; index: number };
+  selected?: boolean;
+  isConnectable?: boolean;
+}) {
   return (
     <div
       className="sg-node-shell"
@@ -65,9 +92,19 @@ export function SignalNode({ data }: { data: { node: WorkflowNode; index: number
       // size lives in exactly one place.
       style={{ ['--i' as string]: data.index, width: NODE_WIDTH, height: NODE_HEIGHT }}
     >
-      <Handle type="target" position={Position.Left} className="sg-port" />
-      <SignalNodeBody node={data.node} />
-      <Handle type="source" position={Position.Right} className="sg-port" />
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="sg-port"
+        isConnectable={isConnectable ?? false}
+      />
+      <SignalNodeBody node={data.node} selected={selected} />
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="sg-port"
+        isConnectable={isConnectable ?? false}
+      />
     </div>
   );
 }

@@ -61,6 +61,39 @@
 /* the provenance chip sits alone on the right */
 .sg-chip--end { margin-left: auto; }
 
+/* The one thing in the toolbar you can press. It reads as a chip until you
+   reach for it, then it lights — the affordance is in the hover, not in a
+   filled button competing with the graph. */
+.sg-ghost-btn {
+  font-family: var(--font-anno);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-chip);
+  padding: 4px 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 140ms ease, border-color 140ms ease;
+}
+.sg-ghost-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.sg-ghost-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sg-ghost-btn { transition: none; }
+}
+
+/* Cards are grabbable now — say so before the drag starts. */
+.sg-viewport .react-flow__node.draggable { cursor: grab; }
+.sg-viewport .react-flow__node.dragging { cursor: grabbing; }
+
 /* z-index: 0 gives the viewport its own stacking context, so React Flow's
    internal layers (nodes, edge labels) resolve against each other and can
    never climb over the toolbar. */
