@@ -14,14 +14,14 @@ https://tahirlone.com/api/flowprint/kb
 
 Plain `GET`, no authentication, no pagination: one response carries every row, as `{ updatedAt, recordCount, records }`. Field names are camelCased versions of the ones in [the table](#the-table) (`Capability Tags` → `capabilityTags`, `Improvement Claim` → `improvementClaim`, and so on), and each record's `id` is its Airtable record id. Graphs generated this way carry `meta.kbSource: "airtable"` — it is Airtable data either way — and matched nodes get suggestion cards.
 
-The feed is a cached mirror behind a 15-minute server cache, so an edit made in the source base appears in the feed within roughly 15–30 minutes. Tahir's base itself stays private; the feed exposes only the matching-relevant fields (`id`, `name`, `url`, `category`, `description`, `language`, `stars`, `dateFirstSeen`, `capabilityTags`, `stepArchetypes`, `improvementClaim`, `install`).
+The feed is a cached mirror: an edit made in the source base reaches it typically within ~30 minutes (server cache + background refresh); during upstream outages the feed serves the last good copy and `updatedAt` shows its age. Tahir's base itself stays private; the feed exposes only the matching-relevant fields (`id`, `name`, `url`, `category`, `description`, `language`, `stars`, `dateFirstSeen`, `capabilityTags`, `stepArchetypes`, `improvementClaim`, `install`).
 
 Two environment variables change what a run reads:
 
 | Variable | Effect |
 | --- | --- |
 | `FLOWPRINT_KB_URL` | Point the skill at a different feed — any URL serving the same envelope. Default: `https://tahirlone.com/api/flowprint/kb`. |
-| `AIRTABLE_API_KEY` | **Overrides the feed entirely** — the skill goes straight to Airtable instead. See [Bring your own knowledge base](#bring-your-own-knowledge-base). |
+| `AIRTABLE_API_KEY` | **Overrides the feed entirely** — the skill goes straight to Airtable instead. If that fetch fails, the run falls back to this feed and says so in its report, so you always know which knowledge base the suggestions came from. See [Bring your own knowledge base](#bring-your-own-knowledge-base). |
 
 If the feed is unreachable and no key is set, nothing breaks: the skill produces the vanilla graph with `meta.kbSource: "none"` and reports "KB not linked".
 

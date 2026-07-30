@@ -48,7 +48,7 @@ There are three ways this stage can end up with rows. Try them strictly in order
 | Tier | Condition | Source | `meta.kbSource` |
 | --- | --- | --- | --- |
 | 1 | `AIRTABLE_API_KEY` is set | Airtable REST, straight from the base (step 2 · tier 1) | `"airtable"` |
-| 2 | no key | the public feed — no token, no setup (step 2 · tier 2) | `"airtable"` |
+| 2 | tier 1 handed you no rows (no key set, **or** the key path failed) | the public feed — no token, no setup (step 2 · tier 2) | `"airtable"` |
 | 3 | neither source returned rows | nothing — the vanilla graph | `"none"` |
 
 Tiers 1 and 2 are the same table read two ways, so both are `"airtable"`.
@@ -65,7 +65,7 @@ echo ${AIRTABLE_API_KEY:+set}
 
 (the bash form prints an empty line when the variable is unset or empty)
 
-- **Set → tier 1**, fetch from Airtable (step 2 · tier 1). If that fetch fails (401, 404, network error) or returns zero rows, do not retry more than once and do not fabricate anything: report the failure in one line and drop to tier 2.
+- **Set → tier 1**, fetch from Airtable (step 2 · tier 1). If that fetch fails (401, 404, network error) or returns zero rows, do not retry more than once and do not fabricate anything: drop to tier 2 and **say so in the report**. Tier 2 serves the *public* feed, not the base the key pointed at, so the mandated one-line failure report must name the substitution — `Airtable fetch failed (401); used the public feed instead`. Someone running their own base has to know the suggestions came from the default knowledge base rather than from their rows.
 - **Unset or empty → tier 2**, fetch the public feed (step 2 · tier 2). A missing key does **not** end this stage and does **not** mean a vanilla graph — the feed needs no key at all.
 - **Tier 2 unusable too → tier 3.** Skip the rest of this stage: set `meta.kbSource: "none"`, leave `suggestions: []`, and tell the user "KB not linked" in the report. This is normal, not a failure: the vanilla graph is the deliverable.
 
@@ -134,19 +134,23 @@ Two things about the response shape, both of which matter later:
 - Each record is `{ "id": "recXXXXXXXXXXXXXX", "createdTime": "...", "fields": { ... } }`. The `id` is the only legal source of `airtableRecordId`.
 - **Airtable omits empty fields entirely.** An absent key in `fields` means blank — not an error, and not something to guess at.
 
-#### Tier 2 — the public feed (no `AIRTABLE_API_KEY`)
+#### Tier 2 — the public feed (tier 1 handed you no rows: no key set, **or** the key path failed)
 
 A cached public mirror of that same Airtable table, served by tahirlone.com. Plain `GET`, **no authentication header of any kind**, and **no pagination** — one request returns the entire knowledge base.
+
+This is the tier for both keyless runs and runs whose Airtable fetch broke. If you arrived here from a failed tier 1, the rows below come from the public base, not the one the key pointed at — the report must say so (step 1).
 
 | Variable | Default |
 | --- | --- |
 | `FLOWPRINT_KB_URL` | `https://tahirlone.com/api/flowprint/kb` |
 
-**curl (bash / Git Bash)** — prints the body, then the HTTP status on its own line:
+**curl (bash / Git Bash)** — body to a file, status to the terminal. Keep it that way: a failing feed answers with a full HTML error page, and dumping that into the session costs thousands of tokens for nothing.
 
 ```bash
-curl -sS -w '\nHTTP %{http_code}\n' "${FLOWPRINT_KB_URL:-https://tahirlone.com/api/flowprint/kb}"
+curl -sS -o kb.json -w 'HTTP %{http_code}\n' "${FLOWPRINT_KB_URL:-https://tahirlone.com/api/flowprint/kb}"
 ```
+
+Read `kb.json` **only** when that line printed `HTTP 200`; on any other status leave the file unopened (it holds an error body or a site error page) and go to tier 3. Delete `kb.json` once the suggestions are authored — it is scratch, not a repo artifact.
 
 **PowerShell** (`Invoke-RestMethod` parses the JSON for you and *throws* on any non-200 — that throw is your signal to go to tier 3):
 
@@ -201,6 +205,8 @@ A **200** response is this envelope and nothing else (the `recXXXX…` ids below
 
 **Record shape.** Each element of `records` is a flat object: the fields sit at the top level, *not* nested under a `fields` key, and their names are camelCase. **Absent fields are omitted entirely**, exactly as Airtable does it — an absent key means blank, not an error, and not something to guess at (see `owner/plain-repo` above, which carries no enrichment fields and is therefore not a candidate under step 3).
 
+The omission spares nothing: `name`, `url`, and `category` can be missing too. `id` is the only key guaranteed on every record. So — **a candidate row with no `name` or no `url` cannot become a suggestion at all**: the schema requires both, and `url` must match `^https?://`. Skip such a row silently and never invent a value to fill the hole. (A missing `category` is harmless — step 5 already writes `Other` for anything outside the schema's enum.)
+
 Steps 3–5 are written against the Airtable field names, and they apply here **unchanged**: this feed is that Airtable table, one feed record per Airtable row. Translate the names with this table; nothing else about those steps changes.
 
 | Feed key | Airtable field | Type | Read by |
@@ -220,7 +226,7 @@ Steps 3–5 are written against the Airtable field names, and they apply here **
 
 One gap to hold on to: **the feed does not carry `Why Noteworthy`.** Step 5's claim fallback names `Description` / `Why Noteworthy`; on this tier only `description` exists, so a row with no `improvementClaim` gets its one line written from that row's own `description` alone — never from anywhere else.
 
-The feed is a snapshot on a 15-minute server cache, so an Airtable edit made minutes ago may not be in it yet. That is not a failure and there is nothing to work around: use exactly the rows the feed returned. Rows from tier 2 count fully as reading the knowledge base — `meta.kbSource` is `"airtable"`, same as tier 1 (step 7).
+The feed is a cached snapshot: an edit made in the source base reaches it typically within ~30 minutes (server cache + background refresh); during upstream outages the feed serves the last good copy and `updatedAt` shows its age. Neither case is a failure and neither needs working around: use exactly the rows the feed returned. Rows from tier 2 count fully as reading the knowledge base — `meta.kbSource` is `"airtable"`, same as tier 1 (step 7).
 
 The knowledge-base table's fields and select choices are documented in `kb/airtable-template.md`. Read it if a row's shape surprises you, or if the user is setting up their own base.
 
@@ -334,4 +340,4 @@ After `OK:`, tell the user:
 1. the file path and node count;
 2. the top 2–3 pain hotspots (highest `painLevel` nodes) — one sentence each;
 3. one line per suggestion, in this shape: `<node label> → <resource name> (<category>) — <claim>`;
-4. the knowledge-base state in one line: `KB not linked` when no source returned rows (tier 3), the failure in one line if a fetch broke, or `KB read, no load-bearing matches` when it was fetched and nothing matched.
+4. the knowledge-base state in one line: `KB not linked` when no source returned rows (tier 3), the failure if a fetch broke — and when a broken tier 1 sent the run to tier 2, that line must name the substitution (`Airtable fetch failed (401); used the public feed instead`) so nobody mistakes the public rows for their own base — or `KB read, no load-bearing matches` when it was fetched and nothing matched.
