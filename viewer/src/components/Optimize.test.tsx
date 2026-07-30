@@ -42,6 +42,27 @@ const optimizeBtn = () => screen.getByTestId('optimize-btn');
 const appliedNames = () =>
   screen.getAllByTestId('scorecard-name').map((el) => el.textContent);
 
+/**
+ * Installs the one thing about `inert` that jsdom does not implement: a browser
+ * REFUSES `focus()` on anything inside an inert subtree, and says nothing about
+ * it. Without this the suite is blind to the whole class of bug where focus is
+ * handed back before the attribute has come off — the call succeeds in jsdom and
+ * fails in Chrome.
+ *
+ * Attribute-driven rather than a spy, so it stays true to what it is modelling:
+ * the moment React commits the removal, focus starts working again.
+ */
+function refuseFocusInsideInert(): () => void {
+  const real = HTMLElement.prototype.focus;
+  HTMLElement.prototype.focus = function (this: HTMLElement, options?: FocusOptions) {
+    if (this.closest('[inert]')) return;
+    real.call(this, options);
+  };
+  return () => {
+    HTMLElement.prototype.focus = real;
+  };
+}
+
 // ---------------------------------------------------------------------------
 // The button
 // ---------------------------------------------------------------------------
@@ -272,22 +293,31 @@ it(
   TOUR_BUDGET,
 );
 
+// The close handler cannot hand focus back itself: dropping the report is a state
+// change, so the canvas is still inert when it runs, and the browser refuses. This
+// runs under that refusal, so it goes red the moment the restore stops waiting for
+// the commit that releases the attribute.
 it(
   'takes focus into the scorecard and hands it back to OPTIMIZE',
   async () => {
-    render(<GraphCanvas workflow={enriched} />);
-    await cardsOf(enriched);
+    const allowFocus = refuseFocusInsideInert();
+    try {
+      render(<GraphCanvas workflow={enriched} />);
+      await cardsOf(enriched);
 
-    await tourToFirstApply();
-    fireEvent.click(optimizeBtn());
+      await tourToFirstApply();
+      fireEvent.click(optimizeBtn());
 
-    const card = await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
-    expect(card).toContainElement(document.activeElement as HTMLElement);
-    expect(document.activeElement).toBe(screen.getByTestId('scorecard-close'));
+      const card = await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
+      expect(card).toContainElement(document.activeElement as HTMLElement);
+      expect(document.activeElement).toBe(screen.getByTestId('scorecard-close'));
 
-    fireEvent.click(screen.getByTestId('scorecard-close'));
-    await waitFor(() => expect(screen.queryByTestId('scorecard')).not.toBeInTheDocument());
-    expect(document.activeElement).toBe(optimizeBtn());
+      fireEvent.click(screen.getByTestId('scorecard-close'));
+      await waitFor(() => expect(screen.queryByTestId('scorecard')).not.toBeInTheDocument());
+      expect(document.activeElement).toBe(optimizeBtn());
+    } finally {
+      allowFocus();
+    }
   },
   TOUR_BUDGET,
 );
@@ -295,18 +325,25 @@ it(
 it(
   'takes Escape as CANCEL, and the next one as CLOSE',
   async () => {
-    render(<GraphCanvas workflow={enriched} />);
-    await cardsOf(enriched);
+    const allowFocus = refuseFocusInsideInert();
+    try {
+      render(<GraphCanvas workflow={enriched} />);
+      await cardsOf(enriched);
 
-    await tourToFirstApply();
-    fireEvent.keyDown(window, { key: 'Escape' });
+      await tourToFirstApply();
+      fireEvent.keyDown(window, { key: 'Escape' });
 
-    // the keystroke that stopped the tour did not also dismiss its report
-    const card = await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
-    expect(card).toHaveTextContent('OPTIMIZED — 1 upgrade applied');
+      // the keystroke that stopped the tour did not also dismiss its report
+      const card = await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
+      expect(card).toHaveTextContent('OPTIMIZED — 1 upgrade applied');
 
-    fireEvent.keyDown(window, { key: 'Escape' });
-    await waitFor(() => expect(screen.queryByTestId('scorecard')).not.toBeInTheDocument());
+      fireEvent.keyDown(window, { key: 'Escape' });
+      await waitFor(() => expect(screen.queryByTestId('scorecard')).not.toBeInTheDocument());
+      // the keyboard route out lands where the pointer route does
+      expect(document.activeElement).toBe(optimizeBtn());
+    } finally {
+      allowFocus();
+    }
   },
   TOUR_BUDGET,
 );
@@ -389,14 +426,21 @@ it('holds its report still when the session moves underneath it', async () => {
 
 it('makes the canvas behind it inert, and gives it back on close', async () => {
   const restore = reduceMotion();
+  const allowFocus = refuseFocusInsideInert();
   try {
     await scorecardAfterInstantTour();
     expect(screen.getByTestId('canvas')).toHaveAttribute('inert');
 
-    fireEvent.click(screen.getByTestId('scorecard-close'));
+    // the third way out — the backdrop — through the same restore as the other two
+    fireEvent.click(screen.getByTestId('scorecard-backdrop'));
     await waitFor(() => expect(screen.queryByTestId('scorecard')).not.toBeInTheDocument());
     expect(screen.getByTestId('canvas')).not.toHaveAttribute('inert');
+    // this tour spent every patch on offer, so OPTIMIZE went with them and the
+    // graph takes the keyboard back instead — inside the canvas that was inert a
+    // moment ago, which is the whole point of waiting for the commit
+    expect(document.activeElement).toHaveClass('react-flow__node');
   } finally {
+    allowFocus();
     restore();
   }
 });

@@ -688,14 +688,38 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     start();
   }, [closeDrawer, start]);
 
+  /** Set when the report is dismissed, spent by the focus effect below. */
+  const focusAfterReport = useRef(false);
+
   const closeScorecard = useCallback(() => {
+    focusAfterReport.current = true;
     setReport(null);
-    // Focus goes back to the control the run was started from. A tour that spent
-    // every patch on offer leaves no such button — the work it described is gone —
-    // so the graph itself takes the keyboard back.
+  }, []);
+
+  /**
+   * Hands focus back once the canvas is in a state to take it.
+   *
+   * Deliberately an effect and not a line in `closeScorecard`: dropping the report
+   * is a state change, so at the moment the close handler runs the canvas is still
+   * carrying `inert` — and a browser REFUSES focus into an inert subtree, silently.
+   * Called there, every route out of the panel (the button, Escape, the backdrop)
+   * left focus on <body>. The effect runs after the commit that takes the attribute
+   * off, which is the first moment the target will accept it.
+   *
+   * jsdom does not implement inert, so this is invisible to the suite by default —
+   * the test that pins it installs the browser's refusal by hand.
+   *
+   * Where focus goes: the control the run was started from, or, when a tour spent
+   * every patch on offer and that button went with the work it described, the graph
+   * itself. The first card is a compromise — the honest target is a card actually
+   * in view, and the viewport maths for that is not worth its weight here.
+   */
+  useEffect(() => {
+    if (report !== null || !focusAfterReport.current) return;
+    focusAfterReport.current = false;
     const button = document.querySelector<HTMLElement>('[data-testid="optimize-btn"]');
     (button ?? document.querySelector<HTMLElement>('.react-flow__node'))?.focus();
-  }, []);
+  }, [report]);
 
   /** Is there anything for OPTIMIZE to do? The button exists only if there is. */
   const hasAppliable = useMemo(

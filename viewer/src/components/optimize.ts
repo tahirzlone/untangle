@@ -142,7 +142,6 @@ export function useCinematic(deps: CinematicDeps): Cinematic {
       return;
     }
 
-
     busy.current = true;
     cancelled.current = false;
     setRunning(true);
