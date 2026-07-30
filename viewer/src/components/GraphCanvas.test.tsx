@@ -593,6 +593,35 @@ it('closes the panel when APPLY consumes the step it describes', async () => {
   }, LAYOUT_WAIT);
 });
 
+// The other half of that close. The panel holds focus, and the card it would hand it
+// back to is exactly what the patch ate — so without this the keyboard route ends on
+// <body> at its climax, one keystroke after APPLY. The replacement is where the step's
+// work went, so that is where focus lands.
+it('lands focus on the replacement when APPLY consumes the card it was on', async () => {
+  const { container } = render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+
+  // the whole route without a pointer: focus a card, Enter to open, APPLY
+  const wrapper = container.querySelector<HTMLElement>(
+    '.react-flow__node[data-id="verify-browser"]',
+  )!;
+  wrapper.focus();
+  fireEvent.keyDown(wrapper, { key: 'Enter' });
+  await screen.findByTestId('detail-drawer');
+  expect(document.activeElement).toBe(screen.getByTestId('drawer-close'));
+
+  // the driven-browser MCP: merges this step into `verify-devtools`
+  fireEvent.click(screen.getAllByTestId('sg-sug-apply')[0]);
+  await waitFor(() => expect(cardLabels()).toContain(DRIVEN), LAYOUT_WAIT);
+
+  await waitFor(() => {
+    expect(document.activeElement).toHaveAttribute('data-id', 'verify-devtools');
+  }, LAYOUT_WAIT);
+  expect(document.activeElement).toBe(
+    container.querySelector('.react-flow__node[data-id="verify-devtools"]'),
+  );
+});
+
 // The conventions skill deletes the SCAFFOLD step, not the coding loop it is matched
 // to — so the panel's subject survives the morph and has to be restated from the new
 // version rather than left describing the old one.

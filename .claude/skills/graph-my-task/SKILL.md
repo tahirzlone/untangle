@@ -37,13 +37,23 @@ This stage attaches real, existing helpers — Claude skills, plugins, and MCP s
 
 > Suggestions may ONLY reference rows that exist in the Airtable response. Never invent, remember, or import resources from anywhere else.
 
-> At most ONE suggestion per Airtable row per graph — the same row must never be attached to two nodes (the viewer refuses duplicate ids).
+> At most ONE suggestion per Airtable row per graph — the same row must never be attached to two nodes. `airtableRecordId` is the viewer's identity key, so a repeat is not a cosmetic slip: the viewer disables the ENTIRE suggestion layer for the file (a SUGGESTIONS DISABLED notice), not just the duplicate cards.
 
 A resource you know about from training, from another repo, from your own memory of this session, or from a web search is **not** eligible. If it is not in the response you fetched, it does not exist for this graph. (The reverse is fine: one node may carry several suggestions, as long as each comes from a different row.)
 
 ### 1. Is a knowledge base linked?
 
-Check the `AIRTABLE_API_KEY` environment variable.
+Check the `AIRTABLE_API_KEY` environment variable. Probe it, don't assume — and print only whether it is there, never the key itself:
+
+```powershell
+if ($env:AIRTABLE_API_KEY) { 'set' } else { 'missing' }
+```
+
+```bash
+echo ${AIRTABLE_API_KEY:+set}
+```
+
+(the bash form prints an empty line when the variable is unset or empty)
 
 - **Unset or empty → skip this whole stage.** Set `meta.kbSource: "none"`, leave `suggestions: []`, and tell the user "KB not linked" in the report. This is normal, not a failure: the vanilla graph is the deliverable.
 - **Set → fetch (step 2).** If the fetch fails (401, 404, network error) or returns zero rows, do not retry more than once and do not fabricate anything: report the failure in one line and fall back to exactly the keyless behavior above (`kbSource: "none"`, `suggestions: []`).
@@ -166,14 +176,14 @@ Fields:
 - **`newEdges`** (required array, may be empty) — edges to add after the deletions. Every endpoint must be a surviving node id or `replaceWith.id`. **An endpoint this same effect deletes is a hard error.**
 - **`metrics`** (required) — `stepsSaved`, `estTimeSavedMin`, `estTokensSaved`, `manualInterventionsRemoved`, all integers ≥ 0.
 
-Every effect must change the graph. An effect with empty `removeNodes`, empty `mergeNodes`, and no `replaceWith` passes the schema but does nothing on screen — the user clicks APPLY and watches an identical graph. If a resource eliminates nothing, it is not load-bearing; drop the suggestion instead. A real effect takes one of two shapes:
+Every effect must eliminate or replace at least one node. An effect that deletes nothing passes the schema and still fails on screen: with empty `removeNodes` and empty `mergeNodes` the user clicks APPLY and watches an identical graph, and adding a `replaceWith` on its own only makes it worse — the graph grows a node and `stepsSaved` computes negative. If a resource eliminates nothing, it is not load-bearing; drop the suggestion instead. A real effect takes one of two shapes:
 
 - **Collapse:** `removeNodes` (and/or `mergeNodes`) with `newEdges` closing the gap — steps disappear entirely.
 - **Substitute:** `mergeNodes` listing the painful steps plus a low-pain `replaceWith` and `newEdges` wiring it in — several manual steps become one helper-driven step.
 
 Two traps to author around:
 
-- **Rewire what you cut.** Because step 3 drops every edge touching a deleted node, removing a node from the middle of the flow leaves its upstream and downstream disconnected. Supply `newEdges` reconnecting them (upstream → `replaceWith` → downstream, or upstream → downstream directly). **Nothing downstream checks connectivity** — no validator and no reducer will catch a missed rewire; the patch applies happily and strands an orphaned node on screen. YOU are the only gate: after authoring the effect, re-trace every surviving node and confirm it still has a path from the input node.
+- **Rewire what you cut.** Because step 3 drops every edge touching a deleted node, removing a node from the middle of the flow leaves its upstream and downstream disconnected. Supply `newEdges` reconnecting them (upstream → `replaceWith` → downstream, or upstream → downstream directly). **Nothing downstream checks connectivity** — no validator and no reducer will catch a missed rewire; the patch applies happily and strands an orphaned node on screen. YOU are the only gate: after authoring the effect, re-walk every surviving node and confirm it still has a path from the input node.
 - **Respect the size floor.** The schema requires **at least 3 nodes and at least 2 edges**, and the graph is re-validated AFTER the patch applies. Count it before you write it: `nodes − (removeNodes + mergeNodes) + (replaceWith ? 1 : 0) ≥ 3`, and surviving edges + `newEdges` ≥ 2. On a small graph, keep effects modest — one or two nodes. Never author an effect that would shrink the graph below the floor.
 
 Metrics, estimated **conservatively** — this number is on screen next to a real resource, so it has to survive scrutiny:

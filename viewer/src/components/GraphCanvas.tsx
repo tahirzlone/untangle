@@ -42,6 +42,8 @@ const FLIP_CLASS = 'sg-node-shell--flip';
 const FLIP_PLAY_CLASS = 'sg-node-shell--flip-play';
 /** How many frames the FLIP will wait for React Flow to catch up before it plays. */
 const FLIP_FRAME_BUDGET = 4;
+/** How many frames the focus landing will wait for the card it aims at to mount. */
+const FOCUS_FRAME_BUDGET = 4;
 
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -186,6 +188,12 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const ghostTimer = useRef(0);
   const flipTimer = useRef(0);
   const flipped = useRef<HTMLElement[]>([]);
+  /**
+   * The card focus is owed once the next version is on screen, or null when
+   * nothing is owed. Written only when a patch consumed the step the drawer was
+   * describing — see `morphTo` and the landing effect below.
+   */
+  const focusAfterMorph = useRef<{ id: string | null } | null>(null);
   // The layout effect must know what is selected without re-running when that
   // changes — a selection is not a reason to lay the graph out again.
   const selectedRef = useRef<string | null>(null);
@@ -340,6 +348,42 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     return () => cancelAnimationFrame(frame);
   }, [clearFlip, laidOut]);
 
+  /**
+   * Lands the focus the morph owed, on the card the consumed step became.
+   *
+   * A patch that eats the drawer's subject unmounts the panel with focus inside it,
+   * which drops focus on `<body>` — at the climax of the keyboard route, one keystroke
+   * after APPLY was reached without a pointer. The replacement is where that step's
+   * work went, so that is where the keyboard belongs: React Flow gives every card
+   * `tabindex="0"`, so its wrapper takes focus directly.
+   *
+   * The wait is the same beat the FLIP above waits out. React Flow pushes our `nodes`
+   * into its own store from an effect and mounts the new wrappers in the render that
+   * follows, so at this effect's time the replacement's `data-id` is not in the DOM
+   * yet — hence a few frames of asking. If it never arrives (or the effect had no
+   * replacement to aim at), any card will do: what matters is that focus is back
+   * inside the graph, and the pane itself carries no tabindex to hand it to.
+   */
+  useEffect(() => {
+    if (!focusAfterMorph.current) return;
+    const { id } = focusAfterMorph.current;
+    let waited = 0;
+    let frame = 0;
+    const land = () => {
+      const wrapper = id
+        ? document.querySelector<HTMLElement>(`.react-flow__node[data-id="${id}"]`)
+        : null;
+      if (!wrapper && id && ++waited < FOCUS_FRAME_BUDGET) {
+        frame = requestAnimationFrame(land);
+        return;
+      }
+      focusAfterMorph.current = null;
+      (wrapper ?? document.querySelector<HTMLElement>('.react-flow__node'))?.focus();
+    };
+    frame = requestAnimationFrame(land);
+    return () => cancelAnimationFrame(frame);
+  }, [nodes]);
+
   useEffect(
     () => () => {
       window.clearTimeout(ghostTimer.current);
@@ -419,9 +463,13 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
    * by the layout effect above once the new layout exists. Under
    * prefers-reduced-motion nothing is planned at all, which is what makes the swap
    * instant: no ghosts are mounted and no shell is ever touched.
+   *
+   * `replacementId` is the node the patch put in place of what it ate, when it had
+   * one — the only honest place for focus to go if the panel's own card is what left.
+   * UNDO and the version jumps have no such node and pass nothing.
    */
   const morphTo = useCallback(
-    (next: GraphSession) => {
+    (next: GraphSession, replacementId: string | null = null) => {
       const survives = new Set(current(next).nodes.map((n) => n.id));
       if (!prefersReducedMotion()) {
         const from = new Map<string, { x: number; y: number }>();
@@ -437,7 +485,15 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
       // with it; a step that survived keeps the panel, and because the selection
       // is an id the panel's node and rows are re-derived from the new version on
       // the way through the render below.
-      if (selectedRef.current && !survives.has(selectedRef.current)) closeDrawer();
+      if (selectedRef.current && !survives.has(selectedRef.current)) {
+        closeDrawer();
+        // Closing the panel unmounts the element focus is standing on, and its card
+        // is not there to fall back to. Where focus goes instead is decided here and
+        // carried out once the new cards exist — see the landing effect above.
+        focusAfterMorph.current = {
+          id: replacementId && survives.has(replacementId) ? replacementId : null,
+        };
+      }
       setOpened({ source: workflow, session: next });
     },
     [closeDrawer, nodes, workflow],
@@ -454,9 +510,15 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
         // this is defence in depth: a refusal changes nothing and claims nothing.
         return;
       }
-      morphTo(next);
+      // Read off the version the patch was applied to, where the row still exists:
+      // the replacement is the step this one became, and the morph needs it in case
+      // the card the panel is open on is the card being eaten.
+      const replacement =
+        graph.suggestions.find((s) => s.airtableRecordId === airtableRecordId)?.effect.replaceWith
+          ?.id ?? null;
+      morphTo(next, replacement);
     },
-    [morphTo, session],
+    [graph, morphTo, session],
   );
 
   const onUndo = useCallback(() => {

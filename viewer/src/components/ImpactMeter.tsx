@@ -84,6 +84,14 @@ function useCountUp(target: SessionMetrics): SessionMetrics {
  * Only components that actually moved get a chip. Honest generations routinely
  * claim no token saving or no manual step removed, and a chip reading "−0 tok"
  * would turn that zero into a boast about nothing.
+ *
+ * The count-up is CEILED, not rounded, for the same reason: a saving of one step
+ * spends the first half of its tween below 0.5, and `Math.round` renders that as
+ * "−0 steps" — a falsehood held on screen for 200ms at the one moment the user is
+ * watching this number. Ceiling cannot invent a saving here, because a component
+ * whose TOTAL is zero never gets a chip at all: every tween that runs is between
+ * two numbers on the same side of zero, so the ceiling of any frame of it is a
+ * value the chip will honestly reach.
  */
 export function ImpactMeter({ metrics }: { metrics: SessionMetrics }) {
   const shown = useCountUp(metrics);
@@ -97,7 +105,7 @@ export function ImpactMeter({ metrics }: { metrics: SessionMetrics }) {
       {parts.map((p) => (
         <span className="sg-impact-chip" data-testid="impact-part" key={p.key}>
           {MINUS}
-          {Math.round(shown[p.key])} {p.unit}
+          {Math.ceil(shown[p.key])} {p.unit}
         </span>
       ))}
     </span>
