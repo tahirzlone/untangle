@@ -1,0 +1,100 @@
+{
+  "meta": {
+    "task": "Add a payments feature to my web app — build it, test it, verify it in the browser, review it, and ship",
+    "title": "Ship a Payments Feature End-to-End",
+    "generatedAt": "2026-07-29T23:30:00Z",
+    "model": "claude-fable-5",
+    "kbSource": "airtable"
+  },
+  "nodes": [
+    { "id": "gather-scope", "label": "Gather scope + acceptance criteria", "kind": "input", "description": "Collect the feature spec, payment-provider keys, edge cases, and what done looks like.", "painLevel": 2 },
+    { "id": "read-conventions", "label": "Trawl the codebase for conventions", "kind": "process", "description": "Grep and read file after file to learn routing patterns, error handling, naming, and where payments-adjacent code already lives.", "painLevel": 4 },
+    { "id": "plan-changes", "label": "Plan files, schema, and API surface", "kind": "process", "description": "Decide the migration, endpoints, UI components, and how failure states flow through the app.", "painLevel": 3 },
+    { "id": "write-code", "label": "Write the feature", "kind": "process", "description": "Implement the migration, API handlers, and checkout UI against the plan.", "painLevel": 3 },
+    { "id": "write-tests", "label": "Write tests after the fact", "kind": "process", "description": "Backfill unit and integration tests around code that already exists, guessing at the cases that matter.", "painLevel": 3 },
+    { "id": "run-suite", "label": "Run the test suite", "kind": "process", "description": "Run everything and collect the failures.", "painLevel": 2 },
+    { "id": "tests-pass", "label": "Suite green?", "kind": "decision", "description": "All tests passing, including the new ones?", "painLevel": 2 },
+    { "id": "fix-failures", "label": "Debug the failures", "kind": "process", "description": "Chase stack traces and assertion diffs; patch code or tests until the suite settles.", "painLevel": 4 },
+    { "id": "browser-verify", "label": "Click through the flows by hand", "kind": "process", "description": "Boot the app, walk every checkout path, watch the network tab, babysit redirects and webhook callbacks in person.", "painLevel": 5 },
+    { "id": "capture-evidence", "label": "Screenshot and file the evidence", "kind": "process", "description": "Capture every state by hand, name the files, and organize the artifacts for the review.", "painLevel": 3 },
+    { "id": "self-review", "label": "Re-read the whole diff", "kind": "review", "description": "One long pass over the change set for quality, security, and the money-handling mistakes you cannot afford.", "painLevel": 3 },
+    { "id": "deploy-staging", "label": "Deploy to staging and smoke-test", "kind": "process", "description": "Ship to staging, tail the logs, and run a live test charge.", "painLevel": 3 },
+    { "id": "ship", "label": "Ship it", "kind": "output", "description": "Merge and release with the evidence attached.", "painLevel": 1 }
+  ],
+  "edges": [
+    { "from": "gather-scope", "to": "read-conventions", "kind": "sequence" },
+    { "from": "read-conventions", "to": "plan-changes", "kind": "sequence" },
+    { "from": "plan-changes", "to": "write-code", "kind": "sequence" },
+    { "from": "write-code", "to": "write-tests", "kind": "sequence" },
+    { "from": "write-tests", "to": "run-suite", "kind": "sequence" },
+    { "from": "run-suite", "to": "tests-pass", "kind": "sequence" },
+    { "from": "tests-pass", "to": "fix-failures", "kind": "branch", "label": "failures" },
+    { "from": "fix-failures", "to": "run-suite", "kind": "retry", "label": "patch and rerun" },
+    { "from": "tests-pass", "to": "browser-verify", "kind": "branch", "label": "green" },
+    { "from": "browser-verify", "to": "write-code", "kind": "retry", "label": "broken flow found — patch" },
+    { "from": "browser-verify", "to": "capture-evidence", "kind": "sequence" },
+    { "from": "capture-evidence", "to": "self-review", "kind": "sequence" },
+    { "from": "self-review", "to": "write-code", "kind": "retry", "label": "changes requested" },
+    { "from": "self-review", "to": "deploy-staging", "kind": "sequence" },
+    { "from": "deploy-staging", "to": "ship", "kind": "sequence" }
+  ],
+  "suggestions": [
+    {
+      "nodeId": "read-conventions",
+      "airtableRecordId": "rec9WCKMascIoC9Dx",
+      "name": "safishamsi/graphify",
+      "url": "https://github.com/safishamsi/graphify",
+      "category": "Claude Skill",
+      "claim": "Turns a codebase into a queryable knowledge graph so agents reason over structure instead of grepping.",
+      "effect": {
+        "removeNodes": [],
+        "mergeNodes": ["read-conventions"],
+        "replaceWith": { "id": "query-code-graph", "label": "Query the code knowledge graph", "kind": "process", "description": "Ask graphify for the conventions, patterns, and payments-adjacent touch points in one query.", "painLevel": 1 },
+        "newEdges": [
+          { "from": "gather-scope", "to": "query-code-graph", "kind": "sequence" },
+          { "from": "query-code-graph", "to": "plan-changes", "kind": "sequence" }
+        ],
+        "metrics": { "stepsSaved": 0, "estTimeSavedMin": 45, "estTokensSaved": 8000, "manualInterventionsRemoved": 0 }
+      }
+    },
+    {
+      "nodeId": "write-tests",
+      "airtableRecordId": "recQxvcJ5VqgJgyoy",
+      "name": "obra/superpowers",
+      "url": "https://github.com/obra/superpowers",
+      "category": "Claude Skill",
+      "claim": "A full engineering methodology (brainstorm→plan→TDD→review) that turns one-shot vibe coding into disciplined shipping.",
+      "install": "/plugin install superpowers",
+      "effect": {
+        "removeNodes": [],
+        "mergeNodes": ["write-tests"],
+        "replaceWith": { "id": "tdd-discipline", "label": "TDD via superpowers", "kind": "process", "description": "Failing tests come first and drive the implementation — test design stops being an afterthought.", "painLevel": 2 },
+        "newEdges": [
+          { "from": "write-code", "to": "tdd-discipline", "kind": "sequence" },
+          { "from": "tdd-discipline", "to": "run-suite", "kind": "sequence" }
+        ],
+        "metrics": { "stepsSaved": 0, "estTimeSavedMin": 30, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
+      }
+    },
+    {
+      "nodeId": "browser-verify",
+      "airtableRecordId": "rec8IRupxSpAxupRy",
+      "name": "ChromeDevTools/chrome-devtools-mcp",
+      "url": "https://github.com/ChromeDevTools/chrome-devtools-mcp",
+      "category": "MCP Server",
+      "claim": "Gives Claude live eyes on a real browser — debugging, performance traces, and page inspection in one MCP.",
+      "install": "claude mcp add chrome-devtools -- npx chrome-devtools-mcp@latest",
+      "effect": {
+        "removeNodes": ["capture-evidence"],
+        "mergeNodes": ["browser-verify"],
+        "replaceWith": { "id": "mcp-browser-verify", "label": "Drive the browser via MCP", "kind": "process", "description": "chrome-devtools-mcp walks the checkout flows, reads console and network, and captures the evidence — no hand-babysitting.", "painLevel": 2 },
+        "newEdges": [
+          { "from": "tests-pass", "to": "mcp-browser-verify", "kind": "branch", "label": "green" },
+          { "from": "mcp-browser-verify", "to": "write-code", "kind": "retry", "label": "broken flow found — patch" },
+          { "from": "mcp-browser-verify", "to": "self-review", "kind": "sequence" }
+        ],
+        "metrics": { "stepsSaved": 1, "estTimeSavedMin": 40, "estTokensSaved": 0, "manualInterventionsRemoved": 1 }
+      }
+    }
+  ]
+}
