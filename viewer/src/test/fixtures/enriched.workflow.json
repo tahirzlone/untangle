@@ -84,7 +84,7 @@
         "metrics": {
           "stepsSaved": 1,
           "estTimeSavedMin": 25,
-          "estTokensSaved": 4000,
+          "estTokensSaved": 0,
           "manualInterventionsRemoved": 1
         }
       }
@@ -167,6 +167,26 @@
           "estTimeSavedMin": 15,
           "estTokensSaved": 3000,
           "manualInterventionsRemoved": 1
+        }
+      }
+    },
+    {
+      "nodeId": "write-code",
+      "airtableRecordId": "recE4wU7zJ3mVbL9d",
+      "name": "codebase-conventions skill",
+      "url": "https://github.com/anthropics/skills",
+      "category": "Claude Skill",
+      "claim": "Writes new modules the way this codebase already wires them, so the separate scaffold-and-hook step folds into the coding loop.",
+      "install": "/plugin install codebase-conventions",
+      "effect": {
+        "removeNodes": ["scaffold-repo"],
+        "mergeNodes": [],
+        "newEdges": [{ "from": "research-docs", "to": "write-code", "kind": "sequence" }],
+        "metrics": {
+          "stepsSaved": 1,
+          "estTimeSavedMin": 20,
+          "estTokensSaved": 2500,
+          "manualInterventionsRemoved": 0
         }
       }
     }

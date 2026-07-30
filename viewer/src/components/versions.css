@@ -1,0 +1,63 @@
+/* Version strip — sits just under the toolbar on the left, floating over the graph
+   rather than stealing a band from it. Same 5 as the toolbar so it clears the node
+   layer; the drawer (6) still wins. */
+.sg-versions {
+  position: absolute;
+  top: 52px;
+  left: 20px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0;
+}
+
+.sg-version {
+  font-family: var(--font-anno);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  color: var(--dim);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-chip);
+  padding: 4px 9px;
+  cursor: pointer;
+  transition: color 140ms ease, border-color 140ms ease;
+}
+.sg-version:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.sg-version:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The version on the canvas. Filled, so the strip reads as a position rather than
+   as a row of equal buttons. */
+.sg-version--at {
+  color: var(--bg-deep);
+  background: var(--accent);
+  border-color: var(--accent);
+  cursor: default;
+}
+.sg-version--at:hover {
+  color: var(--bg-deep);
+}
+
+.sg-undo {
+  margin-left: 4px;
+}
+.sg-undo:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.sg-undo:disabled:hover {
+  color: var(--dim);
+  border-color: var(--line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sg-version { transition: none; }
+}

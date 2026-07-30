@@ -1,0 +1,22 @@
+/* Impact meter — what the applied patches saved, in the toolbar beside the KB chip.
+   Accent-bordered rather than accent-filled: this is the graph's own good news, and
+   it must not out-shout the one button in the toolbar. */
+.sg-impact {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sg-impact-chip {
+  font-family: var(--font-anno);
+  font-size: 10px;
+  line-height: 1;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: var(--radius-chip);
+  padding: 4px 9px;
+  white-space: nowrap;
+  /* the numbers count up, so the chip must not resize on every frame */
+  font-variant-numeric: tabular-nums;
+}

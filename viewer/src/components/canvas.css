@@ -60,6 +60,13 @@
 .sg-chip-hot { color: var(--ember); }
 /* the provenance chip sits alone on the right */
 .sg-chip--end { margin-left: auto; }
+/* A graph the reducer will not open a session on (two cards, one Airtable row).
+   Ember, not accent: nothing here is on offer. */
+.sg-chip--refused {
+  color: var(--ember);
+  border-color: color-mix(in srgb, var(--ember) 45%, transparent);
+  letter-spacing: 0.08em;
+}
 
 /* The one thing in the toolbar you can press. It reads as a chip until you
    reach for it, then it lights — the affordance is in the hover, not in a
@@ -103,6 +110,48 @@
    any future change to React Flow's own stacking */
 .sg-viewport .react-flow__edgelabel-renderer { z-index: 5; }
 
+/* ---------------------------------------------------------------------------
+   The morph. A patch is applied, ELK lays the new version out, and the cards
+   travel to their new places instead of teleporting: the canvas writes each
+   surviving shell's inverse offset into --flip-dx/--flip-dy, forces a reflow, then
+   hands the transform back to identity — the transition below is what the eye
+   reads as the card moving. Both classes live here rather than in node.css
+   because the movement belongs to the canvas, not to the card.
+   --------------------------------------------------------------------------- */
+.sg-node-shell--flip {
+  transform: translate(var(--flip-dx, 0px), var(--flip-dy, 0px));
+}
+/* Written after --flip so its identity transform wins on the second pass. */
+.sg-node-shell--flip-play {
+  transform: none;
+  transition: transform 480ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Where the consumed cards are held while they leave. Same coordinate space as
+   React Flow's own viewport — the layer carries that transform, so the copies sit
+   exactly where the originals were. `sg-ghost` is a leaving CARD; the unrelated
+   `sg-ghost-btn` above is a control style. */
+.sg-morph-ghosts {
+  position: absolute;
+  inset: 0;
+  /* under the toolbar (5), the version strip (5) and the drawer (6), over the cards */
+  z-index: 4;
+  pointer-events: none;
+  /* No clip of its own: `overflow: hidden` here would be transformed along with the
+     layer and cut the ghosts against a moved rectangle. `.sg-canvas` already clips
+     the whole workspace, and everything a ghost could reach outranks it. */
+  transform-origin: 0 0;
+}
+/* Doubled-up selector so the border wins over `.sg-node`'s shorthand in node.css
+   without depending on which stylesheet the bundler happens to emit first. */
+.sg-node.sg-ghost {
+  position: absolute;
+  box-sizing: border-box;
+  /* the heat draining out of a step that is no longer part of the work */
+  border-color: color-mix(in srgb, var(--ember) 45%, var(--line));
+  animation: sg-ghost-out 400ms ease-in forwards;
+}
+
 /* The wait is a signal, not a fade: the caption warms toward the accent and
    back. `color: var(--x)` resolves to a concrete color before interpolation, so
    these tokens animate as smoothly as literals would. */
@@ -110,7 +159,21 @@
   0%, 100% { color: var(--dim); text-shadow: none; }
   50% { color: var(--accent); text-shadow: 0 0 12px var(--accent-soft); }
 }
+
+/* Shrinks slightly as it goes, so the card reads as receding rather than as a
+   light being switched off. */
+@keyframes sg-ghost-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.9); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* no animation-name means the base `color: var(--dim)` above stands */
   .sg-canvas--loading { animation: none; }
+  /* The canvas plans no morph at all under this setting — no ghost is ever mounted
+     and no shell is ever inverted — so these are belt and braces: if one of them
+     did land, it would land instantly. */
+  .sg-node.sg-ghost { animation: none; opacity: 0; }
+  .sg-node-shell--flip,
+  .sg-node-shell--flip-play { transform: none; transition: none; }
 }

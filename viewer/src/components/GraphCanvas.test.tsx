@@ -303,9 +303,9 @@ it('pips only the cards the KB matched, with the count it matched', async () => 
   expect(pip('verify-browser')).toHaveTextContent('2');
   expect(pip('research-docs')).toHaveTextContent('1');
   expect(pip('scaffold-repo')).toHaveTextContent('1');
-  expect(pip('write-code')).toBeNull();
+  expect(pip('write-code')).toHaveTextContent('1');
   expect(pip('gather-brief')).toBeNull();
-  expect(screen.getAllByTestId('sg-badge')).toHaveLength(3);
+  expect(screen.getAllByTestId('sg-badge')).toHaveLength(4);
 });
 
 it('leaves every card bare on a graph with no KB behind it', async () => {
@@ -430,16 +430,377 @@ it('marks the patch the reducer refuses as invalid', async () => {
   expect(screen.getByTestId('sg-sug-invalid')).toHaveTextContent('PATCH INVALID');
 });
 
-// Task 5 owns the morph. Until it lands, pressing APPLY is inert — pinned so a
-// half-wired handler cannot quietly mutate the graph in the meantime.
-it('leaves the graph alone when APPLY is pressed — the morph is Task 5', async () => {
-  render(<GraphCanvas workflow={enriched} />);
-  const all = await cardsOf(enriched);
+// ---------------------------------------------------------------------------
+// The magic moment: apply, morph, impact, versions
+// ---------------------------------------------------------------------------
 
-  fireEvent.click(cardFor(VERIFY, all));
+const RESEARCH = 'Research the libraries & read the docs';
+const CODE = 'Write the feature, one slice at a time';
+/** What the fixture's two appliable patches put in place of the steps they eat. */
+const RESEARCH_MCP = 'Pull the docs in-session';
+const DRIVEN = 'Verify in a driven browser';
+
+/**
+ * The labels on real cards. Ghosts wear `.sg-label` too — they are copies of the
+ * card that just left — so every "is it still on the canvas" question is asked of
+ * the cards themselves, never of the document text.
+ */
+const cardLabels = () =>
+  screen.getAllByTestId('sg-node').map((el) => el.querySelector('.sg-label')?.textContent ?? '');
+
+/** Opens a step's panel and presses APPLY on the nth row it lists. */
+async function applyOn(label: string, index = 0) {
+  fireEvent.click(cardFor(label, screen.getAllByTestId('sg-node')));
   await screen.findByTestId('detail-drawer');
+  fireEvent.click(screen.getAllByTestId('sg-sug-apply')[index]);
+}
 
-  fireEvent.click(screen.getAllByTestId('sg-sug-apply')[0]);
-  expect(screen.getAllByTestId('sg-node')).toHaveLength(enriched.nodes.length);
+/** Reports the whole session as unwanted motion, the way a real OS setting does. */
+function reduceMotion(): () => void {
+  const original = window.matchMedia;
+  (window as unknown as { matchMedia: unknown }).matchMedia = (query: string) => ({
+    matches: query.includes('prefers-reduced-motion'),
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  });
+  return () => {
+    window.matchMedia = original;
+  };
+}
+
+it('morphs the graph when a patch is applied', async () => {
+  render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+  expect(screen.getAllByTestId('sg-badge')).toHaveLength(4);
+
+  // the driven-browser MCP: merges the hand-verify step into a replacement
+  await applyOn(VERIFY);
+
+  await waitFor(() => {
+    expect(cardLabels()).toContain(DRIVEN);
+  }, LAYOUT_WAIT);
+  expect(cardLabels()).not.toContain(VERIFY);
+  // one merged, one replacement — the count the effect describes
+  expect(screen.getAllByTestId('sg-node')).toHaveLength(6);
+  expect(screen.getByTestId('canvas-toolbar')).toHaveTextContent('6 nodes');
+  // the applied row is gone, and so is the sibling that also targeted that step
   expect(screen.getAllByTestId('sg-badge')).toHaveLength(3);
+});
+
+it('extinguishes the ember when the hottest step is the one replaced', async () => {
+  render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+  expect(document.querySelectorAll('.sg-node--hot')).toHaveLength(1);
+  expect(document.querySelector('.sg-chip-hot')).toHaveTextContent('●●●●●');
+
+  await applyOn(VERIFY);
+  await waitFor(() => expect(cardLabels()).toContain(DRIVEN), LAYOUT_WAIT);
+
+  // the pain-1 replacement carries no heat, so the graph's maximum drops with it
+  expect(document.querySelectorAll('.sg-node--hot')).toHaveLength(0);
+  expect(document.querySelector('.sg-chip-hot')).toHaveTextContent('●●●●');
+});
+
+it('counts only the components the applied patch actually saved', async () => {
+  render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+  expect(screen.queryByTestId('impact-meter')).not.toBeInTheDocument();
+
+  // the docs MCP claims an honest zero on tokens — it reads pages, it does not save them
+  await applyOn(RESEARCH);
+
+  const meter = await screen.findByTestId('impact-meter');
+  await waitFor(() => {
+    expect(meter).toHaveTextContent('−1 steps');
+    expect(meter).toHaveTextContent('−25 min');
+    expect(meter).toHaveTextContent('−1 manual');
+  });
+  // no chip claims a saving the row did not: "−0 tok" would be a lie about a zero
+  expect(meter).not.toHaveTextContent('tok');
+  expect(screen.getAllByTestId('impact-part')).toHaveLength(3);
+});
+
+it('shows the version strip only once there is more than one version', async () => {
+  render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+  expect(screen.queryByTestId('version-strip')).not.toBeInTheDocument();
+
+  await applyOn(RESEARCH);
+  await waitFor(() => expect(screen.getByTestId('version-strip')).toBeInTheDocument());
+
+  expect(screen.getAllByTestId('version-chip').map((c) => c.textContent)).toEqual(['V0', 'V1']);
+  expect(screen.getAllByTestId('version-chip')[1]).toHaveAttribute('aria-current', 'true');
+  expect(screen.getByTestId('undo-btn')).toBeEnabled();
+});
+
+it('UNDO puts the graph, the meter and the strip back', async () => {
+  render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+
+  await applyOn(RESEARCH);
+  await waitFor(() => expect(cardLabels()).toContain(RESEARCH_MCP), LAYOUT_WAIT);
+
+  fireEvent.click(screen.getByTestId('undo-btn'));
+  await waitFor(() => expect(cardLabels()).toContain(RESEARCH), LAYOUT_WAIT);
+
+  expect(cardLabels()).not.toContain(RESEARCH_MCP);
+  expect(screen.getAllByTestId('sg-badge')).toHaveLength(4);
+  // back at V0 there is nothing saved and no history to show
+  expect(screen.queryByTestId('impact-meter')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('version-strip')).not.toBeInTheDocument();
+});
+
+// The strip is a jump list, not a log: pressing V1 rebuilds the session by replaying
+// the applied prefix, so the graph that comes back is the one that was there.
+it('jumps to an intermediate version from the strip', async () => {
+  render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+
+  await applyOn(RESEARCH);
+  await waitFor(() => expect(cardLabels()).toContain(RESEARCH_MCP), LAYOUT_WAIT);
+  await applyOn(VERIFY);
+  await waitFor(() => expect(cardLabels()).toContain(DRIVEN), LAYOUT_WAIT);
+
+  expect(screen.getAllByTestId('version-chip').map((c) => c.textContent)).toEqual([
+    'V0',
+    'V1',
+    'V2',
+  ]);
+  // the second patch is the one with a token saving, so the third chip appears with it
+  await waitFor(() => expect(screen.getByTestId('impact-meter')).toHaveTextContent('−9000 tok'));
+
+  fireEvent.click(screen.getAllByTestId('version-chip')[1]);
+  await waitFor(() => expect(cardLabels()).toContain(VERIFY), LAYOUT_WAIT);
+
+  expect(cardLabels()).toContain(RESEARCH_MCP);
+  expect(cardLabels()).not.toContain(DRIVEN);
+  expect(screen.getAllByTestId('version-chip').map((c) => c.textContent)).toEqual(['V0', 'V1']);
+  await waitFor(() => expect(screen.getByTestId('impact-meter')).not.toHaveTextContent('tok'));
+});
+
+it('closes the panel when APPLY consumes the step it describes', async () => {
+  render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+
+  await applyOn(VERIFY);
+  await waitFor(() => {
+    expect(screen.queryByTestId('detail-drawer')).not.toBeInTheDocument();
+  }, LAYOUT_WAIT);
+});
+
+// The conventions skill deletes the SCAFFOLD step, not the coding loop it is matched
+// to — so the panel's subject survives the morph and has to be restated from the new
+// version rather than left describing the old one.
+it('re-derives the panel from the new version when its step survives', async () => {
+  render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+
+  await applyOn(CODE);
+  await waitFor(() => expect(screen.getAllByTestId('sg-node')).toHaveLength(5), LAYOUT_WAIT);
+
+  expect(screen.getByTestId('detail-drawer')).toHaveTextContent(CODE);
+  // the row that was pressed is gone from the panel it was pressed in
+  expect(screen.getByTestId('drawer-suggestions')).toBeEmptyDOMElement();
+  expect(cardLabels()).not.toContain(SCAFFOLD);
+  // the ring stays with the panel through the morph
+  expect(document.querySelectorAll('.sg-node--selected')).toHaveLength(1);
+});
+
+/**
+ * Two rows that consolidate their own step into the SAME replacement id — generation
+ * that ignored the skill's unique-replacement rule. Either one applies alone; once one
+ * has, the other's replacement collides with a node that now exists and the reducer
+ * refuses it. A card can only know that if its dry run asks the live session.
+ */
+const COLLIDING = {
+  meta: {
+    task: 'write a thing',
+    title: 'Write a Thing',
+    generatedAt: '2026-07-29T15:00:00Z',
+    model: 'claude-fable-5',
+    kbSource: 'airtable',
+  },
+  nodes: [
+    { id: 'intake', label: 'Take the ask', kind: 'input', description: 'Read the request.', painLevel: 1 },
+    { id: 'hand-draft', label: 'Write it by hand', kind: 'process', description: 'The slog.', painLevel: 4 },
+    { id: 'hand-check', label: 'Check it over by hand', kind: 'review', description: 'Read it back.', painLevel: 3 },
+    { id: 'ship', label: 'Hand it over', kind: 'output', description: 'Deliver.', painLevel: 1 },
+  ],
+  edges: [
+    { from: 'intake', to: 'hand-draft', kind: 'sequence' },
+    { from: 'hand-draft', to: 'hand-check', kind: 'sequence' },
+    { from: 'hand-check', to: 'ship', kind: 'sequence' },
+  ],
+  suggestions: [
+    {
+      nodeId: 'hand-draft',
+      airtableRecordId: 'recF1aB2cD3eF4gH5',
+      name: 'one-pass-writer',
+      url: 'https://example.com/one-pass-writer',
+      category: 'Claude Skill',
+      claim: 'Drafts and checks in a single pass.',
+      effect: {
+        removeNodes: ['hand-draft'],
+        mergeNodes: [],
+        replaceWith: {
+          id: 'one-pass',
+          label: 'Draft and check in one pass',
+          kind: 'process',
+          description: 'One call writes it and reads it back.',
+          painLevel: 1,
+        },
+        newEdges: [{ from: 'intake', to: 'one-pass', kind: 'sequence' }],
+        metrics: { stepsSaved: 1, estTimeSavedMin: 10, estTokensSaved: 0, manualInterventionsRemoved: 1 },
+      },
+    },
+    {
+      nodeId: 'hand-check',
+      airtableRecordId: 'recG6iJ7kL8mN9oP0',
+      name: 'one-pass-reviewer',
+      url: 'https://example.com/one-pass-reviewer',
+      category: 'Claude Plugin',
+      claim: 'Folds the read-back into the same pass.',
+      effect: {
+        removeNodes: ['hand-check'],
+        mergeNodes: [],
+        replaceWith: {
+          id: 'one-pass',
+          label: 'Draft and check in one pass',
+          kind: 'process',
+          description: 'One call writes it and reads it back.',
+          painLevel: 1,
+        },
+        newEdges: [{ from: 'one-pass', to: 'ship', kind: 'sequence' }],
+        metrics: { stepsSaved: 1, estTimeSavedMin: 8, estTokensSaved: 0, manualInterventionsRemoved: 1 },
+      },
+    },
+  ],
+};
+
+const colliding = fixture(COLLIDING, 'colliding');
+
+it('judges every card against the version on screen, not the original graph', async () => {
+  render(<GraphCanvas workflow={colliding} />);
+  await cardsOf(colliding);
+
+  fireEvent.click(cardFor('Check it over by hand', screen.getAllByTestId('sg-node')));
+  await screen.findByTestId('detail-drawer');
+  expect(screen.getByTestId('sg-sug-apply')).toBeEnabled();
+  fireEvent.keyDown(window, { key: 'Escape' });
+
+  await applyOn('Write it by hand');
+  await waitFor(() => expect(cardLabels()).toContain('Draft and check in one pass'), LAYOUT_WAIT);
+
+  fireEvent.click(cardFor('Check it over by hand', screen.getAllByTestId('sg-node')));
+  await screen.findByTestId('detail-drawer');
+  expect(screen.getByTestId('sg-sug-apply')).toBeDisabled();
+  expect(screen.getByTestId('sg-sug-invalid')).toHaveTextContent('PATCH INVALID');
+});
+
+// Two cards carrying one Airtable row is a graph the reducer cannot key on, and the
+// loader lets it through. The canvas draws it and withholds the suggestion layer
+// whole rather than offering half of it.
+it('withholds the suggestion layer when two rows share an id', async () => {
+  const twinned = fixture(
+    {
+      ...COLLIDING,
+      suggestions: [
+        COLLIDING.suggestions[0],
+        { ...COLLIDING.suggestions[1], airtableRecordId: COLLIDING.suggestions[0].airtableRecordId },
+      ],
+    },
+    'twinned',
+  );
+  render(<GraphCanvas workflow={twinned} />);
+  await cardsOf(twinned);
+
+  expect(screen.getByTestId('suggestions-disabled')).toHaveTextContent(
+    'SUGGESTIONS DISABLED — DUPLICATE IDS',
+  );
+  expect(screen.queryByTestId('sg-badge')).not.toBeInTheDocument();
+
+  fireEvent.click(cardFor('Write it by hand', screen.getAllByTestId('sg-node')));
+  await screen.findByTestId('detail-drawer');
+  expect(screen.queryByTestId('sg-sug-apply')).not.toBeInTheDocument();
+  expect(screen.getByTestId('drawer-suggestions')).toBeEmptyDOMElement();
+});
+
+// The morph's two halves in jsdom: the ghost is a real element with a real lifetime,
+// and the inversion is real inline state on the surviving shells. What they LOOK like
+// is a browser question — this pins that the paths run and clean up after themselves.
+it('sends the consumed card out as a ghost, then takes it off the canvas', async () => {
+  render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+
+  // deletes the scaffold step outright — no replacement, so there is something to mourn
+  await applyOn(CODE);
+
+  const ghost = await screen.findByTestId('sg-ghost', {}, LAYOUT_WAIT);
+  expect(ghost).toHaveTextContent(SCAFFOLD);
+  expect(screen.getByTestId('ghost-layer')).toContainElement(ghost);
+  await waitFor(() => expect(screen.queryByTestId('sg-ghost')).not.toBeInTheDocument(), {
+    timeout: 2000,
+  });
+});
+
+it('inverts the surviving shells for the FLIP, then clears the properties', async () => {
+  render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+
+  await applyOn(CODE);
+
+  const flipping = () => [...document.querySelectorAll<HTMLElement>('.sg-node-shell--flip')];
+  await waitFor(() => expect(flipping().length).toBeGreaterThan(0), LAYOUT_WAIT);
+
+  const shell = flipping()[0];
+  expect(shell.style.getPropertyValue('--flip-dx')).toMatch(/px$/);
+  expect(shell.style.getPropertyValue('--flip-dy')).toMatch(/px$/);
+  // deleting a step out of the chain pulls everything downstream a layer to the
+  // left, so at least one card has real ground to cover
+  const dx = flipping().map((el) => Math.abs(parseFloat(el.style.getPropertyValue('--flip-dx'))));
+  expect(Math.max(...dx)).toBeGreaterThan(100);
+  // both classes: the inverted transform, then the transition back to identity
+  expect(shell.classList.contains('sg-node-shell--flip-play')).toBe(true);
+
+  await waitFor(() => expect(flipping()).toHaveLength(0), { timeout: 2000 });
+  expect(shell.style.getPropertyValue('--flip-dx')).toBe('');
+});
+
+// A second file dropped on the viewer is a second session. Without that reset the
+// canvas would keep drawing the first graph's current version — and judging the new
+// graph's cards against the old graph's rows.
+it('opens a new session when the workflow itself changes', async () => {
+  const { rerender } = render(<GraphCanvas workflow={wf} />);
+  await cards();
+  expect(screen.queryByTestId('sg-badge')).not.toBeInTheDocument();
+
+  rerender(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+
+  expect(screen.getByText(enriched.meta.title)).toBeInTheDocument();
+  expect(screen.getAllByTestId('sg-badge')).toHaveLength(4);
+  expect(screen.queryByTestId('version-strip')).not.toBeInTheDocument();
+});
+
+it('swaps the graph outright when motion is not wanted', async () => {
+  const restore = reduceMotion();
+  try {
+    render(<GraphCanvas workflow={enriched} />);
+    await cardsOf(enriched);
+
+    await applyOn(CODE);
+    await waitFor(() => expect(screen.getAllByTestId('sg-node')).toHaveLength(5), LAYOUT_WAIT);
+
+    expect(cardLabels()).not.toContain(SCAFFOLD);
+    expect(screen.queryByTestId('sg-ghost')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('ghost-layer')).not.toBeInTheDocument();
+    expect(document.querySelectorAll('.sg-node-shell--flip')).toHaveLength(0);
+  } finally {
+    restore();
+  }
 });
