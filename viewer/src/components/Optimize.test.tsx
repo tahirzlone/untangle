@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import gallery from '../../../gallery/add-e2e-tests.workflow.json';
 import enrichedDoc from '../test/fixtures/enriched.workflow.json';
 import {
@@ -339,6 +339,110 @@ it('reports the branch the cursor is on, not the future it left behind', async (
     expect(appliedNames()).toEqual(['firecrawl-mcp', 'chrome-devtools-mcp']);
     expect(card).not.toHaveTextContent('browser-verify plugin');
     expect(card).toHaveTextContent('OPTIMIZED — 2 upgrades applied');
+  } finally {
+    restore();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// The scorecard is a report, not a live readout
+// ---------------------------------------------------------------------------
+
+/** Runs a whole tour without the pacing and hands back the scorecard. */
+async function scorecardAfterInstantTour() {
+  render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+  fireEvent.click(optimizeBtn());
+  return screen.findByTestId('scorecard');
+}
+
+// The report is frozen at the moment the run stops. A session that moves under it
+// afterwards — a version jump, an undo — does not get to rewrite what the user
+// just watched happen into "0 upgrades applied".
+it('holds its report still when the session moves underneath it', async () => {
+  const restore = reduceMotion();
+  try {
+    const card = await scorecardAfterInstantTour();
+    expect(card).toHaveTextContent('OPTIMIZED — 2 upgrades applied');
+
+    // straight back to the original graph, behind the open panel
+    fireEvent.click(screen.getAllByTestId('version-chip')[0]);
+    await waitFor(() => expect(cardLabels()).toContain(RESEARCH), LAYOUT_WAIT);
+
+    expect(screen.getByTestId('scorecard')).toHaveTextContent('OPTIMIZED — 2 upgrades applied');
+    expect(appliedNames()).toEqual(['firecrawl-mcp', 'chrome-devtools-mcp']);
+    expect(screen.getAllByTestId('scorecard-metric').map((el) => el.textContent)).toEqual([
+      '−2 steps',
+      '−65 min',
+      '−9000 tok',
+      '−4 manual',
+    ]);
+    expect(screen.getByTestId('scorecard-count')).toHaveTextContent('6 → 6 nodes');
+  } finally {
+    restore();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Nothing behind the backdrop is reachable
+// ---------------------------------------------------------------------------
+
+it('makes the canvas behind it inert, and gives it back on close', async () => {
+  const restore = reduceMotion();
+  try {
+    await scorecardAfterInstantTour();
+    expect(screen.getByTestId('canvas')).toHaveAttribute('inert');
+
+    fireEvent.click(screen.getByTestId('scorecard-close'));
+    await waitFor(() => expect(screen.queryByTestId('scorecard')).not.toBeInTheDocument());
+    expect(screen.getByTestId('canvas')).not.toHaveAttribute('inert');
+  } finally {
+    restore();
+  }
+});
+
+// Tab out of the panel would land on the masthead, which the backdrop does not
+// cover — so the panel keeps the key rather than trusting the geometry.
+it('keeps Tab inside the panel', async () => {
+  const restore = reduceMotion();
+  try {
+    await scorecardAfterInstantTour();
+    const close = screen.getByTestId('scorecard-close');
+    expect(document.activeElement).toBe(close);
+
+    const forward = createEvent.keyDown(close, { key: 'Tab' });
+    fireEvent(close, forward);
+    expect(forward.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(close);
+
+    const back = createEvent.keyDown(close, { key: 'Tab', shiftKey: true });
+    fireEvent(close, back);
+    expect(back.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(close);
+  } finally {
+    restore();
+  }
+});
+
+// The drawer draws at z6 and the backdrop at z7, so a panel opened now would be a
+// panel nobody can see holding the focus. The canvas declines to open one.
+it('will not open the drawer while the scorecard is up', async () => {
+  const restore = reduceMotion();
+  try {
+    const { container } = render(<GraphCanvas workflow={enriched} />);
+    await cardsOf(enriched);
+    fireEvent.click(optimizeBtn());
+    await screen.findByTestId('scorecard');
+
+    const wrapper = container.querySelector<HTMLElement>(
+      '.react-flow__node[data-id="gather-brief"]',
+    )!;
+    fireEvent.click(wrapper.querySelector('[data-testid="sg-node"]')!);
+    expect(screen.queryByTestId('detail-drawer')).not.toBeInTheDocument();
+
+    wrapper.focus();
+    fireEvent.keyDown(wrapper, { key: 'Enter' });
+    expect(screen.queryByTestId('detail-drawer')).not.toBeInTheDocument();
   } finally {
     restore();
   }

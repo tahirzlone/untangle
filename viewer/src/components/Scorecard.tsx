@@ -1,37 +1,49 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, type KeyboardEvent } from 'react';
 import type { SessionMetrics } from '../graph/apply';
 import type { Suggestion } from '../graph/types';
 import { CategoryChip } from './DetailDrawer';
 import { impactLabel, impactParts } from './ImpactMeter';
 import './scorecard.css';
 
-export interface ScorecardProps {
-  /** The rows behind the version on the canvas, in the order they were applied. */
+/**
+ * What a finished run did, frozen at the moment it stopped.
+ *
+ * Deliberately a snapshot and not a view of the session: the panel is a report on
+ * something the user watched happen, and a session that moves underneath it — a
+ * version jump, an undo — must not be able to rewrite that account into
+ * "0 upgrades applied" while it is still on screen.
+ */
+export interface ScorecardReport {
+  /** The rows behind the version the run finished on, in the order they landed. */
   applied: Suggestion[];
-  /** The totals for those rows — the same numbers the toolbar meter carries. */
+  /** The totals for those rows — the same numbers the toolbar meter carried. */
   metrics: SessionMetrics;
   /** Steps in the original graph. */
   before: number;
-  /** Steps in the graph on screen. */
+  /** Steps in the graph the run finished on. */
   after: number;
-  onClose: () => void;
 }
+
+/** Everything the browser will stop on inside the panel, in tab order. */
+const FOCUSABLE =
+  'button:not([disabled]), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 /**
  * What the cinematic did, once it has stopped doing it.
  *
- * The panel describes the SESSION, not the tour: the totals are summed off the
- * original graph, so the node counts either side of them have to be measured from
- * the same place, and the rows listed are every row the version on screen is
- * standing on. A tour that finishes work a hand-pressed APPLY started reports all
- * of it, because all of it is what the graph now is.
+ * The report describes the SESSION as the run left it: the totals are summed off
+ * the original graph, so the node counts either side of them are measured from the
+ * same place, and the rows listed are every row that version was standing on. A
+ * tour that finishes work a hand-pressed APPLY started reports all of it, because
+ * all of it is what the graph had become.
  *
- * Modal, unlike the detail drawer: this is the end of a sequence the user set off
- * and watched, and the graph behind it has just stopped moving. There is one way
- * on, and it is in here.
+ * Modal, unlike the detail drawer, and modal in the way the word actually
+ * promises: the canvas behind is made inert by the caller, and Tab is kept in here
+ * rather than left to geometry — the masthead sits above the backdrop.
  */
-export function Scorecard({ applied, metrics, before, after, onClose }: ScorecardProps) {
+export function Scorecard({ report, onClose }: { report: ScorecardReport; onClose: () => void }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
 
   // Focus arrives with the panel. The tour was started from a button and ran
   // without the keyboard; landing focus on the way out is what hands it back.
@@ -40,15 +52,36 @@ export function Scorecard({ applied, metrics, before, after, onClose }: Scorecar
   }, []);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const parts = impactParts(metrics);
-  const n = applied.length;
+  /**
+   * Tab wraps inside the panel.
+   *
+   * `inert` on the canvas puts the graph, the toolbar and the version strip out of
+   * reach, but the masthead lives above the backdrop and would otherwise be one
+   * Tab away — and with EXPORT PNG disabled there is exactly one stop in here, so
+   * every Tab is a Tab out.
+   */
+  const onKeyDown = useCallback((e: KeyboardEvent<HTMLElement>) => {
+    if (e.key !== 'Tab' || !panelRef.current) return;
+    const stops = [...panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
+    if (stops.length === 0) return;
+    // Shift+Tab falls off the front of the list, Tab off the back; either way the
+    // focus comes round to the other end rather than leaving.
+    const edge = e.shiftKey ? stops[0] : stops[stops.length - 1];
+    const wrap = e.shiftKey ? stops[stops.length - 1] : stops[0];
+    if (document.activeElement !== edge) return;
+    e.preventDefault();
+    wrap.focus();
+  }, []);
+
+  const parts = impactParts(report.metrics);
+  const n = report.applied.length;
 
   return (
     <div
@@ -63,6 +96,8 @@ export function Scorecard({ applied, metrics, before, after, onClose }: Scorecar
         role="dialog"
         aria-modal="true"
         aria-labelledby="sg-scorecard-title"
+        ref={panelRef}
+        onKeyDown={onKeyDown}
         // the backdrop closes; the panel is not the backdrop
         onClick={(e) => e.stopPropagation()}
       >
@@ -74,18 +109,18 @@ export function Scorecard({ applied, metrics, before, after, onClose }: Scorecar
           <div className="sg-scorecard-metrics" role="group" aria-label="impact">
             {parts.map((p) => (
               <span className="sg-scorecard-metric" data-testid="scorecard-metric" key={p.key}>
-                {impactLabel(metrics[p.key], p.unit)}
+                {impactLabel(report.metrics[p.key], p.unit)}
               </span>
             ))}
           </div>
         ) : null}
 
         <p className="sg-scorecard-count" data-testid="scorecard-count">
-          {before} → {after} nodes
+          {report.before} → {report.after} nodes
         </p>
 
         <ul className="sg-scorecard-list" data-testid="scorecard-list">
-          {applied.map((s) => (
+          {report.applied.map((s) => (
             <li className="sg-scorecard-row" data-testid="scorecard-row" key={s.airtableRecordId}>
               <CategoryChip category={s.category} />
               <span className="sg-scorecard-name" data-testid="scorecard-name">

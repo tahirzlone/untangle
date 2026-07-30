@@ -42,6 +42,21 @@ export function orderAppliable(
 const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
 /**
+ * A finished run, in the terms the scorecard is written from.
+ *
+ * The session comes back WITH the count rather than being fetched afterwards: the
+ * instant route commits every patch inside one React batch, so at the moment it
+ * finishes there is no re-render yet and no fresh session to go and ask for. The
+ * route that produced it is the only thing that knows.
+ */
+export interface TourResult {
+  /** How many patches the reducer actually took. */
+  applied: number;
+  /** The session they produced, or null when none landed. */
+  session: GraphSession | null;
+}
+
+/**
  * Everything the tour needs from the canvas it is running on.
  *
  * Handed over as callbacks rather than as state, because every one of them has to
@@ -58,10 +73,10 @@ export interface CinematicDeps {
   lookAt: (x: number, y: number) => void;
   /** One patch, through the same route the drawer's APPLY drives. */
   applyOne: (airtableRecordId: string) => void;
-  /** Every patch in one commit; answers how many the reducer actually took. */
-  applyAll: (airtableRecordIds: string[]) => number;
-  /** The run has stopped, having applied this many patches. */
-  onDone: (applied: number) => void;
+  /** Every patch in one commit, for when motion is not wanted. */
+  applyAll: (airtableRecordIds: string[]) => TourResult;
+  /** The run has stopped, and this is what it left behind. */
+  onDone: (result: TourResult) => void;
 }
 
 export interface Cinematic {
@@ -127,6 +142,7 @@ export function useCinematic(deps: CinematicDeps): Cinematic {
       return;
     }
 
+
     busy.current = true;
     cancelled.current = false;
     setRunning(true);
@@ -159,7 +175,10 @@ export function useCinematic(deps: CinematicDeps): Cinematic {
       busy.current = false;
       if (!live.current) return;
       setRunning(false);
-      latest.current.onDone(applied);
+      // Read here rather than carried through the loop: every apply committed and
+      // re-rendered before the settle that followed it, so this is the session the
+      // last one produced.
+      latest.current.onDone({ applied, session: latest.current.getSession() });
     })();
   }, []);
 

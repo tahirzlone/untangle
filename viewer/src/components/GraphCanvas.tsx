@@ -33,8 +33,8 @@ import { ImpactMeter } from './ImpactMeter';
 import { SignalNode } from './SignalNode';
 import { SignalEdge } from './SignalEdge';
 import { VersionStrip } from './VersionStrip';
-import { Scorecard } from './Scorecard';
-import { useCinematic } from './optimize';
+import { Scorecard, type ScorecardReport } from './Scorecard';
+import { useCinematic, type TourResult } from './optimize';
 import { CAMERA_MS, FLIP_MS, GHOST_MS, prefersReducedMotion } from './motion';
 import './canvas.css';
 
@@ -60,6 +60,31 @@ const FOCUS_FRAME_BUDGET = 4;
  */
 const TOUR_ZOOM_MIN = 0.75;
 const TOUR_ZOOM_MAX = 1;
+
+/**
+ * What a session looks like from the outside, the moment a run finished with it.
+ *
+ * Taken as a copy, not read live: the scorecard is an account of something the
+ * user watched happen, and the session behind it goes on moving — an UNDO or a
+ * version jump would otherwise rewrite the account into a version nobody ran.
+ *
+ * `appliedIds` is read to the CURSOR: it spans the redo-future too, and the report
+ * describes the graph the run finished on. The rows themselves only survive in V0
+ * — applying one strips it from every version after — so that is where they are
+ * looked up.
+ */
+function reportOn(session: GraphSession): ScorecardReport {
+  const byId = new Map(session.versions[0].suggestions.map((s) => [s.airtableRecordId, s]));
+  return {
+    applied: session.appliedIds
+      .slice(0, session.cursor)
+      .map((id) => byId.get(id))
+      .filter((s): s is Suggestion => s !== undefined),
+    metrics: session.metrics,
+    before: session.versions[0].nodes.length,
+    after: current(session).nodes.length,
+  };
+}
 
 /** The data every SignalNode carries; also how a click finds its workflow node. */
 interface SignalNodeData extends Record<string, unknown> {
@@ -186,8 +211,11 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const [layoutRun, setLayoutRun] = useState(0);
   const [ghosts, setGhosts] = useState<GhostCard[]>(NO_GHOSTS);
   const [ghostTransform, setGhostTransform] = useState('');
-  /** Shown when a cinematic has applied at least one patch — see `onTourDone`. */
-  const [scorecardOpen, setScorecardOpen] = useState(false);
+  /**
+   * The frozen account of the last run, or null when there is nothing to report.
+   * Written once, when the run stops, and never re-derived — see `reportOn`.
+   */
+  const [report, setReport] = useState<ScorecardReport | null>(null);
 
   const [opened, setOpened] = useState(() => openSession(workflow));
   // A new graph is a new session, adjusted during render rather than in an effect:
@@ -614,11 +642,12 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
    * The reducer is called once per patch, in the tour's order, and each answer is
    * the input to the next; only the last one reaches the canvas. A patch the run
    * before it consumed is skipped here for the same reason the paced tour skips
-   * it, and the count that comes back is what actually landed.
+   * it, and what comes back is what actually landed — including the session,
+   * which React has not re-rendered with yet at the moment this returns.
    */
   const applyAll = useCallback(
-    (airtableRecordIds: string[]): number => {
-      if (!session) return 0;
+    (airtableRecordIds: string[]): TourResult => {
+      if (!session) return { applied: 0, session: null };
       let next = session;
       let applied = 0;
       for (const id of airtableRecordIds) {
@@ -630,15 +659,16 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
         }
       }
       if (applied > 0) morphTo(next);
-      return applied;
+      return { applied, session: next };
     },
     [morphTo, session],
   );
 
-  const onTourDone = useCallback((applied: number) => {
+  const onTourDone = useCallback(({ applied, session: ended }: TourResult) => {
     // Nothing applied, nothing to report — a cancel before the first patch landed
     // leaves the graph exactly as it was, and a panel saying so would be noise.
-    if (applied > 0) setScorecardOpen(true);
+    if (applied === 0 || !ended) return;
+    setReport(reportOn(ended));
   }, []);
 
   const { running, start, cancel } = useCinematic({
@@ -654,12 +684,12 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     // The tour owns the canvas: a panel left open would sit over the camera, and
     // its subject is about to be applied out from under it anyway.
     closeDrawer();
-    setScorecardOpen(false);
+    setReport(null);
     start();
   }, [closeDrawer, start]);
 
   const closeScorecard = useCallback(() => {
-    setScorecardOpen(false);
+    setReport(null);
     // Focus goes back to the control the run was started from. A tour that spent
     // every patch on offer leaves no such button — the work it described is gone —
     // so the graph itself takes the keyboard back.
@@ -674,21 +704,15 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   );
 
   /**
-   * The rows the version on screen is standing on, in the order they were applied.
+   * Is the canvas answering to the user at all?
    *
-   * Read to the CURSOR: `appliedIds` spans the redo-future too, and the scorecard
-   * describes the graph the user is looking at, never one the session walked back
-   * out of. The rows themselves only survive in V0 — applying one strips it from
-   * every version after — so that is where they are looked up.
+   * False while the tour drives it, and false again while its report is up: the
+   * drawer draws at z6 and the backdrop at z7, so a panel opened now would be a
+   * panel nobody can see, holding the focus. `inert` on the canvas is what stops a
+   * pointer or a Tab reaching it; this is what stops the canvas's own key handlers
+   * acting on something that got through anyway.
    */
-  const appliedRows = useMemo<Suggestion[]>(() => {
-    if (!session) return NO_SUGGESTIONS;
-    const byId = new Map(session.versions[0].suggestions.map((s) => [s.airtableRecordId, s]));
-    return session.appliedIds
-      .slice(0, session.cursor)
-      .map((id) => byId.get(id))
-      .filter((s): s is Suggestion => s !== undefined);
-  }, [session]);
+  const canvasIdle = !running && report === null;
 
   // Drag and click share the same gesture; React Flow tells them apart by
   // distance, and the tolerance is set on the ReactFlow element below — see the
@@ -698,10 +722,10 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     (_: unknown, node: SignalRFNode) => {
       // While the tour runs the canvas is being driven, not browsed: a panel
       // opening over the camera would be a second thing moving.
-      if (running) return;
+      if (!canvasIdle) return;
       select(node.id);
     },
-    [running, select],
+    [canvasIdle, select],
   );
 
   /**
@@ -717,7 +741,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const onPaneKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>) => {
       if (!OPEN_KEYS.includes(e.key)) return;
-      if (running) return; // the tour has the canvas — same stand-down as the click
+      if (!canvasIdle) return; // the tour or its report has the canvas
       const focused = document.activeElement;
       const wrapper = focused instanceof Element ? focused.closest('.react-flow__node') : null;
       const id = wrapper?.getAttribute('data-id');
@@ -727,7 +751,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
       e.preventDefault();
       select(id);
     },
-    [nodes, running, select],
+    [canvasIdle, nodes, select],
   );
   // Selection is dropped here rather than left to the rebuild the effect will
   // do: ELK is async, and a ring that lingers until it answers reads as a button
@@ -755,144 +779,146 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const selected = selectedId ? graph.nodes.find((n) => n.id === selectedId) ?? null : null;
 
   return (
-    <div className="sg-canvas" data-testid="canvas">
-      <svg className="sg-defs" aria-hidden="true">
-        <defs>
-          <marker id="fp-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-            <path d="M 0 0 L 8 4 L 0 8" fill="none" stroke="context-stroke" strokeWidth="1.5" />
-          </marker>
-        </defs>
-      </svg>
-      <div className="sg-toolbar" data-testid="canvas-toolbar">
-        <span className="sg-wf-title">{meta.title}</span>
-        <span className="sg-chip">
-          <b>{graph.nodes.length}</b> nodes
-        </span>
-        <span className="sg-chip">
-          max pain <span className="sg-chip-hot">{'●'.repeat(maxPain)}</span>
-        </span>
-        <span className="sg-chip">{meta.kbSource === 'airtable' ? 'AIRTABLE' : 'KB NOT LINKED'}</span>
-        {session ? (
-          <ImpactMeter metrics={session.metrics} />
-        ) : (
-          <span className="sg-chip sg-chip--refused" data-testid="suggestions-disabled">
-            SUGGESTIONS DISABLED — DUPLICATE IDS
+    <>
+      {/* `inert` is what makes the report modal in fact and not just in ARIA: with
+          it, nothing behind the backdrop takes a click, a Tab or a keystroke — no
+          version chip to jump the session out from under the panel, no card to open
+          an invisible drawer on. It is dropped again the moment the panel closes. */}
+      <div className="sg-canvas" data-testid="canvas" inert={report !== null}>
+        <svg className="sg-defs" aria-hidden="true">
+          <defs>
+            <marker id="fp-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+              <path d="M 0 0 L 8 4 L 0 8" fill="none" stroke="context-stroke" strokeWidth="1.5" />
+            </marker>
+          </defs>
+        </svg>
+        <div className="sg-toolbar" data-testid="canvas-toolbar">
+          <span className="sg-wf-title">{meta.title}</span>
+          <span className="sg-chip">
+            <b>{graph.nodes.length}</b> nodes
           </span>
-        )}
-        {session && (hasAppliable || running) ? (
-          // One slot, two jobs: the way in while there is a tour to start, the way
-          // out while one is running. A second button appearing beside the first
-          // would put the stop control somewhere the eye has not been.
+          <span className="sg-chip">
+            max pain <span className="sg-chip-hot">{'●'.repeat(maxPain)}</span>
+          </span>
+          <span className="sg-chip">{meta.kbSource === 'airtable' ? 'AIRTABLE' : 'KB NOT LINKED'}</span>
+          {session ? (
+            <ImpactMeter metrics={session.metrics} />
+          ) : (
+            <span className="sg-chip sg-chip--refused" data-testid="suggestions-disabled">
+              SUGGESTIONS DISABLED — DUPLICATE IDS
+            </span>
+          )}
+          {session && (hasAppliable || running) ? (
+            // One slot, two jobs: the way in while there is a tour to start, the way
+            // out while one is running. A second button appearing beside the first
+            // would put the stop control somewhere the eye has not been.
+            <button
+              type="button"
+              className={`sg-optimize${running ? ' sg-optimize--cancel' : ''}`}
+              data-testid="optimize-btn"
+              onClick={running ? cancel : startTour}
+            >
+              {running ? 'CANCEL' : 'OPTIMIZE'}
+            </button>
+          ) : null}
           <button
             type="button"
-            className={`sg-optimize${running ? ' sg-optimize--cancel' : ''}`}
-            data-testid="optimize-btn"
-            onClick={running ? cancel : startTour}
+            className="sg-ghost-btn"
+            data-testid="reset-layout"
+            onClick={resetLayout}
           >
-            {running ? 'CANCEL' : 'OPTIMIZE'}
+            RESET LAYOUT
           </button>
-        ) : null}
-        <button
-          type="button"
-          className="sg-ghost-btn"
-          data-testid="reset-layout"
-          onClick={resetLayout}
-        >
-          RESET LAYOUT
-        </button>
-        <span className="sg-chip sg-chip--end">
-          generated by <b>{meta.model}</b>
-        </span>
-      </div>
-      <VersionStrip
-        count={versionCount}
-        at={versionAt}
-        onJump={onJump}
-        onUndo={onUndo}
-        onRedo={onRedo}
-      />
-      {/* The pane is a listening post for keys aimed at the focusable cards inside
-          it — it takes no focus of its own and adds no keyboard trap. */}
-      <div className="sg-viewport" onKeyDown={onPaneKeyDown}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onNodeClick={onNodeClick}
-          onPaneClick={closeDrawer}
-          onInit={takeInstance}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          fitView
-          fitViewOptions={{ padding: 0.12 }}
-          minZoom={0.2}
-          maxZoom={2}
-          nodesDraggable
-          elementsSelectable
-          // How far the pointer may slip and still count as a click. React Flow
-          // hands this to d3-drag's clickDistance, which swallows the trailing
-          // click of any gesture that travelled further. The default is 0 — and
-          // at 0, a CDP pointer probe showed a 1px wobble already killing the
-          // click, so on a real mouse or trackpad the drawer would open only by
-          // luck. 4px is under the width of a fingertip's tremor and still well
-          // inside "I did not mean to move that card": a gesture that short nudges
-          // the node imperceptibly AND opens the drawer, while a genuine drag
-          // stays silent.
-          nodeClickDistance={4}
-          // reshaping the layout is not rewiring the workflow: cards move, the
-          // graph's semantics do not
-          nodesConnectable={false}
-          proOptions={{ hideAttribution: true }}
+          <span className="sg-chip sg-chip--end">
+            generated by <b>{meta.model}</b>
+          </span>
+        </div>
+        <VersionStrip
+          count={versionCount}
+          at={versionAt}
+          onJump={onJump}
+          onUndo={onUndo}
+          onRedo={onRedo}
         />
-        {ghosts.length > 0 ? (
-          // The cards the patch consumed, held for one 400ms fade at the positions
-          // they left. Carrying the pane's transform puts them in the same
-          // coordinate space the real cards were in, so nothing has to be
-          // projected back into screen pixels.
-          <div
-            className="sg-morph-ghosts"
-            data-testid="ghost-layer"
-            aria-hidden="true"
-            style={{ transform: ghostTransform }}
-          >
-            {ghosts.map((g) => (
-              <div
-                key={g.id}
-                className="sg-node sg-ghost"
-                data-testid="sg-ghost"
-                style={{ left: g.x, top: g.y, width: NODE_WIDTH, height: NODE_HEIGHT }}
-              >
-                <div className="sg-node-head">
-                  <span className="sg-label">{g.label}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : null}
-      </div>
-      {selected ? (
-        session ? (
-          <DetailDrawer
-            node={selected}
-            onClose={closeDrawer}
-            suggestions={matched.get(selected.id) ?? NO_SUGGESTIONS}
-            canApply={canApply}
-            onApply={onApply}
+        {/* The pane is a listening post for keys aimed at the focusable cards inside
+            it — it takes no focus of its own and adds no keyboard trap. */}
+        <div className="sg-viewport" onKeyDown={onPaneKeyDown}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onNodeClick={onNodeClick}
+            onPaneClick={closeDrawer}
+            onInit={takeInstance}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            fitView
+            fitViewOptions={{ padding: 0.12 }}
+            minZoom={0.2}
+            maxZoom={2}
+            nodesDraggable
+            elementsSelectable
+            // How far the pointer may slip and still count as a click. React Flow
+            // hands this to d3-drag's clickDistance, which swallows the trailing
+            // click of any gesture that travelled further. The default is 0 — and
+            // at 0, a CDP pointer probe showed a 1px wobble already killing the
+            // click, so on a real mouse or trackpad the drawer would open only by
+            // luck. 4px is under the width of a fingertip's tremor and still well
+            // inside "I did not mean to move that card": a gesture that short nudges
+            // the node imperceptibly AND opens the drawer, while a genuine drag
+            // stays silent.
+            nodeClickDistance={4}
+            // reshaping the layout is not rewiring the workflow: cards move, the
+            // graph's semantics do not
+            nodesConnectable={false}
+            proOptions={{ hideAttribution: true }}
           />
-        ) : (
-          // No session, no APPLY: the panel states the step and stops there.
-          <DetailDrawer node={selected} onClose={closeDrawer} />
-        )
-      ) : null}
-      {scorecardOpen && session ? (
-        <Scorecard
-          applied={appliedRows}
-          metrics={session.metrics}
-          before={session.versions[0].nodes.length}
-          after={graph.nodes.length}
-          onClose={closeScorecard}
-        />
-      ) : null}
-    </div>
+          {ghosts.length > 0 ? (
+            // The cards the patch consumed, held for one 400ms fade at the positions
+            // they left. Carrying the pane's transform puts them in the same
+            // coordinate space the real cards were in, so nothing has to be
+            // projected back into screen pixels.
+            <div
+              className="sg-morph-ghosts"
+              data-testid="ghost-layer"
+              aria-hidden="true"
+              style={{ transform: ghostTransform }}
+            >
+              {ghosts.map((g) => (
+                <div
+                  key={g.id}
+                  className="sg-node sg-ghost"
+                  data-testid="sg-ghost"
+                  style={{ left: g.x, top: g.y, width: NODE_WIDTH, height: NODE_HEIGHT }}
+                >
+                  <div className="sg-node-head">
+                    <span className="sg-label">{g.label}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+        {selected ? (
+          session ? (
+            <DetailDrawer
+              node={selected}
+              onClose={closeDrawer}
+              suggestions={matched.get(selected.id) ?? NO_SUGGESTIONS}
+              canApply={canApply}
+              onApply={onApply}
+            />
+          ) : (
+            // No session, no APPLY: the panel states the step and stops there.
+            <DetailDrawer node={selected} onClose={closeDrawer} />
+          )
+        ) : null}
+      </div>
+      {/* Outside the canvas, not inside it: the panel is what the canvas is inert
+          FOR, and a modal nested in the thing it disables would disable itself.
+          `.app-main` is the positioned ancestor either way, so the backdrop still
+          covers exactly the same rectangle. */}
+      {report ? <Scorecard report={report} onClose={closeScorecard} /> : null}
+    </>
   );
 }
