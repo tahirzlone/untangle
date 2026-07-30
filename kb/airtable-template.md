@@ -1,10 +1,33 @@
 # The knowledge base — Airtable template
 
-Flowprint's suggestions come from exactly one place: an Airtable table of real, existing resources. The `/graph-my-task` skill reads it live over the REST API at generation time and may only ever suggest rows it actually fetched — no invented tools, no remembered ones. There is no sync script and no cached copy in this repo; the table *is* the knowledge base.
+Flowprint's suggestions come from exactly one place: an Airtable table of real, existing resources. The `/graph-my-task` skill reads it at generation time — through a public feed by default, or straight from the Airtable REST API when you bring your own key — and may only ever suggest rows it actually fetched: no invented tools, no remembered ones. There is no sync script and no cached copy in this repo; the table *is* the knowledge base.
 
 This document is the contract. Replicate the table below and your fork suggests from your own curated list.
 
-## Quick start for a fork
+## Zero setup (default)
+
+Suggestions work out of the box. With nothing configured — no Airtable account, no token, no environment variable — `/graph-my-task` reads Tahir's curated table through a public, read-only feed:
+
+```
+https://tahirlone.com/api/flowprint/kb
+```
+
+Plain `GET`, no authentication, no pagination: one response carries every row, as `{ updatedAt, recordCount, records }`. Field names are camelCased versions of the ones in [the table](#the-table) (`Capability Tags` → `capabilityTags`, `Improvement Claim` → `improvementClaim`, and so on), and each record's `id` is its Airtable record id. Graphs generated this way carry `meta.kbSource: "airtable"` — it is Airtable data either way — and matched nodes get suggestion cards.
+
+The feed is a cached mirror behind a 15-minute server cache, so an edit made in the source base appears in the feed within roughly 15–30 minutes. Tahir's base itself stays private; the feed exposes only the matching-relevant fields (`id`, `name`, `url`, `category`, `description`, `language`, `stars`, `dateFirstSeen`, `capabilityTags`, `stepArchetypes`, `improvementClaim`, `install`).
+
+Two environment variables change what a run reads:
+
+| Variable | Effect |
+| --- | --- |
+| `FLOWPRINT_KB_URL` | Point the skill at a different feed — any URL serving the same envelope. Default: `https://tahirlone.com/api/flowprint/kb`. |
+| `AIRTABLE_API_KEY` | **Overrides the feed entirely** — the skill goes straight to Airtable instead. See [Bring your own knowledge base](#bring-your-own-knowledge-base). |
+
+If the feed is unreachable and no key is set, nothing breaks: the skill produces the vanilla graph with `meta.kbSource: "none"` and reports "KB not linked".
+
+## Bring your own knowledge base
+
+The override path: set `AIRTABLE_API_KEY` and the skill skips the feed and reads your own base directly, so suggestions come from your curated rows instead of Tahir's.
 
 1. Create an Airtable base (any name) with one table (any name) shaped like [the schema below](#the-table).
 2. Add rows: one resource per row, deduplicated by `URL`.
@@ -13,7 +36,7 @@ This document is the contract. Replicate the table below and your fork suggests 
 5. Point the skill at your base with `FLOWPRINT_AIRTABLE_BASE` and `FLOWPRINT_AIRTABLE_TABLE` (see [environment variables](#environment-variables)).
 6. Run `/graph-my-task "your task"`. The graph's `meta.kbSource` reads `"airtable"` and matched nodes carry suggestion cards.
 
-No token? Nothing breaks — the skill produces the vanilla graph with `meta.kbSource: "none"` and reports "KB not linked".
+No token? Nothing breaks and nothing is lost — you stay on the [public feed](#zero-setup-default) and still get suggestions. This section is only for suggesting from rows you curate yourself.
 
 ## The table
 
@@ -28,7 +51,7 @@ The reference base is Tahir's *Daily Trending — GitHub & Claude Ecosystem*, ta
 | 5 | `Language` | Single line text | no | Primary language, capture metadata. |
 | 6 | `Stars` | Number | no | Total stars at time of capture. |
 | 7 | `Stars Gained` | Number | no | Approximate stars gained that day, if known. |
-| 8 | `Why Noteworthy` | Long text | yes (claim fallback only) | Why it was trending / buzzing that day. |
+| 8 | `Why Noteworthy` | Long text | yes (claim fallback only, and only on the key path — the public feed omits this field) | Why it was trending / buzzing that day. |
 | 9 | `Date First Seen` | Date | no | First capture date. |
 | 10 | `Capability Tags` | Multiple select | yes (matching + candidate filter) | What the resource is good at. Choices below. |
 | 11 | `Step Archetypes` | Multiple select | yes (matching — strongest signal) | Which workflow-step types it upgrades. Choices below. |
@@ -79,9 +102,12 @@ Tahir's live base carries five more fields the daily scan writes for his own rea
 
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
-| `AIRTABLE_API_KEY` | **yes** (no key → no suggestions) | — | Personal access token with read access to your base. |
+| `AIRTABLE_API_KEY` | no (without it the skill uses the [public feed](#zero-setup-default)) | — | Personal access token with read access to your base. Setting it overrides the feed. |
+| `FLOWPRINT_KB_URL` | no | `https://tahirlone.com/api/flowprint/kb` | The public feed read when there is no `AIRTABLE_API_KEY`. |
 | `FLOWPRINT_AIRTABLE_BASE` | no | `appRSePRgk4jlaRUc` | Your base id (`app` + 14 characters). |
 | `FLOWPRINT_AIRTABLE_TABLE` | no | `tblOJzSLHAW7lbBWv` | Your table id (`tbl` + 14 characters) — a table name also works in the REST path, but the id never breaks when the table is renamed. |
+
+`FLOWPRINT_AIRTABLE_BASE` and `FLOWPRINT_AIRTABLE_TABLE` matter only when `AIRTABLE_API_KEY` is set; the feed URL is self-contained.
 
 Find both ids in the browser URL while the table is open: `https://airtable.com/appXXXXXXXXXXXXXX/tblXXXXXXXXXXXXXX/viwXXXXXXXXXXXXXX`.
 

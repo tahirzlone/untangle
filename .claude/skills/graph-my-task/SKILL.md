@@ -41,9 +41,19 @@ This stage attaches real, existing helpers — Claude skills, plugins, and MCP s
 
 A resource you know about from training, from another repo, from your own memory of this session, or from a web search is **not** eligible. If it is not in the response you fetched, it does not exist for this graph. (The reverse is fine: one node may carry several suggestions, as long as each comes from a different row.)
 
-### 1. Is a knowledge base linked?
+### 1. Which knowledge base? Three tiers, in order
 
-Check the `AIRTABLE_API_KEY` environment variable. Probe it, don't assume — and print only whether it is there, never the key itself:
+There are three ways this stage can end up with rows. Try them strictly in order and stop at the first one that hands you rows — you never climb back up a tier.
+
+| Tier | Condition | Source | `meta.kbSource` |
+| --- | --- | --- | --- |
+| 1 | `AIRTABLE_API_KEY` is set | Airtable REST, straight from the base (step 2 · tier 1) | `"airtable"` |
+| 2 | no key | the public feed — no token, no setup (step 2 · tier 2) | `"airtable"` |
+| 3 | neither source returned rows | nothing — the vanilla graph | `"none"` |
+
+Tiers 1 and 2 are the same table read two ways, so both are `"airtable"`.
+
+Start by checking the `AIRTABLE_API_KEY` environment variable. Probe it, don't assume — and print only whether it is there, never the key itself:
 
 ```powershell
 if ($env:AIRTABLE_API_KEY) { 'set' } else { 'missing' }
@@ -55,10 +65,15 @@ echo ${AIRTABLE_API_KEY:+set}
 
 (the bash form prints an empty line when the variable is unset or empty)
 
-- **Unset or empty → skip this whole stage.** Set `meta.kbSource: "none"`, leave `suggestions: []`, and tell the user "KB not linked" in the report. This is normal, not a failure: the vanilla graph is the deliverable.
-- **Set → fetch (step 2).** If the fetch fails (401, 404, network error) or returns zero rows, do not retry more than once and do not fabricate anything: report the failure in one line and fall back to exactly the keyless behavior above (`kbSource: "none"`, `suggestions: []`).
+- **Set → tier 1**, fetch from Airtable (step 2 · tier 1). If that fetch fails (401, 404, network error) or returns zero rows, do not retry more than once and do not fabricate anything: report the failure in one line and drop to tier 2.
+- **Unset or empty → tier 2**, fetch the public feed (step 2 · tier 2). A missing key does **not** end this stage and does **not** mean a vanilla graph — the feed needs no key at all.
+- **Tier 2 unusable too → tier 3.** Skip the rest of this stage: set `meta.kbSource: "none"`, leave `suggestions: []`, and tell the user "KB not linked" in the report. This is normal, not a failure: the vanilla graph is the deliverable.
 
 ### 2. Fetch every row
+
+Two sources, one job: end up holding every row of the knowledge-base table. Read only the tier step 1 sent you to.
+
+#### Tier 1 — straight from Airtable (`AIRTABLE_API_KEY` is set)
 
 Resolve the base and table from the environment, with Tahir's base as the default so a fork can point elsewhere:
 
@@ -118,6 +133,94 @@ Two things about the response shape, both of which matter later:
 
 - Each record is `{ "id": "recXXXXXXXXXXXXXX", "createdTime": "...", "fields": { ... } }`. The `id` is the only legal source of `airtableRecordId`.
 - **Airtable omits empty fields entirely.** An absent key in `fields` means blank — not an error, and not something to guess at.
+
+#### Tier 2 — the public feed (no `AIRTABLE_API_KEY`)
+
+A cached public mirror of that same Airtable table, served by tahirlone.com. Plain `GET`, **no authentication header of any kind**, and **no pagination** — one request returns the entire knowledge base.
+
+| Variable | Default |
+| --- | --- |
+| `FLOWPRINT_KB_URL` | `https://tahirlone.com/api/flowprint/kb` |
+
+**curl (bash / Git Bash)** — prints the body, then the HTTP status on its own line:
+
+```bash
+curl -sS -w '\nHTTP %{http_code}\n' "${FLOWPRINT_KB_URL:-https://tahirlone.com/api/flowprint/kb}"
+```
+
+**PowerShell** (`Invoke-RestMethod` parses the JSON for you and *throws* on any non-200 — that throw is your signal to go to tier 3):
+
+```powershell
+$kbUrl = if ($env:FLOWPRINT_KB_URL) { $env:FLOWPRINT_KB_URL } else { 'https://tahirlone.com/api/flowprint/kb' }
+$feed = Invoke-RestMethod -Uri $kbUrl
+$feed.records | ConvertTo-Json -Depth 6
+```
+
+A **200** response is this envelope and nothing else (the `recXXXX…` ids below are placeholders for shape only — never copy one into a graph):
+
+```json
+{
+  "updatedAt": "2026-07-30T14:05:00.000Z",
+  "recordCount": 2,
+  "records": [
+    {
+      "id": "recXXXXXXXXXXXXXX",
+      "name": "owner/example-mcp",
+      "url": "https://github.com/owner/example-mcp",
+      "category": "MCP Server",
+      "description": "Runs SQL against a warehouse and returns typed results.",
+      "language": "TypeScript",
+      "stars": 1840,
+      "dateFirstSeen": "2026-06-02",
+      "capabilityTags": ["data-etl", "api-integration"],
+      "stepArchetypes": ["data-etl", "research"],
+      "improvementClaim": "Replaces hand-written export scripts with one query call.",
+      "install": "claude mcp add example-mcp"
+    },
+    {
+      "id": "recYYYYYYYYYYYYYY",
+      "name": "owner/plain-repo",
+      "url": "https://github.com/owner/plain-repo",
+      "category": "GitHub Trending"
+    }
+  ]
+}
+```
+
+- `updatedAt` — ISO 8601 timestamp of the mirror's last refresh from Airtable. Informational; never write it into the graph.
+- `recordCount` — how many objects are in `records`.
+- `records` — the rows themselves. This array **is** the whole knowledge base: there is no `offset`, no `next` link, and no second page to request.
+
+**Anything else means tier 2 is unusable.** Do not retry more than once, do not fabricate rows — report the failure in one line and go to tier 3:
+
+| Response | What it means |
+| --- | --- |
+| `503` `{ "error": "kb_unavailable" }` | the feed is not configured on the server |
+| `502` `{ "error": "upstream_failed" }` | the feed could not reach Airtable |
+| any other non-200 status, a network/DNS error, a timeout, or `records: []` | nothing usable came back |
+
+**Record shape.** Each element of `records` is a flat object: the fields sit at the top level, *not* nested under a `fields` key, and their names are camelCase. **Absent fields are omitted entirely**, exactly as Airtable does it — an absent key means blank, not an error, and not something to guess at (see `owner/plain-repo` above, which carries no enrichment fields and is therefore not a candidate under step 3).
+
+Steps 3–5 are written against the Airtable field names, and they apply here **unchanged**: this feed is that Airtable table, one feed record per Airtable row. Translate the names with this table; nothing else about those steps changes.
+
+| Feed key | Airtable field | Type | Read by |
+| --- | --- | --- | --- |
+| `id` | the record id itself | string, `^rec[A-Za-z0-9]{14}$` | **the only legal source of `airtableRecordId`** — copy it verbatim, character for character |
+| `name` | `Name` | string | step 5 → `name` |
+| `url` | `URL` | string | step 5 → `url` |
+| `category` | `Category` | string | step 3 candidate filter · step 5 → `category` |
+| `description` | `Description` | string | step 4 matching · step 5 claim fallback |
+| `capabilityTags` | `Capability Tags` | array of strings | step 3 candidate filter · step 4 matching |
+| `stepArchetypes` | `Step Archetypes` | array of strings | step 4 matching (strongest signal) |
+| `improvementClaim` | `Improvement Claim` | string | step 5 → `claim` |
+| `install` | `Install` | string | step 5 → `install` |
+| `language` | `Language` | string | nothing |
+| `stars` | `Stars` | number | nothing |
+| `dateFirstSeen` | `Date First Seen` | string | nothing |
+
+One gap to hold on to: **the feed does not carry `Why Noteworthy`.** Step 5's claim fallback names `Description` / `Why Noteworthy`; on this tier only `description` exists, so a row with no `improvementClaim` gets its one line written from that row's own `description` alone — never from anywhere else.
+
+The feed is a snapshot on a 15-minute server cache, so an Airtable edit made minutes ago may not be in it yet. That is not a failure and there is nothing to work around: use exactly the rows the feed returned. Rows from tier 2 count fully as reading the knowledge base — `meta.kbSource` is `"airtable"`, same as tier 1 (step 7).
 
 The knowledge-base table's fields and select choices are documented in `kb/airtable-template.md`. Read it if a row's shape surprises you, or if the user is setting up their own base.
 
@@ -197,8 +300,8 @@ If two suggestions target overlapping nodes, that is allowed but understand the 
 
 ### 7. Set `meta.kbSource`
 
-- `"airtable"` — you fetched the knowledge base, whatever the match count (including zero).
-- `"none"` — no key, or the fetch failed. Then `suggestions` must be `[]`.
+- `"airtable"` — you fetched the knowledge base, whatever the match count (including zero). Tier 1 and tier 2 both count: the public feed is Airtable data too.
+- `"none"` — tier 3: neither source returned rows. Then `suggestions` must be `[]`.
 
 ### 8. Self-check before validating
 
@@ -231,4 +334,4 @@ After `OK:`, tell the user:
 1. the file path and node count;
 2. the top 2–3 pain hotspots (highest `painLevel` nodes) — one sentence each;
 3. one line per suggestion, in this shape: `<node label> → <resource name> (<category>) — <claim>`;
-4. the knowledge-base state in one line: `KB not linked` when there was no `AIRTABLE_API_KEY`, the failure in one line if the fetch broke, or `KB read, no load-bearing matches` when it was fetched and nothing matched.
+4. the knowledge-base state in one line: `KB not linked` when no source returned rows (tier 3), the failure in one line if a fetch broke, or `KB read, no load-bearing matches` when it was fetched and nothing matched.
