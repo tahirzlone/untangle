@@ -5,6 +5,8 @@ import {
   createSession,
   current,
   InvalidEffectError,
+  jump,
+  redo,
   reset,
   undo,
 } from './apply';
@@ -160,6 +162,13 @@ function brokenSuggestion(patch: Partial<Suggestion['effect']>, id = rec('X')): 
 
 const ids = (wf: Workflow) => wf.nodes.map((n) => n.id);
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
+/** What the meter reads with nothing applied — V0, and every cursor sitting on it. */
+const zeroed = {
+  stepsSaved: 0,
+  estTimeSavedMin: 0,
+  estTokensSaved: 0,
+  manualInterventionsRemoved: 0,
+};
 
 /**
  * Runs a patch that must be refused and hands back the error. `errors` is the
@@ -184,6 +193,7 @@ it('starts every session on the untouched workflow', () => {
   const s = createSession(wf);
   expect(s.versions).toHaveLength(1);
   expect(s.versions[0]).toEqual(wf);
+  expect(s.cursor).toBe(0);
   expect(s.appliedIds).toEqual([]);
   expect(s.metrics).toEqual({
     stepsSaved: 0,
@@ -194,12 +204,14 @@ it('starts every session on the untouched workflow', () => {
   expect(validateWorkflow(wf).valid).toBe(true);
 });
 
-it('current() hands back the newest version', () => {
+it('current() hands back the version the cursor is on', () => {
   const s = createSession(makeWorkflow());
   expect(current(s)).toBe(s.versions[0]);
   const next = applySuggestion(s, REC_A);
-  expect(current(next)).toBe(next.versions[next.versions.length - 1]);
+  expect(current(next)).toBe(next.versions[next.cursor]);
   expect(current(next)).not.toEqual(current(s));
+  // and the cursor is what moves it, not the length of the list
+  expect(current(undo(next))).toBe(next.versions[0]);
 });
 
 it('deletes both removeNodes and mergeNodes from the graph', () => {
@@ -312,6 +324,7 @@ it('accumulates metrics across two applies and grows versions in step', () => {
   const one = applySuggestion(createSession(makeWorkflow()), REC_A);
   expect(one.metrics).toEqual(suggestionA().effect.metrics);
   expect(one.versions).toHaveLength(2);
+  expect(one.cursor).toBe(1);
   expect(one.appliedIds).toEqual([REC_A]);
 
   const two = applySuggestion(one, REC_B);
@@ -322,6 +335,7 @@ it('accumulates metrics across two applies and grows versions in step', () => {
     manualInterventionsRemoved: 3,
   });
   expect(two.versions).toHaveLength(3);
+  expect(two.cursor).toBe(2);
   expect(two.appliedIds).toEqual([REC_A, REC_B]);
   expect(ids(current(two)).sort()).toEqual(['auto-draft', 'intake', 'review', 'ship']);
 });
@@ -341,20 +355,27 @@ it('produces a workflow that passes the shared validator, in either order', () =
   }
 });
 
+// Undo walks the CURSOR back. The versions it steps off stay in the list — that is
+// the whole of redo, and the reason the strip can keep showing them.
 it('undo restores the exact prior workflow and rolls the metrics back', () => {
   const start = createSession(makeWorkflow());
   const one = applySuggestion(start, REC_A);
   const two = applySuggestion(one, REC_B);
 
   const back = undo(two);
-  expect(back.versions).toHaveLength(2);
+  expect(back.cursor).toBe(1);
+  expect(current(back)).toBe(two.versions[1]);
   expect(current(back)).toEqual(current(one));
-  expect(back.appliedIds).toEqual([REC_A]);
   expect(back.metrics).toEqual(suggestionA().effect.metrics);
+  // history is kept whole: the version stepped off is still there, and so is the
+  // id that made it
+  expect(back.versions).toHaveLength(3);
+  expect(back.appliedIds).toEqual([REC_A, REC_B]);
 
   const start2 = undo(back);
+  expect(start2.cursor).toBe(0);
   expect(current(start2)).toEqual(makeWorkflow());
-  expect(start2.appliedIds).toEqual([]);
+  expect(start2.versions).toHaveLength(3);
   expect(start2.metrics).toEqual({
     stepsSaved: 0,
     estTimeSavedMin: 0,
@@ -368,18 +389,131 @@ it('undo at version 0 is a no-op', () => {
   expect(undo(s)).toBe(s);
 });
 
-it('reset returns to the original workflow with zeroed metrics', () => {
+it('redo walks the cursor forward again, exactly', () => {
   const two = applySuggestion(applySuggestion(createSession(makeWorkflow()), REC_A), REC_B);
+  const round = redo(undo(two));
+
+  // not "a graph like it" — the same stored version, and the same totals
+  expect(round).toEqual(two);
+  expect(current(round)).toBe(current(two));
+  expect(round.cursor).toBe(2);
+  expect(round.metrics).toEqual(two.metrics);
+});
+
+it('redo at the newest version is a no-op', () => {
+  const one = applySuggestion(createSession(makeWorkflow()), REC_A);
+  expect(redo(one)).toBe(one);
+  const fresh = createSession(makeWorkflow());
+  expect(redo(fresh)).toBe(fresh); // a session with no history at all
+});
+
+it('undo/redo leave the session they were handed untouched', () => {
+  const two = applySuggestion(applySuggestion(createSession(makeWorkflow()), REC_A), REC_B);
+  const before = clone(two);
+  const back = undo(two);
+  redo(back);
+  expect(two).toEqual(before);
+  // the cursor moves on a new object; the version list is shared, not copied
+  expect(back).not.toBe(two);
+  expect(back.versions).toBe(two.versions);
+});
+
+it('jump moves the cursor without touching the history either side of it', () => {
+  const two = applySuggestion(applySuggestion(createSession(makeWorkflow()), REC_A), REC_B);
+  const at1 = jump(two, 1);
+
+  expect(at1.cursor).toBe(1);
+  expect(current(at1)).toBe(two.versions[1]);
+  // the Phase-3 ruling reversed: the forward version SURVIVES a jump backwards
+  expect(at1.versions).toHaveLength(3);
+  expect(at1.appliedIds).toEqual([REC_A, REC_B]);
+  expect(at1.metrics).toEqual(suggestionA().effect.metrics);
+  // and the way back is a jump forward
+  expect(jump(at1, 2)).toEqual(two);
+});
+
+it('jump to the version already on the cursor is a no-op', () => {
+  const one = applySuggestion(createSession(makeWorkflow()), REC_A);
+  expect(jump(one, 1)).toBe(one);
+});
+
+it('jump refuses an index no version answers to', () => {
+  const one = applySuggestion(createSession(makeWorkflow()), REC_A);
+  for (const bad of [-1, 2, 99, 0.5, NaN]) {
+    expect(() => jump(one, bad)).toThrow(RangeError);
+  }
+  // a refusal is not a silent clamp: the session is exactly where it was
+  expect(one.cursor).toBe(1);
+});
+
+it('reports the applied-prefix metrics at every cursor position', () => {
+  const two = applySuggestion(applySuggestion(createSession(makeWorkflow()), REC_A), REC_B);
+  const a = suggestionA().effect.metrics;
+  const b = suggestionB().effect.metrics;
+
+  expect(jump(two, 0).metrics).toEqual(zeroed);
+  expect(jump(two, 1).metrics).toEqual(a);
+  expect(jump(two, 2).metrics).toEqual({
+    stepsSaved: a.stepsSaved + b.stepsSaved,
+    estTimeSavedMin: a.estTimeSavedMin + b.estTimeSavedMin,
+    estTokensSaved: a.estTokensSaved + b.estTokensSaved,
+    manualInterventionsRemoved: a.manualInterventionsRemoved + b.manualInterventionsRemoved,
+  });
+  // walked, not jumped — the same totals either way round
+  expect(undo(undo(two)).metrics).toEqual(zeroed);
+  expect(redo(undo(undo(two))).metrics).toEqual(a);
+});
+
+// The standard branch. Applying from a version the cursor stepped back to makes a
+// new future, and the old one cannot survive it: versions[2] described a graph this
+// patch was never applied to.
+it('applying from mid-history drops the versions after the cursor', () => {
+  const two = applySuggestion(applySuggestion(createSession(makeWorkflow()), REC_A), REC_B);
+  const branched = applySuggestion(jump(two, 1), REC_C);
+
+  expect(branched.versions).toHaveLength(3);
+  expect(branched.cursor).toBe(2);
+  expect(branched.appliedIds).toEqual([REC_A, REC_C]);
+  expect(branched.metrics).toEqual({
+    stepsSaved: 2,
+    estTimeSavedMin: 36,
+    estTokensSaved: 4300,
+    manualInterventionsRemoved: 2,
+  });
+
+  // B's patch was never applied on this branch, so the manual fix loop is still
+  // in the graph and its card is still on offer
+  expect(ids(current(branched))).toContain('fix');
+  expect(current(branched).suggestions.map((s) => s.airtableRecordId)).toEqual([REC_B]);
+  // versions[0..1] are the ones the branch grew from, untouched
+  expect(branched.versions[0]).toBe(two.versions[0]);
+  expect(branched.versions[1]).toBe(two.versions[1]);
+  // there is nothing to redo into
+  expect(redo(branched)).toBe(branched);
+  // and the session it branched from is exactly as it was
+  expect(two.versions).toHaveLength(3);
+  expect(two.appliedIds).toEqual([REC_A, REC_B]);
+});
+
+// Two different intentions that both land on V0: "show me the start" keeps the
+// history, "start over" throws it away.
+it('reset wipes the history that jump(0) keeps', () => {
+  const two = applySuggestion(applySuggestion(createSession(makeWorkflow()), REC_A), REC_B);
+
   const back = reset(two);
   expect(back.versions).toHaveLength(1);
+  expect(back.cursor).toBe(0);
   expect(current(back)).toEqual(makeWorkflow());
   expect(back.appliedIds).toEqual([]);
-  expect(back.metrics).toEqual({
-    stepsSaved: 0,
-    estTimeSavedMin: 0,
-    estTokensSaved: 0,
-    manualInterventionsRemoved: 0,
-  });
+  expect(back.metrics).toEqual(zeroed);
+  expect(redo(back)).toBe(back); // nothing forward to walk into
+
+  const at0 = jump(two, 0);
+  expect(current(at0)).toEqual(current(back)); // the same graph on screen…
+  expect(at0.versions).toHaveLength(3); // …with the way forward still open
+  expect(at0.appliedIds).toEqual([REC_A, REC_B]);
+  expect(at0.metrics).toEqual(zeroed);
+  expect(redo(at0)).toEqual(jump(two, 1));
 });
 
 it('throws InvalidEffectError for an id no live suggestion carries', () => {

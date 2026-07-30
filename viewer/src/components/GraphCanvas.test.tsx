@@ -439,6 +439,8 @@ const CODE = 'Write the feature, one slice at a time';
 /** What the fixture's two appliable patches put in place of the steps they eat. */
 const RESEARCH_MCP = 'Pull the docs in-session';
 const DRIVEN = 'Verify in a driven browser';
+/** The sibling row on that same step — the other future the verify step could have. */
+const REPLAY = 'Replay the recorded walk-through';
 
 /**
  * The labels on real cards. Ghosts wear `.sg-label` too — they are copies of the
@@ -536,9 +538,11 @@ it('shows the version strip only once there is more than one version', async () 
   expect(screen.getAllByTestId('version-chip').map((c) => c.textContent)).toEqual(['V0', 'V1']);
   expect(screen.getAllByTestId('version-chip')[1]).toHaveAttribute('aria-current', 'true');
   expect(screen.getByTestId('undo-btn')).toBeEnabled();
+  // nothing has been walked back from yet, so there is nothing to walk forward into
+  expect(screen.getByTestId('redo-btn')).toBeDisabled();
 });
 
-it('UNDO puts the graph, the meter and the strip back', async () => {
+it('UNDO puts the graph and the meter back, keeping the version it stepped off', async () => {
   render(<GraphCanvas workflow={enriched} />);
   await cardsOf(enriched);
 
@@ -550,14 +554,41 @@ it('UNDO puts the graph, the meter and the strip back', async () => {
 
   expect(cardLabels()).not.toContain(RESEARCH_MCP);
   expect(screen.getAllByTestId('sg-badge')).toHaveLength(4);
-  // back at V0 there is nothing saved and no history to show
+  // back at V0 there is nothing saved…
   expect(screen.queryByTestId('impact-meter')).not.toBeInTheDocument();
-  expect(screen.queryByTestId('version-strip')).not.toBeInTheDocument();
+  // …but the version undone is still on the strip, dimmed and one click away
+  const chips = screen.getAllByTestId('version-chip');
+  expect(chips.map((c) => c.textContent)).toEqual(['V0', 'V1']);
+  expect(chips[0]).toHaveAttribute('aria-current', 'true');
+  expect(chips[1].className).toContain('sg-vchip--future');
+  expect(chips[1]).toBeEnabled();
+  expect(screen.getByTestId('undo-btn')).toBeDisabled();
+  expect(screen.getByTestId('redo-btn')).toBeEnabled();
 });
 
-// The strip is a jump list, not a log: pressing V1 rebuilds the session by replaying
-// the applied prefix, so the graph that comes back is the one that was there.
-it('jumps to an intermediate version from the strip', async () => {
+it('REDO walks back into the version UNDO stepped off', async () => {
+  render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+
+  await applyOn(RESEARCH);
+  await waitFor(() => expect(cardLabels()).toContain(RESEARCH_MCP), LAYOUT_WAIT);
+  fireEvent.click(screen.getByTestId('undo-btn'));
+  await waitFor(() => expect(cardLabels()).toContain(RESEARCH), LAYOUT_WAIT);
+
+  fireEvent.click(screen.getByTestId('redo-btn'));
+  await waitFor(() => expect(cardLabels()).toContain(RESEARCH_MCP), LAYOUT_WAIT);
+
+  expect(cardLabels()).not.toContain(RESEARCH);
+  // the totals come back with the version, and the buttons swap ends
+  await waitFor(() => expect(screen.getByTestId('impact-meter')).toHaveTextContent('−25 min'));
+  expect(screen.getAllByTestId('version-chip')[1]).toHaveAttribute('aria-current', 'true');
+  expect(document.querySelectorAll('.sg-vchip--future')).toHaveLength(0);
+  expect(screen.getByTestId('redo-btn')).toBeDisabled();
+});
+
+// The strip is a jump list, not a log: pressing V1 moves the cursor onto the version
+// the reducer already built, and the versions past it stay exactly where they are.
+it('jumps to an intermediate version and keeps the way forward', async () => {
   render(<GraphCanvas workflow={enriched} />);
   await cardsOf(enriched);
 
@@ -579,8 +610,68 @@ it('jumps to an intermediate version from the strip', async () => {
 
   expect(cardLabels()).toContain(RESEARCH_MCP);
   expect(cardLabels()).not.toContain(DRIVEN);
-  expect(screen.getAllByTestId('version-chip').map((c) => c.textContent)).toEqual(['V0', 'V1']);
+  // V2 is still there — dimmed, still clickable, and REDO points at it
+  const chips = screen.getAllByTestId('version-chip');
+  expect(chips.map((c) => c.textContent)).toEqual(['V0', 'V1', 'V2']);
+  expect(chips[1]).toHaveAttribute('aria-current', 'true');
+  expect(chips[2].className).toContain('sg-vchip--future');
+  expect(screen.getByTestId('redo-btn')).toBeEnabled();
   await waitFor(() => expect(screen.getByTestId('impact-meter')).not.toHaveTextContent('tok'));
+
+  // and the chip is the way back too
+  fireEvent.click(chips[2]);
+  await waitFor(() => expect(cardLabels()).toContain(DRIVEN), LAYOUT_WAIT);
+});
+
+// Applying from a version the cursor stepped back to is a branch: the future that
+// was there described a graph this patch was never applied to, so it goes.
+it('drops the versions after the cursor when a patch is applied from one of them', async () => {
+  render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+
+  await applyOn(RESEARCH);
+  await waitFor(() => expect(cardLabels()).toContain(RESEARCH_MCP), LAYOUT_WAIT);
+  await applyOn(VERIFY);
+  await waitFor(() => expect(cardLabels()).toContain(DRIVEN), LAYOUT_WAIT);
+
+  fireEvent.click(screen.getAllByTestId('version-chip')[1]);
+  await waitFor(() => expect(cardLabels()).toContain(VERIFY), LAYOUT_WAIT);
+
+  // the OTHER row on the same step — a different V2 than the one that was there
+  await applyOn(VERIFY, 1);
+  await waitFor(() => expect(cardLabels()).toContain(REPLAY), LAYOUT_WAIT);
+
+  expect(cardLabels()).not.toContain(DRIVEN);
+  const chips = screen.getAllByTestId('version-chip');
+  expect(chips.map((c) => c.textContent)).toEqual(['V0', 'V1', 'V2']);
+  expect(chips[2]).toHaveAttribute('aria-current', 'true');
+  expect(document.querySelectorAll('.sg-vchip--future')).toHaveLength(0);
+  expect(screen.getByTestId('redo-btn')).toBeDisabled();
+  // the branch's own totals, not the abandoned version's
+  await waitFor(() => expect(screen.getByTestId('impact-meter')).toHaveTextContent('−6000 tok'));
+});
+
+// The cursor moves through the same morph an APPLY does — the version swap is what
+// the animation keys on, not the fact that a patch was just pressed. Without this,
+// a cursor that moves without rebuilding could quietly swap the graph in one frame.
+it('plays the morph on a cursor move: REDO sends the consumed card out again', async () => {
+  render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+
+  // deletes the scaffold step outright — no replacement, so there is a card to mourn
+  await applyOn(CODE);
+  expect(await screen.findByTestId('sg-ghost', {}, LAYOUT_WAIT)).toHaveTextContent(SCAFFOLD);
+  await waitFor(() => expect(screen.queryByTestId('sg-ghost')).not.toBeInTheDocument(), {
+    timeout: 2000,
+  });
+
+  fireEvent.click(screen.getByTestId('undo-btn'));
+  await waitFor(() => expect(cardLabels()).toContain(SCAFFOLD), LAYOUT_WAIT);
+
+  fireEvent.click(screen.getByTestId('redo-btn'));
+  const ghost = await screen.findByTestId('sg-ghost', {}, LAYOUT_WAIT);
+  expect(ghost).toHaveTextContent(SCAFFOLD);
+  await waitFor(() => expect(cardLabels()).not.toContain(SCAFFOLD), LAYOUT_WAIT);
 });
 
 it('closes the panel when APPLY consumes the step it describes', async () => {

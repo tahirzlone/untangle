@@ -15,10 +15,22 @@ export interface SessionMetrics {
 }
 
 export interface GraphSession {
-  /** versions[0] is the original; the last entry is what the canvas draws. */
+  /** versions[0] is the original; `cursor` picks the one the canvas draws. */
   versions: Workflow[];
-  /** airtableRecordId per applied step, parallel to versions[1..]. */
+  /**
+   * The airtableRecordId behind each transition, parallel to versions[1..] — the
+   * WHOLE history, not just what is currently applied. What the graph on screen
+   * has had done to it is `appliedIds.slice(0, cursor)`; anything past that is
+   * the tail redo walks back into.
+   */
   appliedIds: string[];
+  /**
+   * Which version is on the canvas. Undo and redo move it; the versions either
+   * side of it stay put, which is what makes the walk reversible. Only a fresh
+   * apply throws the forward half away — see `applySuggestion`.
+   */
+  cursor: number;
+  /** Totals for the applied prefix — recomputed whenever the cursor moves. */
   metrics: SessionMetrics;
 }
 
@@ -56,6 +68,40 @@ function addMetrics(a: SessionMetrics, b: EffectMetrics): SessionMetrics {
   };
 }
 
+/**
+ * The totals for `appliedIds[0..cursor)`, summed off versions[0].
+ *
+ * Recomputed rather than added up as it goes: applying a suggestion strips it out
+ * of every later version, so versions[0] is the only place its metrics still
+ * live — and the cursor can land anywhere in the history, so there is no "last
+ * step" to add or subtract. One expression answers every position.
+ */
+function metricsAt(versions: Workflow[], appliedIds: string[], cursor: number): SessionMetrics {
+  const byId = new Map(versions[0].suggestions.map((s) => [s.airtableRecordId, s]));
+  return appliedIds.slice(0, cursor).reduce<SessionMetrics>((acc, id) => {
+    const s = byId.get(id);
+    return s ? addMetrics(acc, s.effect.metrics) : acc;
+  }, zeroMetrics());
+}
+
+/**
+ * The same session, read from another version. Nothing is rebuilt: the versions
+ * are exact records of what the reducer produced, so moving is a matter of saying
+ * where to look and restating the totals for the prefix that got there.
+ *
+ * The version list and the id list are SHARED with the session handed in, not
+ * copied — both are treated as immutable everywhere in this module, and sharing
+ * them is the point of keeping history rather than replaying it.
+ */
+function withCursor(session: GraphSession, cursor: number): GraphSession {
+  if (cursor === session.cursor) return session;
+  return {
+    ...session,
+    cursor,
+    metrics: metricsAt(session.versions, session.appliedIds, cursor),
+  };
+}
+
 /** Every node id an effect names, other than the one it introduces. */
 function referencedNodeIds(s: Suggestion): string[] {
   const refs = [s.nodeId, ...s.effect.removeNodes, ...s.effect.mergeNodes];
@@ -86,18 +132,23 @@ export function createSession(wf: Workflow): GraphSession {
     }
     seen.add(s.airtableRecordId);
   }
-  return { versions: [wf], appliedIds: [], metrics: zeroMetrics() };
+  return { versions: [wf], appliedIds: [], cursor: 0, metrics: zeroMetrics() };
 }
 
 export function current(session: GraphSession): Workflow {
-  return session.versions[session.versions.length - 1];
+  return session.versions[session.cursor];
 }
 
 /**
- * Applies one suggestion's effect to the session's current workflow and returns
- * a new session. Nothing is mutated: Task 5's FLIP diffing compares the old and
+ * Applies one suggestion's effect to the version the cursor is on and returns a
+ * new session. Nothing is mutated: Task 5's FLIP diffing compares the old and
  * new graphs by identity, so every surviving object is carried over untouched
  * and every container is fresh.
+ *
+ * Applying from anywhere but the newest version BRANCHES: the versions the cursor
+ * stepped back from describe a future this patch has just replaced, so they are
+ * dropped along with the ids that made them. That is the standard undo/redo
+ * branch, and the only place forward history is ever lost.
  */
 export function applySuggestion(session: GraphSession, airtableRecordId: string): GraphSession {
   const wf = current(session);
@@ -159,34 +210,58 @@ export function applySuggestion(session: GraphSession, airtableRecordId: string)
     );
   }
 
+  const at = session.cursor;
+  const versions = [...session.versions.slice(0, at + 1), next];
+  const appliedIds = [...session.appliedIds.slice(0, at), airtableRecordId];
+
   return {
-    versions: [...session.versions, next],
-    appliedIds: [...session.appliedIds, airtableRecordId],
-    metrics: addMetrics(session.metrics, effect.metrics),
+    versions,
+    appliedIds,
+    cursor: at + 1,
+    metrics: metricsAt(versions, appliedIds, at + 1),
   };
 }
 
 /**
- * Steps back one version. Metrics are recomputed from the original suggestion
- * list rather than subtracted — applied suggestions are stripped out of later
- * versions, so versions[0] is the only place their metrics still live.
+ * Steps the cursor back one version. The version stepped off is KEPT, along with
+ * the id that made it — `redo` is the way back, and the strip goes on showing it.
+ * At V0 there is nowhere to go and the same session is handed straight back.
  */
 export function undo(session: GraphSession): GraphSession {
-  if (session.versions.length <= 1) return session;
-
-  const appliedIds = session.appliedIds.slice(0, -1);
-  const byId = new Map(session.versions[0].suggestions.map((s) => [s.airtableRecordId, s]));
-  const metrics = appliedIds.reduce<SessionMetrics>(
-    (acc, id) => {
-      const s = byId.get(id);
-      return s ? addMetrics(acc, s.effect.metrics) : acc;
-    },
-    zeroMetrics(),
-  );
-
-  return { versions: session.versions.slice(0, -1), appliedIds, metrics };
+  return withCursor(session, Math.max(0, session.cursor - 1));
 }
 
+/**
+ * Steps the cursor forward into the history undo walked out of. A no-op at the
+ * newest version, and after a branch there is nothing forward to step into.
+ */
+export function redo(session: GraphSession): GraphSession {
+  return withCursor(session, Math.min(session.versions.length - 1, session.cursor + 1));
+}
+
+/**
+ * Puts the cursor on version `index`, keeping every version either side of it.
+ *
+ * An index outside the list is a caller bug, not a user action — the strip only
+ * ever offers versions that exist — so it throws rather than clamping to the
+ * nearest legal answer and drawing a version nobody asked for.
+ */
+export function jump(session: GraphSession, index: number): GraphSession {
+  if (!Number.isInteger(index) || index < 0 || index >= session.versions.length) {
+    throw new RangeError(
+      `no version ${index} in a session of ${session.versions.length}`,
+    );
+  }
+  return withCursor(session, index);
+}
+
+/**
+ * Start over: V0 alone, no history, nothing to redo into.
+ *
+ * Not the same action as `jump(session, 0)`, which draws the same graph while
+ * keeping every version after it one click away. This one is the wipe — the
+ * session that comes back is indistinguishable from a freshly opened one.
+ */
 export function reset(session: GraphSession): GraphSession {
   return createSession(session.versions[0]);
 }

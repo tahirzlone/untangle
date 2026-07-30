@@ -46,18 +46,33 @@
   color: var(--bg-deep);
 }
 
+/* Versions the cursor has stepped back out of. Still there, still one click away —
+   dimmed so the strip reads as a position on a line with a way forward, not as a
+   row of equal buttons. A patch applied from here branches over them. */
+.sg-vchip--future {
+  opacity: 0.45;
+  border-color: var(--dim);
+  transition: color 140ms ease, border-color 140ms ease, opacity 140ms ease;
+}
+.sg-vchip--future:hover {
+  opacity: 1;
+}
+
 .sg-undo {
   margin-left: 4px;
 }
-.sg-undo:disabled {
+.sg-undo:disabled,
+.sg-redo:disabled {
   opacity: 0.45;
   cursor: default;
 }
-.sg-undo:disabled:hover {
+.sg-undo:disabled:hover,
+.sg-redo:disabled:hover {
   color: var(--dim);
   border-color: var(--line);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .sg-version { transition: none; }
+  .sg-vchip--future { transition: none; }
 }

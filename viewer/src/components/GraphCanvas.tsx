@@ -14,7 +14,8 @@ import {
   applySuggestion,
   createSession,
   current,
-  reset,
+  jump,
+  redo,
   undo,
   type GraphSession,
 } from '../graph/apply';
@@ -180,9 +181,11 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   if (opened.source !== workflow) setOpened(openSession(workflow));
 
   const { session } = opened;
-  /** The graph on screen: the session's current version, always. */
+  /** The graph on screen: the version the session's cursor is on, always. */
   const graph = session ? current(session) : opened.source;
   const versionCount = session ? session.versions.length : 1;
+  /** Which version that is — not necessarily the newest, once UNDO has been used. */
+  const versionAt = session ? session.cursor : 0;
 
   const morphRef = useRef<MorphPlan | null>(null);
   const ghostTimer = useRef(0);
@@ -530,20 +533,29 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     morphTo(back);
   }, [morphTo, session]);
 
+  const onRedo = useCallback(() => {
+    if (!session) return;
+    const forward = redo(session);
+    // same no-op guard as UNDO, at the other end of the history
+    if (forward === session) return;
+    morphTo(forward);
+  }, [morphTo, session]);
+
   const onJump = useCallback(
     (index: number) => {
-      if (!session || index === session.versions.length - 1) return;
-      // Versions are rebuilt, not stored: reset, then replay the applied prefix.
-      // The reducer is pure, so replaying [0..index) lands on exactly the graph
-      // that was there — there is no snapshot to keep in sync with anything.
-      let at = reset(session);
+      if (!session) return;
+      let at: GraphSession;
       try {
-        for (const id of session.appliedIds.slice(0, index)) at = applySuggestion(at, id);
+        // Versions are STORED, not replayed: the reducer already built this exact
+        // graph, so moving to it is a cursor move and the ones past it survive.
+        at = jump(session, index);
       } catch {
-        // A patch that applied once cannot refuse the same replay; if it somehow
-        // does, the canvas stays where it is rather than showing half a version.
+        // An index outside the list is a caller bug the strip cannot produce — it
+        // renders one chip per version. Defence in depth: the canvas stays where it
+        // is rather than taking a RangeError through a click handler.
         return;
       }
+      if (at === session) return; // the chip for the version already drawn
       morphTo(at);
     },
     [morphTo, session],
@@ -637,9 +649,10 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
       </div>
       <VersionStrip
         count={versionCount}
-        at={versionCount - 1}
+        at={versionAt}
         onJump={onJump}
         onUndo={onUndo}
+        onRedo={onRedo}
       />
       {/* The pane is a listening post for keys aimed at the focusable cards inside
           it — it takes no focus of its own and adds no keyboard trap. */}
