@@ -97,6 +97,46 @@
   .sg-ghost-btn { transition: none; }
 }
 
+/* The headline action, and the only filled control on the canvas: same weight and
+   colour as OPEN GRAPH in the gallery, sized down to sit in a 52px band beside the
+   chips. RESET LAYOUT stays a ghost button next to it — one of the two is the
+   thing you came for, and it should not be a coin toss which. */
+.sg-optimize {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--bg-deep);
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  padding: 7px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+.sg-optimize:hover {
+  background: color-mix(in srgb, var(--accent) 85%, var(--text));
+}
+.sg-optimize:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* Running: the same slot becomes the way out. Ember, because stopping a sequence
+   mid-flight is not the same kind of act as starting it. */
+.sg-optimize--cancel {
+  background: var(--ember);
+}
+.sg-optimize--cancel:hover {
+  background: color-mix(in srgb, var(--ember) 85%, var(--text));
+}
+.sg-optimize--cancel:focus-visible {
+  outline-color: var(--ember);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sg-optimize { transition: none; }
+}
+
 /* Cards are grabbable now — say so before the drag starts. */
 .sg-viewport .react-flow__node.draggable { cursor: grab; }
 .sg-viewport .react-flow__node.dragging { cursor: grabbing; }

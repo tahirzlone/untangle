@@ -1,15 +1,16 @@
 import { createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import gallery from '../../../gallery/add-e2e-tests.workflow.json';
 import enrichedDoc from '../test/fixtures/enriched.workflow.json';
-import { loadWorkflow } from '../graph/load';
-import type { Workflow } from '../graph/types';
+import {
+  applyOn,
+  cardFor,
+  cardLabels,
+  cardsOf,
+  fixture,
+  LAYOUT_WAIT,
+  reduceMotion,
+} from '../test/harness';
 import { GraphCanvas } from './GraphCanvas';
-
-function fixture(raw: unknown, what: string): Workflow {
-  const res = loadWorkflow(raw);
-  if (!res.ok) throw new Error(`${what} fixture invalid: ${res.errors.join('; ')}`);
-  return res.workflow;
-}
 
 const wf = fixture(gallery, 'gallery');
 /** The KB-matched graph: two suggestions on one node, one patch the reducer refuses. */
@@ -17,28 +18,7 @@ const enriched = fixture(enrichedDoc, 'enriched');
 
 const maxPain = wf.nodes.reduce((m, n) => Math.max(m, n.painLevel), 0);
 
-/**
- * Waits out the async ELK pass and hands back the painted cards. The generous
- * timeout is for the layout, not for flakiness: a whole ELK run sits between the
- * render and the first card, and on a loaded machine that outlasts the 1s
- * default long before anything is actually wrong.
- */
-const LAYOUT_WAIT = { timeout: 5000 };
-
-async function cardsOf(graph: Workflow): Promise<HTMLElement[]> {
-  await waitFor(() => {
-    expect(screen.getAllByTestId('sg-node')).toHaveLength(graph.nodes.length);
-  }, LAYOUT_WAIT);
-  return screen.getAllByTestId('sg-node');
-}
-
 const cards = () => cardsOf(wf);
-
-function cardFor(label: string, all: HTMLElement[]): HTMLElement {
-  const card = all.find((el) => el.textContent?.includes(label));
-  if (!card) throw new Error(`no card for ${label}`);
-  return card;
-}
 
 it('lays out and renders every node on the canvas', async () => {
   render(<GraphCanvas workflow={wf} />);
@@ -441,39 +421,6 @@ const RESEARCH_MCP = 'Pull the docs in-session';
 const DRIVEN = 'Verify in a driven browser';
 /** The sibling row on that same step — the other future the verify step could have. */
 const REPLAY = 'Replay the recorded walk-through';
-
-/**
- * The labels on real cards. Ghosts wear `.sg-label` too — they are copies of the
- * card that just left — so every "is it still on the canvas" question is asked of
- * the cards themselves, never of the document text.
- */
-const cardLabels = () =>
-  screen.getAllByTestId('sg-node').map((el) => el.querySelector('.sg-label')?.textContent ?? '');
-
-/** Opens a step's panel and presses APPLY on the nth row it lists. */
-async function applyOn(label: string, index = 0) {
-  fireEvent.click(cardFor(label, screen.getAllByTestId('sg-node')));
-  await screen.findByTestId('detail-drawer');
-  fireEvent.click(screen.getAllByTestId('sg-sug-apply')[index]);
-}
-
-/** Reports the whole session as unwanted motion, the way a real OS setting does. */
-function reduceMotion(): () => void {
-  const original = window.matchMedia;
-  (window as unknown as { matchMedia: unknown }).matchMedia = (query: string) => ({
-    matches: query.includes('prefers-reduced-motion'),
-    media: query,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false,
-  });
-  return () => {
-    window.matchMedia = original;
-  };
-}
 
 it('morphs the graph when a patch is applied', async () => {
   render(<GraphCanvas workflow={enriched} />);

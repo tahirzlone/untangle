@@ -16,6 +16,22 @@ const PARTS: { key: keyof SessionMetrics; unit: string }[] = [
   { key: 'manualInterventionsRemoved', unit: 'manual' },
 ];
 
+/**
+ * The components a set of totals actually moved, in reading order.
+ *
+ * Exported because the scorecard states the same four numbers at the end of a
+ * cinematic, and two places deciding separately which of them count is two places
+ * that can disagree about what the graph saved.
+ */
+export function impactParts(metrics: SessionMetrics): { key: keyof SessionMetrics; unit: string }[] {
+  return PARTS.filter((p) => metrics[p.key] !== 0);
+}
+
+/** One component, written the way this theme writes a saving. */
+export function impactLabel(value: number, unit: string): string {
+  return `${MINUS}${Math.ceil(value)} ${unit}`;
+}
+
 function lerp(from: SessionMetrics, to: SessionMetrics, p: number): SessionMetrics {
   return {
     stepsSaved: from.stepsSaved + (to.stepsSaved - from.stepsSaved) * p,
@@ -97,15 +113,14 @@ export function ImpactMeter({ metrics }: { metrics: SessionMetrics }) {
   const shown = useCountUp(metrics);
   // Visibility is decided by the TOTALS, not by the tweened numbers — a chip that
   // waited for its count-up to leave zero would pop in a frame late.
-  const parts = PARTS.filter((p) => metrics[p.key] !== 0);
+  const parts = impactParts(metrics);
   if (parts.length === 0) return null;
 
   return (
     <span className="sg-impact" data-testid="impact-meter" role="group" aria-label="impact">
       {parts.map((p) => (
         <span className="sg-impact-chip" data-testid="impact-part" key={p.key}>
-          {MINUS}
-          {Math.ceil(shown[p.key])} {p.unit}
+          {impactLabel(shown[p.key], p.unit)}
         </span>
       ))}
     </span>

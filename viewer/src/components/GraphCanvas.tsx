@@ -7,7 +7,14 @@ import {
   useState,
   type KeyboardEvent,
 } from 'react';
-import { Position, ReactFlow, useNodesState, type Edge, type Node } from '@xyflow/react';
+import {
+  Position,
+  ReactFlow,
+  useNodesState,
+  type Edge,
+  type Node,
+  type ReactFlowInstance,
+} from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import type { Suggestion, Workflow, WorkflowNode } from '../graph/types';
 import {
@@ -26,6 +33,9 @@ import { ImpactMeter } from './ImpactMeter';
 import { SignalNode } from './SignalNode';
 import { SignalEdge } from './SignalEdge';
 import { VersionStrip } from './VersionStrip';
+import { Scorecard } from './Scorecard';
+import { useCinematic } from './optimize';
+import { CAMERA_MS, FLIP_MS, GHOST_MS, prefersReducedMotion } from './motion';
 import './canvas.css';
 
 const nodeTypes = { signal: SignalNode };
@@ -36,9 +46,6 @@ const NO_SUGGESTIONS: Suggestion[] = [];
 const NO_GHOSTS: GhostCard[] = [];
 const NO_MATCHES: Map<string, Suggestion[]> = new Map();
 
-/** The morph's two durations, matching the transitions in canvas.css. */
-const FLIP_MS = 480;
-const GHOST_MS = 400;
 const FLIP_CLASS = 'sg-node-shell--flip';
 const FLIP_PLAY_CLASS = 'sg-node-shell--flip-play';
 /** How many frames the FLIP will wait for React Flow to catch up before it plays. */
@@ -46,7 +53,13 @@ const FLIP_FRAME_BUDGET = 4;
 /** How many frames the focus landing will wait for the card it aims at to mount. */
 const FOCUS_FRAME_BUDGET = 4;
 
-const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+/**
+ * How close the cinematic's camera may get, and how far it may pull back. The
+ * tour reframes rather than re-zooms — whatever the user was looking at stays
+ * roughly that size — but held inside a band where a card is still readable.
+ */
+const TOUR_ZOOM_MIN = 0.75;
+const TOUR_ZOOM_MAX = 1;
 
 /** The data every SignalNode carries; also how a click finds its workflow node. */
 interface SignalNodeData extends Record<string, unknown> {
@@ -173,6 +186,8 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const [layoutRun, setLayoutRun] = useState(0);
   const [ghosts, setGhosts] = useState<GhostCard[]>(NO_GHOSTS);
   const [ghostTransform, setGhostTransform] = useState('');
+  /** Shown when a cinematic has applied at least one patch — see `onTourDone`. */
+  const [scorecardOpen, setScorecardOpen] = useState(false);
 
   const [opened, setOpened] = useState(() => openSession(workflow));
   // A new graph is a new session, adjusted during render rather than in an effect:
@@ -188,6 +203,12 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const versionAt = session ? session.cursor : 0;
 
   const morphRef = useRef<MorphPlan | null>(null);
+  /**
+   * React Flow's own handle, taken at init. The canvas renders `<ReactFlow>`
+   * directly rather than inside a provider, so `useReactFlow` is out of reach
+   * here — `onInit` is how the camera gets a way to move.
+   */
+  const rf = useRef<ReactFlowInstance<SignalRFNode, Edge> | null>(null);
   const ghostTimer = useRef(0);
   const flipTimer = useRef(0);
   const flipped = useRef<HTMLElement[]>([]);
@@ -435,16 +456,6 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     [laidOut, backPlan],
   );
 
-  // Drag and click share the same gesture; React Flow tells them apart by
-  // distance, and the tolerance is set on the ReactFlow element below — see the
-  // note on `nodeClickDistance`, which is load-bearing for this handler ever
-  // firing from a real mouse.
-  const onNodeClick = useCallback(
-    (_: unknown, node: SignalRFNode) => {
-      select(node.id);
-    },
-    [select],
-  );
   /**
    * Closing drops the ring with the panel.
    *
@@ -561,6 +572,138 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     [morphTo, session],
   );
 
+  // -------------------------------------------------------------------------
+  // The cinematic. One press applies the graph's best patches as a camera tour,
+  // driving the SAME apply above — versions, chips and totals accumulate exactly
+  // as they do under the drawer's own APPLY, and a tour started from a version
+  // the cursor stepped back to branches over the forward history for the same
+  // reason a hand-pressed APPLY does.
+  // -------------------------------------------------------------------------
+
+  /** Where a step's card is right now — after every drag, not where ELK put it. */
+  const boxOf = useCallback(
+    (nodeId: string) => {
+      const n = nodes.find((x) => x.id === nodeId);
+      if (!n) return null;
+      return {
+        x: n.position.x,
+        y: n.position.y,
+        width: n.width ?? NODE_WIDTH,
+        height: n.height ?? NODE_HEIGHT,
+      };
+    },
+    [nodes],
+  );
+
+  const takeInstance = useCallback((instance: ReactFlowInstance<SignalRFNode, Edge>) => {
+    rf.current = instance;
+  }, []);
+
+  const lookAt = useCallback((x: number, y: number) => {
+    const instance = rf.current;
+    if (!instance) return;
+    const zoom = Math.min(TOUR_ZOOM_MAX, Math.max(TOUR_ZOOM_MIN, instance.getZoom()));
+    // The promise resolves when the pan has finished; the tour keeps its own clock,
+    // so nothing here waits on it — but a rejection must not surface as unhandled.
+    instance.setCenter(x, y, { duration: CAMERA_MS, zoom }).catch(() => {});
+  }, []);
+
+  /**
+   * The whole run in one commit — the route taken when motion is not wanted.
+   *
+   * The reducer is called once per patch, in the tour's order, and each answer is
+   * the input to the next; only the last one reaches the canvas. A patch the run
+   * before it consumed is skipped here for the same reason the paced tour skips
+   * it, and the count that comes back is what actually landed.
+   */
+  const applyAll = useCallback(
+    (airtableRecordIds: string[]): number => {
+      if (!session) return 0;
+      let next = session;
+      let applied = 0;
+      for (const id of airtableRecordIds) {
+        try {
+          next = applySuggestion(next, id);
+          applied += 1;
+        } catch {
+          // a cascade took this row with the step it described
+        }
+      }
+      if (applied > 0) morphTo(next);
+      return applied;
+    },
+    [morphTo, session],
+  );
+
+  const onTourDone = useCallback((applied: number) => {
+    // Nothing applied, nothing to report — a cancel before the first patch landed
+    // leaves the graph exactly as it was, and a panel saying so would be noise.
+    if (applied > 0) setScorecardOpen(true);
+  }, []);
+
+  const { running, start, cancel } = useCinematic({
+    getSession: () => session,
+    boxOf,
+    lookAt,
+    applyOne: onApply,
+    applyAll,
+    onDone: onTourDone,
+  });
+
+  const startTour = useCallback(() => {
+    // The tour owns the canvas: a panel left open would sit over the camera, and
+    // its subject is about to be applied out from under it anyway.
+    closeDrawer();
+    setScorecardOpen(false);
+    start();
+  }, [closeDrawer, start]);
+
+  const closeScorecard = useCallback(() => {
+    setScorecardOpen(false);
+    // Focus goes back to the control the run was started from. A tour that spent
+    // every patch on offer leaves no such button — the work it described is gone —
+    // so the graph itself takes the keyboard back.
+    const button = document.querySelector<HTMLElement>('[data-testid="optimize-btn"]');
+    (button ?? document.querySelector<HTMLElement>('.react-flow__node'))?.focus();
+  }, []);
+
+  /** Is there anything for OPTIMIZE to do? The button exists only if there is. */
+  const hasAppliable = useMemo(
+    () => graph.suggestions.some((s) => canApply(s.airtableRecordId)),
+    [canApply, graph],
+  );
+
+  /**
+   * The rows the version on screen is standing on, in the order they were applied.
+   *
+   * Read to the CURSOR: `appliedIds` spans the redo-future too, and the scorecard
+   * describes the graph the user is looking at, never one the session walked back
+   * out of. The rows themselves only survive in V0 — applying one strips it from
+   * every version after — so that is where they are looked up.
+   */
+  const appliedRows = useMemo<Suggestion[]>(() => {
+    if (!session) return NO_SUGGESTIONS;
+    const byId = new Map(session.versions[0].suggestions.map((s) => [s.airtableRecordId, s]));
+    return session.appliedIds
+      .slice(0, session.cursor)
+      .map((id) => byId.get(id))
+      .filter((s): s is Suggestion => s !== undefined);
+  }, [session]);
+
+  // Drag and click share the same gesture; React Flow tells them apart by
+  // distance, and the tolerance is set on the ReactFlow element below — see the
+  // note on `nodeClickDistance`, which is load-bearing for this handler ever
+  // firing from a real mouse.
+  const onNodeClick = useCallback(
+    (_: unknown, node: SignalRFNode) => {
+      // While the tour runs the canvas is being driven, not browsed: a panel
+      // opening over the camera would be a second thing moving.
+      if (running) return;
+      select(node.id);
+    },
+    [running, select],
+  );
+
   /**
    * The same open, reached without a pointer.
    *
@@ -574,6 +717,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const onPaneKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>) => {
       if (!OPEN_KEYS.includes(e.key)) return;
+      if (running) return; // the tour has the canvas — same stand-down as the click
       const focused = document.activeElement;
       const wrapper = focused instanceof Element ? focused.closest('.react-flow__node') : null;
       const id = wrapper?.getAttribute('data-id');
@@ -583,7 +727,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
       e.preventDefault();
       select(id);
     },
-    [nodes, select],
+    [nodes, running, select],
   );
   // Selection is dropped here rather than left to the rebuild the effect will
   // do: ELK is async, and a ring that lingers until it answers reads as a button
@@ -635,6 +779,19 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
             SUGGESTIONS DISABLED — DUPLICATE IDS
           </span>
         )}
+        {session && (hasAppliable || running) ? (
+          // One slot, two jobs: the way in while there is a tour to start, the way
+          // out while one is running. A second button appearing beside the first
+          // would put the stop control somewhere the eye has not been.
+          <button
+            type="button"
+            className={`sg-optimize${running ? ' sg-optimize--cancel' : ''}`}
+            data-testid="optimize-btn"
+            onClick={running ? cancel : startTour}
+          >
+            {running ? 'CANCEL' : 'OPTIMIZE'}
+          </button>
+        ) : null}
         <button
           type="button"
           className="sg-ghost-btn"
@@ -663,6 +820,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
           onNodesChange={onNodesChange}
           onNodeClick={onNodeClick}
           onPaneClick={closeDrawer}
+          onInit={takeInstance}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           fitView
@@ -725,6 +883,15 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
           // No session, no APPLY: the panel states the step and stops there.
           <DetailDrawer node={selected} onClose={closeDrawer} />
         )
+      ) : null}
+      {scorecardOpen && session ? (
+        <Scorecard
+          applied={appliedRows}
+          metrics={session.metrics}
+          before={session.versions[0].nodes.length}
+          after={graph.nodes.length}
+          onClose={closeScorecard}
+        />
       ) : null}
     </div>
   );

@@ -17,6 +17,21 @@ const CAT_CLASS: Record<SuggestionCategory, string> = {
 };
 
 /**
+ * What kind of resource this is, in its own ink.
+ *
+ * Exported because the scorecard lists the same rows at the end of a cinematic,
+ * and a chip that reads a different colour there would break the one thing the
+ * palette is for: a row wears the same colour wherever it is named.
+ */
+export function CategoryChip({ category }: { category: SuggestionCategory }) {
+  return (
+    <span className={`sg-sug-cat sg-sug-cat--${CAT_CLASS[category]}`} data-testid="sg-sug-cat">
+      {category}
+    </span>
+  );
+}
+
+/**
  * A drawer that shows suggestion cards must also be told how to dry-run them and
  * what to do when one is applied. Expressed as a union so a card can never reach
  * the screen with an APPLY button nobody is behind: pass all three, or none.
@@ -45,12 +60,7 @@ function SuggestionCard({
   return (
     <article className="sg-sug-card" data-testid="sg-sug-card">
       <div className="sg-sug-head">
-        <span
-          className={`sg-sug-cat sg-sug-cat--${CAT_CLASS[suggestion.category]}`}
-          data-testid="sg-sug-cat"
-        >
-          {suggestion.category}
-        </span>
+        <CategoryChip category={suggestion.category} />
         {/* the row's own link, opened away from the graph — and noreferrer with
             noopener so the new tab gets no handle on this one */}
         <a
