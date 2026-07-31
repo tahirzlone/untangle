@@ -122,18 +122,25 @@
   outline-offset: 2px;
 }
 
+/* The panel's second action, and deliberately the quieter one: taking the picture
+   is a real thing to do here, but CLOSE is what the panel is asking. */
 .sg-scorecard-export {
   flex: 1;
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 12px;
   letter-spacing: 0.08em;
-  color: var(--dim);
+  color: var(--text);
   background: var(--line);
   border: none;
   border-radius: 8px;
   padding: 9px 12px;
-  cursor: default;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.sg-scorecard-export:hover {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--line));
 }
 
 .sg-scorecard-note {
@@ -143,6 +150,10 @@
   font-size: 9px;
   letter-spacing: 0.14em;
   color: var(--dim);
+}
+/* Ember, like every other refusal on the canvas: nothing was produced. */
+.sg-scorecard-note--failed {
+  color: var(--ember);
 }
 
 @keyframes sg-scorecard-back-in {
@@ -157,5 +168,6 @@
 @media (prefers-reduced-motion: reduce) {
   .sg-scorecard-back,
   .sg-scorecard { animation: none; }
-  .sg-scorecard-close { transition: none; }
+  .sg-scorecard-close,
+  .sg-scorecard-export { transition: none; }
 }

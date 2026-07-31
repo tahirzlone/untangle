@@ -110,9 +110,10 @@ it('applies every appliable patch at once when motion is not wanted', async () =
     expect(shown).toEqual(['−2 steps', '−65 min', '−9000 tok', '−4 manual']);
     expect(shown).toEqual(screen.getAllByTestId('impact-part').map((el) => el.textContent));
 
-    // the export lands with its own task; the button says so rather than lying
-    expect(screen.getByTestId('export-png')).toBeDisabled();
-    expect(card).toHaveTextContent('EXPORT ARRIVES WITH T3');
+    // the export is live and has a suite of its own; what matters here is that
+    // the panel's second action is an offer rather than a placeholder
+    expect(screen.getByTestId('export-png')).toBeEnabled();
+    expect(card).not.toHaveTextContent('EXPORT ARRIVES WITH');
   } finally {
     restore();
   }
@@ -451,16 +452,19 @@ it('keeps Tab inside the panel', async () => {
   const restore = reduceMotion();
   try {
     await scorecardAfterInstantTour();
+    const exportPng = screen.getByTestId('export-png');
     const close = screen.getByTestId('scorecard-close');
     expect(document.activeElement).toBe(close);
 
+    // CLOSE is the last stop in the panel, so Tab comes round to the first
     const forward = createEvent.keyDown(close, { key: 'Tab' });
     fireEvent(close, forward);
     expect(forward.defaultPrevented).toBe(true);
-    expect(document.activeElement).toBe(close);
+    expect(document.activeElement).toBe(exportPng);
 
-    const back = createEvent.keyDown(close, { key: 'Tab', shiftKey: true });
-    fireEvent(close, back);
+    // and EXPORT PNG is the first, so Shift+Tab comes round to the last
+    const back = createEvent.keyDown(exportPng, { key: 'Tab', shiftKey: true });
+    fireEvent(exportPng, back);
     expect(back.defaultPrevented).toBe(true);
     expect(document.activeElement).toBe(close);
   } finally {

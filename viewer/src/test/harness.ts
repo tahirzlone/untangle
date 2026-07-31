@@ -53,6 +53,28 @@ export async function applyOn(label: string, index = 0) {
   fireEvent.click(screen.getAllByTestId('sg-sug-apply')[index]);
 }
 
+/**
+ * Takes the browser's own download route out of play, and keeps what was asked of it.
+ *
+ * A download is an anchor click, and jsdom answers one with "Not implemented:
+ * navigation" on a timer — noise in the output, and nothing a test can read a
+ * filename off. Swapping the prototype's `click` leaves the ELEMENT alone, which
+ * is where `download` and `href` are.
+ */
+export function captureDownloads(): { links: HTMLAnchorElement[]; restore: () => void } {
+  const links: HTMLAnchorElement[] = [];
+  const real = HTMLAnchorElement.prototype.click;
+  HTMLAnchorElement.prototype.click = function (this: HTMLAnchorElement) {
+    links.push(this);
+  };
+  return {
+    links,
+    restore: () => {
+      HTMLAnchorElement.prototype.click = real;
+    },
+  };
+}
+
 /** Reports the whole session as unwanted motion, the way a real OS setting does. */
 export function reduceMotion(): () => void {
   const original = window.matchMedia;

@@ -8,6 +8,7 @@ import {
   type KeyboardEvent,
 } from 'react';
 import {
+  getNodesBounds,
   Position,
   ReactFlow,
   useNodesState,
@@ -26,6 +27,7 @@ import {
   undo,
   type GraphSession,
 } from '../graph/apply';
+import { exportGraphPng } from '../graph/exportPng';
 import { layoutWorkflow, NODE_HEIGHT, NODE_WIDTH, type LaidOutGraph } from '../graph/layout';
 import { planBackEdges, type BackEdgePlan } from '../graph/backEdge';
 import { DetailDrawer } from './DetailDrawer';
@@ -60,6 +62,12 @@ const FOCUS_FRAME_BUDGET = 4;
  */
 const TOUR_ZOOM_MIN = 0.75;
 const TOUR_ZOOM_MAX = 1;
+
+/** How long a failed export says so before the note clears itself. */
+const EXPORT_NOTE_MS = 4000;
+
+/** Where an export was asked for, so the failure is reported where the press was. */
+type ExportSource = 'toolbar' | 'scorecard';
 
 /**
  * What a session looks like from the outside, the moment a run finished with it.
@@ -216,6 +224,8 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
    * Written once, when the run stops, and never re-derived — see `reportOn`.
    */
   const [report, setReport] = useState<ScorecardReport | null>(null);
+  /** Which button's export failed, or null while nothing has gone wrong. */
+  const [exportFailed, setExportFailed] = useState<ExportSource | null>(null);
 
   const [opened, setOpened] = useState(() => openSession(workflow));
   // A new graph is a new session, adjusted during render rather than in an effect:
@@ -239,6 +249,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const rf = useRef<ReactFlowInstance<SignalRFNode, Edge> | null>(null);
   const ghostTimer = useRef(0);
   const flipTimer = useRef(0);
+  const exportTimer = useRef(0);
   const flipped = useRef<HTMLElement[]>([]);
   /**
    * The card focus is owed once the next version is on screen, or null when
@@ -440,6 +451,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     () => () => {
       window.clearTimeout(ghostTimer.current);
       window.clearTimeout(flipTimer.current);
+      window.clearTimeout(exportTimer.current);
     },
     [],
   );
@@ -785,6 +797,46 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     setLayoutRun((n) => n + 1);
   }, [closeDrawer]);
 
+  /**
+   * The graph as a file, from either of the two places that offer it.
+   *
+   * The bounds come from `nodes` rather than from React Flow's instance: it is the
+   * same set of cards, and this one is in hand whether or not the pane has
+   * initialized — and it carries the positions the user dragged them to, so the
+   * picture frames what is actually on screen.
+   *
+   * Nothing is captured of the toolbar or the chips. The header band the plan
+   * floated would mean compositing a second render onto a canvas under the
+   * viewport's PNG, and the graph is what a person shares; the chips are what they
+   * say about it. Noted rather than done — see `exportPng.ts` on the dot grid,
+   * which is the same kind of decision.
+   */
+  const runExport = useCallback(
+    (from: ExportSource) => {
+      const viewportEl = document.querySelector<HTMLElement>('.react-flow__viewport');
+      if (!viewportEl) return;
+      window.clearTimeout(exportTimer.current);
+      setExportFailed(null);
+      exportGraphPng({
+        viewportEl,
+        nodesBounds: getNodesBounds(nodes),
+        title: graph.meta.title,
+        version: versionAt,
+      }).catch((err: unknown) => {
+        // Nothing here can fix a refused capture — a font the rasterizer could not
+        // inline, a canvas the browser considers tainted — so it is reported where
+        // the press was and written out for whoever opens the console.
+        console.warn('flowprint: PNG export failed', err);
+        setExportFailed(from);
+        exportTimer.current = window.setTimeout(() => setExportFailed(null), EXPORT_NOTE_MS);
+      });
+    },
+    [graph, nodes, versionAt],
+  );
+
+  const exportFromToolbar = useCallback(() => runExport('toolbar'), [runExport]);
+  const exportFromScorecard = useCallback(() => runExport('scorecard'), [runExport]);
+
   if (!laidOut) {
     return (
       <div className="sg-canvas sg-canvas--loading" data-testid="canvas-loading">
@@ -844,6 +896,24 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
             >
               {running ? 'CANCEL' : 'OPTIMIZE'}
             </button>
+          ) : null}
+          {/* Absent while the tour runs: the camera is travelling and the cards are
+              mid-morph, so a capture taken now is a picture of a version nobody has
+              seen yet. It comes back the moment the run stops. */}
+          {running ? null : (
+            <button
+              type="button"
+              className="sg-ghost-btn"
+              data-testid="export-btn"
+              onClick={exportFromToolbar}
+            >
+              EXPORT
+            </button>
+          )}
+          {exportFailed === 'toolbar' ? (
+            <span className="sg-chip sg-chip--refused" data-testid="export-failed" role="status">
+              EXPORT FAILED
+            </span>
           ) : null}
           <button
             type="button"
@@ -942,7 +1012,14 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
           FOR, and a modal nested in the thing it disables would disable itself.
           `.app-main` is the positioned ancestor either way, so the backdrop still
           covers exactly the same rectangle. */}
-      {report ? <Scorecard report={report} onClose={closeScorecard} /> : null}
+      {report ? (
+        <Scorecard
+          report={report}
+          onClose={closeScorecard}
+          onExport={exportFromScorecard}
+          exportFailed={exportFailed === 'scorecard'}
+        />
+      ) : null}
     </>
   );
 }

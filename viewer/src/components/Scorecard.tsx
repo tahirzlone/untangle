@@ -41,7 +41,19 @@ const FOCUSABLE =
  * promises: the canvas behind is made inert by the caller, and Tab is kept in here
  * rather than left to geometry — the masthead sits above the backdrop.
  */
-export function Scorecard({ report, onClose }: { report: ScorecardReport; onClose: () => void }) {
+export function Scorecard({
+  report,
+  onClose,
+  onExport,
+  exportFailed,
+}: {
+  report: ScorecardReport;
+  onClose: () => void;
+  /** Captures the graph the run finished on — the one still drawn behind this. */
+  onExport: () => void;
+  /** The last press asked for from here came back a failure. */
+  exportFailed: boolean;
+}) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLElement>(null);
 
@@ -64,8 +76,7 @@ export function Scorecard({ report, onClose }: { report: ScorecardReport; onClos
    *
    * `inert` on the canvas puts the graph, the toolbar and the version strip out of
    * reach, but the masthead lives above the backdrop and would otherwise be one
-   * Tab away — and with EXPORT PNG disabled there is exactly one stop in here, so
-   * every Tab is a Tab out.
+   * Tab away — two stops in here is two Tabs from the edge, not a containment.
    */
   const onKeyDown = useCallback((e: KeyboardEvent<HTMLElement>) => {
     if (e.key !== 'Tab' || !panelRef.current) return;
@@ -131,13 +142,14 @@ export function Scorecard({ report, onClose }: { report: ScorecardReport; onClos
         </ul>
 
         <div className="sg-scorecard-actions">
+          {/* Takes the graph the run finished on, which is the one still drawn
+              behind this panel. Exporting is not leaving: the report stays up, and
+              CLOSE is still the way out. */}
           <button
             type="button"
             className="sg-scorecard-export"
             data-testid="export-png"
-            // Wired up by the export task. Disabled and saying so beats a button
-            // that looks live and does nothing.
-            disabled
+            onClick={onExport}
           >
             EXPORT PNG
           </button>
@@ -151,7 +163,15 @@ export function Scorecard({ report, onClose }: { report: ScorecardReport; onClos
             CLOSE
           </button>
         </div>
-        <p className="sg-scorecard-note">EXPORT ARRIVES WITH T3</p>
+        {exportFailed ? (
+          <p
+            className="sg-scorecard-note sg-scorecard-note--failed"
+            data-testid="scorecard-export-failed"
+            role="status"
+          >
+            EXPORT FAILED
+          </p>
+        ) : null}
       </section>
     </div>
   );
