@@ -279,7 +279,19 @@
 .sg-node.sg-xray-card .sg-label {
   color: var(--dim);
 }
-/* The present, stepped back a fraction so the past reads against it. */
+/* The present, stepped back a fraction so the past reads against it.
+   This is the LAYER's own step-back, and it is the only one the comparison
+   states: it lands on the whole live graph at once, on the critical route and
+   everything off it alike.
+
+   Which is what lets the two overlays compose without either one being said
+   twice. CRITICAL PATH steps individual ELEMENTS back — see
+   `--critpath-dim-opacity` — and the value it states is stated ONCE, never
+   compounded with this one into a number neither of them means. The contrast
+   the route is drawn by is the same whether or not the comparison is held down;
+   what the comparison changes is where the whole present sits against the past.
+   Nothing here dims the ghost either: it is a picture of a graph that has no
+   route of its own to be on or off. */
 .sg-viewport .react-flow.sg-live--xray {
   opacity: var(--xray-live-opacity);
 }

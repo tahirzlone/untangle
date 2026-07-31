@@ -19,7 +19,7 @@ import './edge.css';
  * Resolved rather than written out here, so the palette stays the one source: an
  * unresolvable token states nothing rather than inventing a colour.
  */
-function edgeInk(kind: EdgeKind, critical: boolean) {
+function edgeInk(kind: EdgeKind, critical: boolean, offPath: boolean) {
   const token = tokenReader();
   return {
     stroke: critical
@@ -37,7 +37,20 @@ function edgeInk(kind: EdgeKind, critical: boolean) {
     // screen and the exported PNG agree about which run is the expensive one.
     strokeWidth: token(critical ? '--edge-stroke-critical' : '--edge-stroke'),
     strokeLinecap: token('--edge-cap') as 'round' | undefined,
-    opacity: critical ? '1' : token(kind === 'retry' ? '--edge-opacity-retry' : '--edge-opacity'),
+    // Three cases, and the order is the decision: the route is at full strength,
+    // everything off it while the route is up steps back to ONE dim, and a graph
+    // nobody is asking about draws at its kind's own opacity.
+    //
+    // The dim REPLACES the kind's opacity rather than compounding with it. A
+    // retry already draws quieter than a sequence edge, and multiplying the two
+    // would push it further back than every other off-path edge — a difference
+    // the eye would read as meaning something, when the only question the toggle
+    // is asking is on the route or off it.
+    opacity: critical
+      ? '1'
+      : offPath
+        ? token('--critpath-dim-opacity')
+        : token(kind === 'retry' ? '--edge-opacity-retry' : '--edge-opacity'),
     // The state the draw-in ENDS on — a retry stays dashed, everything else
     // resolves to one dash over a curve normalized to a single unit. The
     // animation is a CSS keyframe, so it outranks this while it plays and the
@@ -64,6 +77,7 @@ export function EdgeTag({
   x,
   y,
   offset,
+  offPath = false,
 }: {
   /** The edge this tag belongs to — how the collision pass names it. */
   id: string;
@@ -72,12 +86,21 @@ export function EdgeTag({
   x: number;
   y: number;
   offset?: LabelOffset;
+  /**
+   * On an edge the critical path does not run along, while that route is up.
+   *
+   * A class and no attribute, unlike the path this hangs off: the tag is HTML,
+   * and html-to-image inlines computed style onto cloned HTML — it is only SVG
+   * children that arrive with nothing. So the stylesheet carries this one all
+   * the way into the picture.
+   */
+  offPath?: boolean;
 }) {
   const dx = offset?.dx ?? 0;
   const dy = offset?.dy ?? 0;
   return (
     <div
-      className={`sg-edge-tag${kind === 'retry' ? ' sg-edge-tag--retry' : ''}`}
+      className={`sg-edge-tag${kind === 'retry' ? ' sg-edge-tag--retry' : ''}${offPath ? ' sg-edge-tag--offpath' : ''}`}
       style={{
         position: 'absolute',
         transform: `translate(-50%, -50%) translate(${x + dx}px, ${y + dy}px)`,
@@ -129,12 +152,17 @@ export function SignalEdge(props: EdgeProps) {
         index: number;
         back?: BackEdgePlan;
         critical?: boolean;
+        /** Off the route CRITICAL PATH is pointing at, while it is pointing at one. */
+        offPath?: boolean;
         /** Where the collision pass wants this edge's tag, if not where the curve put it. */
         tagOffset?: LabelOffset;
       }
     | undefined;
   const kind = data?.kind ?? 'sequence';
   const critical = data?.critical ?? false;
+  // The canvas decides this — it is the only place that knows whether a route is
+  // being shown at all — so the two can never both be true here.
+  const offPath = data?.offPath ?? false;
   // Geometric, never by kind: ELK reverses whichever edges it must to break the
   // retry cycles, so plain `sequence` edges come back right-to-left too. The
   // route plan is optional — without it the path still clears its own two rows.
@@ -153,11 +181,11 @@ export function SignalEdge(props: EdgeProps) {
   // the dot is decoration with a pulse; reduced motion drops it entirely rather
   // than freezing it somewhere arbitrary along the curve
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const ink = edgeInk(kind, critical);
+  const ink = edgeInk(kind, critical, offPath);
   return (
     <g className="sg-edge-group" style={{ ['--i' as string]: data?.index ?? 0 }}>
       <path
-        className={`sg-edge sg-edge--${kind}${critical ? ' sg-edge--critical' : ''}`}
+        className={`sg-edge sg-edge--${kind}${critical ? ' sg-edge--critical' : ''}${offPath ? ' sg-edge--offpath' : ''}`}
         d={d}
         fill="none"
         markerEnd="url(#fp-arrow)"
@@ -167,7 +195,17 @@ export function SignalEdge(props: EdgeProps) {
       {kind === 'sequence' && !isBack && !reduced ? (
         // the dot's fill is CSS too, and an SVG circle with no fill of its own
         // exports BLACK — a bead of ink on the graph nobody drew
-        <circle className="sg-flow-dot" r="3" fill={ink.stroke}>
+        //
+        // The dim is stated on the dot itself because the dot is the path's
+        // SIBLING, not its child: the path's own opacity never reaches it, and a
+        // bead left at full strength running a stepped-back curve would be the
+        // liveliest thing on the half of the graph that is meant to recede.
+        <circle
+          className={`sg-flow-dot${offPath ? ' sg-flow-dot--offpath' : ''}`}
+          r="3"
+          fill={ink.stroke}
+          {...(offPath && ink.opacity ? { opacity: ink.opacity } : null)}
+        >
           <animateMotion dur="3.2s" repeatCount="indefinite" path={d} />
         </circle>
       ) : null}
@@ -180,6 +218,7 @@ export function SignalEdge(props: EdgeProps) {
             x={labelX}
             y={labelY}
             offset={data?.tagOffset}
+            offPath={offPath}
           />
         </EdgeLabelRenderer>
       ) : null}

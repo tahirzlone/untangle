@@ -106,13 +106,30 @@ export function SignalNode({
   selected,
   isConnectable,
 }: {
-  data: { node: WorkflowNode; index: number; suggestions?: Suggestion[]; critical?: boolean };
+  data: {
+    node: WorkflowNode;
+    index: number;
+    suggestions?: Suggestion[];
+    critical?: boolean;
+    /**
+     * Off the route CRITICAL PATH is pointing at, while it is pointing at one.
+     *
+     * Carried separately from `critical` rather than derived as its negation:
+     * with the toggle up NEITHER is true, and with a graph the sweep cannot
+     * answer about neither is true either. The canvas is the only place that
+     * knows which of those it is looking at — see `critpathActive` there.
+     */
+    offPath?: boolean;
+  };
   selected?: boolean;
   isConnectable?: boolean;
 }) {
   return (
     <div
-      className="sg-node-shell"
+      // The step-back is on the SHELL, not the card: the pip is the card's
+      // sibling, so a dim written on the card would leave the badge burning at
+      // full strength on a step nobody is being pointed at.
+      className={`sg-node-shell${data.offPath ? ' sg-node-shell--offpath' : ''}`}
       // NODE_WIDTH/NODE_HEIGHT come from the layout module so ELK, React Flow's
       // declared bounds, and the painted card can never drift apart — the card
       // size lives in exactly one place.

@@ -46,6 +46,19 @@
   --xray-ghost-opacity: 0.35;
   --xray-live-opacity: 0.85;
 
+  /* CRITICAL PATH. How far the rest of the graph steps back while the route is
+     being pointed at — the toggle is an INVERSION: the path keeps the treatment
+     it has always had, and everything off it recedes out of its way.
+     The same stepped-back grammar VS ORIGINAL uses, and deliberately the same
+     number as `--xray-ghost-opacity`: "not the thing you are looking at" reads
+     one way on this canvas, whichever overlay is saying it.
+     A token and not a literal for the harder reason too — the edge has to state
+     this as a presentation attribute, because CSS-derived presentation on SVG
+     does not survive an html-to-image export, and an off-path edge that stepped
+     back only in a class would export at full strength. One source, so the
+     screen and the shared PNG cannot disagree about which run is expensive. */
+  --critpath-dim-opacity: 0.35;
+
   /* Suggestion categories — one ink per kind of resource, mirroring the select
      colours the Airtable rows already wear, so a card in the drawer reads the
      same colour as its row in the KB. Categories outside the three Claude ones

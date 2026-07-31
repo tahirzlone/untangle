@@ -22,6 +22,7 @@ function edgeProps(data: {
   label?: string;
   index: number;
   critical?: boolean;
+  offPath?: boolean;
 }): EdgeProps {
   return { ...PORTS, data } as EdgeProps;
 }
@@ -45,6 +46,7 @@ const INK: Record<string, string> = {
   '--edge-opacity-retry': '0.9',
   '--edge-dash': '1',
   '--edge-dash-retry': '0.04 0.02',
+  '--critpath-dim-opacity': '0.35',
 };
 
 function installTokens(): () => void {
@@ -184,6 +186,22 @@ it('EdgeTag marks retry edges and leaves other kinds unmarked', () => {
   expect(get2('edge-tag').classList.contains('sg-edge-tag--retry')).toBe(false);
 });
 
+// The tag is HTML, not SVG — the export inlines computed style onto cloned HTML,
+// so a class is enough here and no attribute is needed. What matters is that the
+// condition on an off-path branch steps back with the curve it belongs to,
+// instead of staying the brightest thing left on a dimmed half of the graph.
+it('EdgeTag steps back with the off-path edge it belongs to', () => {
+  const { getByTestId, unmount } = render(
+    <EdgeTag id="e3" lines={['overnight']} kind="branch" x={0} y={0} offPath />,
+  );
+  expect(getByTestId('edge-tag').classList.contains('sg-edge-tag--offpath')).toBe(true);
+  unmount();
+  const { getByTestId: get2 } = render(
+    <EdgeTag id="e1" lines={['overnight']} kind="branch" x={0} y={0} />,
+  );
+  expect(get2('edge-tag').classList.contains('sg-edge-tag--offpath')).toBe(false);
+});
+
 it('EdgeTag centres itself on the label point', () => {
   const { getByTestId } = render(
     <EdgeTag id="e0" lines={['mid']} kind="sequence" x={120} y={64} />,
@@ -305,6 +323,98 @@ it('states the critical run’s heavier ink as attributes too', () => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// The inversion: while CRITICAL PATH is down, everything off the route steps back
+// ---------------------------------------------------------------------------
+
+/**
+ * The dim is an ATTRIBUTE for the same reason every other ink on this path is:
+ * an exported PNG is a clone of the DOM with no stylesheet behind it, so a dim
+ * that lived only in a class would export as a graph where nothing stepped back
+ * and the route the toggle was pointing at is no longer legible in the picture
+ * anybody shares. The class beside it is what governs the screen.
+ */
+it('steps an off-path edge back as an attribute the export can carry', () => {
+  const restore = installTokens();
+  try {
+    const { container } = render(
+      <svg>
+        <SignalEdge {...edgeProps({ kind: 'branch', index: 0, offPath: true })} />
+      </svg>,
+    );
+    const path = container.querySelector('path.sg-edge')!;
+    expect(path.classList.contains('sg-edge--offpath')).toBe(true);
+    expect(path.classList.contains('sg-edge--critical')).toBe(false);
+    expect(path.getAttribute('opacity')).toBe(INK['--critpath-dim-opacity']);
+    // only the strength steps back: a branch that is off the route is still a
+    // branch, drawn in the same ink at the same weight
+    expect(path.getAttribute('stroke')).toBe(INK['--edge-branch']);
+    expect(path.getAttribute('stroke-width')).toBe(INK['--edge-stroke']);
+  } finally {
+    restore();
+  }
+});
+
+// One dim, stated once. A retry already draws at its own opacity, and stacking
+// the two would put it further back than every other off-path edge for no reason
+// anybody could read — the question the toggle asks is on the route or off it.
+it('steps a retry edge back to the same dim, not to a compound of two', () => {
+  const restore = installTokens();
+  try {
+    const { container } = render(
+      <svg>
+        <SignalEdge {...edgeProps({ kind: 'retry', index: 0, offPath: true })} />
+      </svg>,
+    );
+    const path = container.querySelector('path.sg-edge')!;
+    expect(path.getAttribute('opacity')).toBe(INK['--critpath-dim-opacity']);
+    // and it is still the retry: ember, still dashed
+    expect(path.getAttribute('stroke')).toBe(INK['--ember']);
+    expect(path.getAttribute('stroke-dasharray')).toBe(INK['--edge-dash-retry']);
+  } finally {
+    restore();
+  }
+});
+
+// The dot is a sibling of the path, not a child of it, so the path's own opacity
+// never reaches it: a bead left at full strength travelling a stepped-back curve
+// reads as the liveliest thing on the dimmed half of the graph.
+it('sends the off-path flow dot back with the edge it rides', () => {
+  const restore = installTokens();
+  try {
+    const { container } = render(
+      <svg>
+        <SignalEdge {...edgeProps({ kind: 'sequence', index: 0, offPath: true })} />
+      </svg>,
+    );
+    const dot = container.querySelector('circle.sg-flow-dot')!;
+    expect(dot.classList.contains('sg-flow-dot--offpath')).toBe(true);
+    expect(dot.getAttribute('opacity')).toBe(INK['--critpath-dim-opacity']);
+  } finally {
+    restore();
+  }
+});
+
+// The other half of the inversion: the route keeps exactly the treatment it had
+// before anything around it stepped back.
+it('leaves the route itself at full strength and states no dim on it', () => {
+  const restore = installTokens();
+  try {
+    const { container } = render(
+      <svg>
+        <SignalEdge {...edgeProps({ kind: 'sequence', index: 0, critical: true })} />
+      </svg>,
+    );
+    const path = container.querySelector('path.sg-edge')!;
+    expect(path.classList.contains('sg-edge--offpath')).toBe(false);
+    expect(path.getAttribute('opacity')).toBe('1');
+    expect(path.getAttribute('stroke-width')).toBe(INK['--edge-stroke-critical']);
+    expect(container.querySelector('circle.sg-flow-dot')!.hasAttribute('opacity')).toBe(false);
+  } finally {
+    restore();
+  }
+});
+
 // Nothing is invented when the tokens are absent: the attribute is left off and
 // the stylesheet — which is all a browser needs — remains in charge.
 it('states nothing it cannot resolve', () => {
@@ -314,4 +424,18 @@ it('states nothing it cannot resolve', () => {
     </svg>,
   );
   expect(container.querySelector('path.sg-edge')!.hasAttribute('stroke')).toBe(false);
+});
+
+// Same rule for the dim: an unresolvable token states nothing rather than
+// inventing a number, and the class still carries the screen.
+it('states no dim it cannot resolve, and still marks what is off the route', () => {
+  const { container } = render(
+    <svg>
+      <SignalEdge {...edgeProps({ kind: 'sequence', index: 0, offPath: true })} />
+    </svg>,
+  );
+  const path = container.querySelector('path.sg-edge')!;
+  expect(path.classList.contains('sg-edge--offpath')).toBe(true);
+  expect(path.hasAttribute('opacity')).toBe(false);
+  expect(container.querySelector('circle.sg-flow-dot')!.hasAttribute('opacity')).toBe(false);
 });

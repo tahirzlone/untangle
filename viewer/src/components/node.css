@@ -5,8 +5,33 @@
   /* the pip hangs off the corner from here — the shell is the card's box, and
      the card itself clips, so the anchor has to be the shell */
   position: relative;
+  /* Where this card sits between the front of the picture and the back of it.
+     1 for every card until CRITICAL PATH is down; see `--offpath` below. Kept as
+     a variable so the entrance animation can END on it — a card arriving into a
+     graph that is already stepped back should fade in to where it belongs, not
+     fade to full and then snap back. */
+  --shell-opacity: 1;
+  opacity: var(--shell-opacity);
   animation: sg-card-in var(--card-in-dur) ease-out backwards;
   animation-delay: calc(var(--i, 0) * var(--flow-stagger));
+}
+
+/* Off the route CRITICAL PATH is pointing at, while it is pointing at one.
+   The toggle is an INVERSION: the path keeps its outline and its halo exactly as
+   they were, and the rest of the graph recedes so there is somewhere for the eye
+   to land. The same step-back VS ORIGINAL uses on the layer it holds down —
+   one grammar for "not the thing you are being shown".
+
+   Opacity and nothing else: a dimmed card is still a step you can click, drag,
+   tab to and open a drawer on. Stepped back is not switched off, so no
+   `pointer-events` and no `inert` — the toggle answers a question about the
+   graph, it does not take half of it away.
+
+   No transition, at any motion setting: an analysis overlay has to be there the
+   instant it is asked for, and a fade would put the answer behind the question.
+   Nothing here to disable under prefers-reduced-motion for the same reason. */
+.sg-node-shell--offpath {
+  --shell-opacity: var(--critpath-dim-opacity);
 }
 
 /* How many suggestions the KB matched to this step. Sits half off the corner, so
@@ -178,9 +203,12 @@
     0 4px 18px color-mix(in srgb, var(--bg-deep) 45%, transparent);
 }
 
+/* Ends on `--shell-opacity` rather than on 1, so a card that mounts into an
+   already-stepped-back graph — the replacement a patch leaves behind while
+   CRITICAL PATH is down — arrives at the strength it belongs at. */
 @keyframes sg-card-in {
   from { opacity: 0; transform: translateX(-12px); }
-  to { opacity: 1; transform: translateX(0); }
+  to { opacity: var(--shell-opacity, 1); transform: translateX(0); }
 }
 /* Breathes rather than blinks: opacity only, so nothing reflows and the count
    stays legible at every point of the cycle. */

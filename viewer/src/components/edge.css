@@ -36,8 +36,22 @@
   opacity: 1;
 }
 
+/* The other half of that toggle: every run the route does not take steps back
+   out of its way. Written AFTER `.sg-edge--retry` on purpose — both are single
+   classes, so source order is what decides, and the dim has to replace the
+   retry's own opacity rather than lose to it. The same value the path states as
+   a presentation attribute (see `edgeInk`), so the screen and the exported PNG
+   agree about what is off the route. */
+.sg-edge--offpath {
+  opacity: var(--critpath-dim-opacity);
+}
+
 .sg-flow-dot {
   fill: var(--accent);
+}
+/* The dot is a sibling of the path, so the path's opacity never reaches it. */
+.sg-flow-dot--offpath {
+  opacity: var(--critpath-dim-opacity);
 }
 
 /* the edge-label layer's stacking lives with the viewport that owns it —
@@ -60,6 +74,13 @@
 .sg-edge-tag--retry {
   color: var(--ember);
   border-color: color-mix(in srgb, var(--ember) 40%, transparent);
+}
+/* A condition on an off-path edge goes back with the curve it belongs to —
+   otherwise the brightest thing left on the dimmed half of the graph is a chip
+   explaining a route nobody is being pointed at. No attribute needed: the tag is
+   HTML, and an export carries computed style onto cloned HTML. */
+.sg-edge-tag--offpath {
+  opacity: var(--critpath-dim-opacity);
 }
 
 @keyframes sg-draw {

@@ -117,6 +117,14 @@ interface SignalNodeData extends Record<string, unknown> {
   suggestions: Suggestion[];
   /** On the most painful route through this version, while that is being shown. */
   critical: boolean;
+  /**
+   * NOT on that route, while it is being shown.
+   *
+   * The complement of `critical` only while a route is actually up: with the
+   * toggle released, and on a graph the sweep cannot answer about, both are
+   * false and nothing on the canvas steps anywhere.
+   */
+  offPath: boolean;
 }
 type SignalRFNode = Node<SignalNodeData>;
 
@@ -186,6 +194,8 @@ function toRFNodes(
   matched: Map<string, Suggestion[]>,
   selectedId: string | null,
   criticalIds: ReadonlySet<string>,
+  /** Is a route actually being pointed at? Only then does anything step back. */
+  critpathActive: boolean,
   prior: SignalRFNode[] = [],
 ): SignalRFNode[] {
   const measured = new Map(prior.map((n) => [n.id, n.measured]));
@@ -222,8 +232,10 @@ function toRFNodes(
       suggestions: matched.get(n.id) ?? NO_SUGGESTIONS,
       // Restored here for the same reason `selected` is: a re-layout replaces
       // every node object, and a glow that vanished on RESET LAYOUT would read as
-      // the toggle having switched itself off.
+      // the toggle having switched itself off. The step-back is the same fact
+      // read the other way round, and has to survive the same swap.
       critical: criticalIds.has(n.id),
+      offPath: critpathActive && !criticalIds.has(n.id),
     },
     // draggable/selectable are deliberately unset per node: leaving them
     // undefined is what lets the canvas-level flags below govern all of them.
@@ -414,8 +426,10 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     setSelectedId(id);
   }, []);
   // Same bargain for the glow: which steps are on the critical path is not a
-  // reason to run ELK again, so the layout reads the set through a ref.
+  // reason to run ELK again, so the layout reads the set through a ref — and,
+  // beside it, whether there is a route being pointed at at all.
   const criticalRef = useRef<ReadonlySet<string>>(new Set());
+  const critpathRef = useRef(false);
 
   // The KB's answer, indexed by the step it answers about. Two rows can match the
   // same step, so this is a list per node, not one entry per node. Read off the
@@ -478,7 +492,9 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
       setLaidOut(g);
       // Fed the list it replaces, so React Flow's measurements survive the swap —
       // see the note on `toRFNodes` and error #015.
-      setNodes((prev) => toRFNodes(g, matched, selectedRef.current, criticalRef.current, prev));
+      setNodes((prev) =>
+        toRFNodes(g, matched, selectedRef.current, criticalRef.current, critpathRef.current, prev),
+      );
     });
     return () => {
       live = false;
@@ -497,18 +513,35 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const criticalNodes = useMemo(() => new Set(path.nodeIds), [path]);
   const criticalEdges = useMemo(() => new Set(path.edgeKeys), [path]);
 
-  // The glow, onto the cards already on screen. Data rather than a class list
-  // because the card is React Flow's to render — and a patch, not a rebuild,
-  // because turning a toggle on is not a reason to lay the graph out again.
+  /**
+   * Is there a route on screen for the rest of the graph to step back FROM?
+   *
+   * The toggle being down is not enough. A graph whose logical edges form a
+   * cycle has no longest path at all, and `criticalPath` answers `NO_PATH`
+   * rather than inventing one — so "everything not on the route" would be every
+   * card and every edge, and the press would step the whole picture back with
+   * nothing left lit to say why. On that graph the toggle shows nothing, which
+   * is the honest answer to a question with none.
+   */
+  const critpathActive = path.nodeIds.length > 0;
+
+  // The glow and the step-back, onto the cards already on screen. Data rather
+  // than a class list because the card is React Flow's to render — and a patch,
+  // not a rebuild, because turning a toggle on is not a reason to lay the graph
+  // out again.
   useEffect(() => {
     criticalRef.current = criticalNodes;
+    critpathRef.current = critpathActive;
     setNodes((ns) =>
       ns.map((n) => {
         const on = criticalNodes.has(n.id);
-        return n.data.critical === on ? n : { ...n, data: { ...n.data, critical: on } };
+        const back = critpathActive && !on;
+        return n.data.critical === on && n.data.offPath === back
+          ? n
+          : { ...n, data: { ...n.data, critical: on, offPath: back } };
       }),
     );
-  }, [criticalNodes, setNodes]);
+  }, [criticalNodes, critpathActive, setNodes]);
 
   /** Every FLIP property this component wrote, taken back off. */
   const clearFlip = useCallback(() => {
@@ -706,12 +739,16 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
           // The ids the path answers in are the ids the layout minted — see
           // `edgeKey` in graph/insight.ts, which both sides read.
           critical: criticalEdges.has(e.id),
+          // The inversion's other half. Retries are never on the route — the
+          // sweep drops them from the logical graph — so a loop back always
+          // steps back with everything else the work does not run along.
+          offPath: critpathActive && !criticalEdges.has(e.id),
           // Where the tag goes once everything else on the canvas is accounted
           // for. Absent for the tags that landed in clear air, which is most.
           tagOffset: tagOffsets.get(e.id),
         },
       })),
-    [laidOut, backPlan, criticalEdges, tagOffsets],
+    [laidOut, backPlan, criticalEdges, critpathActive, tagOffsets],
   );
 
   /**
