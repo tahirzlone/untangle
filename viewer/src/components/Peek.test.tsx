@@ -204,9 +204,19 @@ it('is not raised by the keyboard', async () => {
 // When it stays out of the way
 // ---------------------------------------------------------------------------
 
-// The panel is the commit path and it states the same row in full — the peek
-// standing beside it would be that row said twice.
-it('gives way to the drawer the click opens', async () => {
+/**
+ * The panel is the commit path and it states the same row in full — the peek
+ * standing beside it would be that row said twice, and at z8 over the drawer's
+ * z6 it would stand ON it.
+ *
+ * The second half is the case a hide at the click cannot answer, and the reason
+ * the drawer is in `peekSuppressed` rather than handled at the press: opening the
+ * panel re-frames the canvas, the cards slide out from under a pointer that never
+ * moved, and the browser dispatches genuine boundary events for whichever card
+ * arrives under it. That enter is indistinguishable from a real one, so the only
+ * honest answer is a mode that keeps refusing for as long as the panel is open.
+ */
+it('gives way to the drawer the click opens, and stays away while it is open', async () => {
   await canvas();
 
   rest(card(RESEARCH));
@@ -215,6 +225,20 @@ it('gives way to the drawer the click opens', async () => {
   fireEvent.click(card(RESEARCH));
   expect(screen.queryByTestId('sg-peek')).not.toBeInTheDocument();
   expect(screen.getByTestId('detail-drawer')).toHaveTextContent(RESEARCH);
+
+  // the boundary events the re-frame produces, arriving on the panel's own step
+  rest(card(RESEARCH));
+  expect(screen.queryByTestId('sg-peek')).not.toBeInTheDocument();
+
+  // and on any other step the cards slid under the pointer
+  rest(card(VERIFY));
+  expect(screen.queryByTestId('sg-peek')).not.toBeInTheDocument();
+
+  // the panel closed, the canvas is a graph to browse again
+  fireEvent.keyDown(window, { key: 'Escape' });
+  expect(screen.queryByTestId('detail-drawer')).not.toBeInTheDocument();
+  rest(card(VERIFY));
+  expect(screen.getByTestId('sg-peek')).toBeInTheDocument();
 });
 
 // While the tour drives the canvas it owns it: the camera is travelling and the

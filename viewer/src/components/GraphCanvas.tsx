@@ -1071,11 +1071,20 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
    *
    * ONE flag, deliberately, and every mode that owns the canvas raises it: a card
    * mid-drag (the pointer is doing something, not asking something), the tour
-   * driving the camera, and the report holding the screen. The wipe compare will
-   * raise it too when it lands — this is the line it joins, so the peek never has
-   * to grow a second suppression route.
+   * driving the camera, the report holding the screen, and a DRAWER already open
+   * on a step. The wipe compare will raise it too when it lands — this is the
+   * line it joins, so the peek never has to grow a second suppression route.
+   *
+   * The drawer is in the list because a one-shot hide at the click was not enough,
+   * and the reason is worth stating: opening the panel re-frames the canvas, the
+   * cards slide out from under a pointer that never moved, and the browser
+   * dispatches perfectly genuine mouseout/mouseover boundary events for the card
+   * that arrived under it. The peek's own enter fires again — 150ms later a panel
+   * drawing at z8 stands on top of the drawer at z6, saying the same row twice.
+   * A peek is a question about a step; while the answer is open there is nothing
+   * left to ask.
    */
-  const peekSuppressed = dragging || !canvasIdle;
+  const peekSuppressed = dragging || !canvasIdle || selectedId !== null;
 
   const hidePeek = useCallback(() => {
     window.clearTimeout(peekTimer.current);
@@ -1119,9 +1128,14 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
 
   // A mode taking the canvas mid-peek drops it — the panel would otherwise hang
   // over a drag it is not about, or over a camera it cannot follow.
+  //
+  // `peek` is in the list as well as the flag, so this also catches one landing
+  // DURING a suppressed mode: the timer was scheduled by a handler that closed
+  // over the flag as it was when the pointer arrived, and a peek held in state
+  // behind a mode would spring back the moment that mode released.
   useEffect(() => {
     if (peekSuppressed) hidePeek();
-  }, [hidePeek, peekSuppressed]);
+  }, [hidePeek, peek, peekSuppressed]);
 
   const onNodeDragStart = useCallback(() => setDragging(true), []);
   const onNodeDragStop = useCallback(() => setDragging(false), []);
@@ -1135,13 +1149,12 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
       // While the tour runs the canvas is being driven, not browsed: a panel
       // opening over the camera would be a second thing moving.
       if (!canvasIdle) return;
-      // The question has been answered in full: a peek left standing beside the
-      // panel would be the same row said twice, and the pointer need not move
-      // for the click to have happened.
-      hidePeek();
+      // Nothing about the peek here: selecting a step raises `peekSuppressed`,
+      // which is the one place that decides this — and it keeps deciding it for
+      // as long as the panel is open, which a hide at the click could not.
       select(node.id);
     },
-    [canvasIdle, hidePeek, select],
+    [canvasIdle, select],
   );
 
   /**
@@ -1299,7 +1312,11 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   // Derived from the id for the same reason the panel's subject is: a patch can
   // consume the very step the pointer is resting on, and a peek about a card that
   // is no longer there would outlive its subject. No card, no peek.
-  const peeked = peek ? nodes.find((n) => n.id === peek.id) ?? null : null;
+  //
+  // The suppression is read HERE too, not only in the effect that clears the
+  // state: the effect runs after the commit, so a mode raised in one render would
+  // otherwise get a frame with the peek still painted over it.
+  const peeked = peek && !peekSuppressed ? nodes.find((n) => n.id === peek.id) ?? null : null;
 
   return (
     <>
