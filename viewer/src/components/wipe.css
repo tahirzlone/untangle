@@ -1,0 +1,194 @@
+/* ---------------------------------------------------------------------------
+   VS ORIGINAL, as a wipe. Two full-fidelity layers share the viewport: the
+   original underneath (this file's .sg-wipe-under), the live canvas clipped
+   above it, and a draggable seam deciding where one world ends and the other
+   begins. Everything here reads Signal tokens — no ink of its own.
+   --------------------------------------------------------------------------- */
+
+/* The original's wrapper: untransformed, so the clip it wears is in screen
+   pixels and stays put while the world inside pans and zooms. Under everything
+   React Flow draws (its wrapper is a z-index:0 stacking context) and over the
+   canvas backdrop, which belongs to an ancestor — the same berth the ghost
+   layer keeps. */
+.sg-wipe-under {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* The world: the live pane's own transform, mirrored, so the two layers are
+   one coordinate space at any pan or zoom. */
+.sg-wipe-world {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+}
+
+.sg-wipe-edges {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  /* the routes are drawn in graph coordinates and run well past the pane */
+  overflow: visible;
+}
+
+/* A real card at a real place: SignalNodeBody inside, full strength — the
+   whole point of the wipe over the ghost it replaced. The wrapper is the
+   positioned box the badge and the endpoint chip anchor to, exactly as
+   .sg-node-shell is on the live side. */
+.sg-wipe-card {
+  position: absolute;
+  box-sizing: border-box;
+}
+
+/* The port rings the live cards wear, restated for a layer with no React Flow
+   handles — same size, same two tokens. */
+.sg-wipe-port {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 2px solid var(--accent);
+  transform: translateY(-50%);
+  z-index: 1;
+}
+.sg-wipe-port--in {
+  left: -5px;
+}
+.sg-wipe-port--out {
+  right: -5px;
+}
+
+/* The seam. A zero-width post holding a 2px accent line, so `left` states
+   exactly where the divide is and the hit area straddles it evenly. Above the
+   cards (React Flow's wrapper resolves at 0), below the toolbar (5) and the
+   drawer (6) — the ghosts' own berth. */
+.sg-wipe-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  z-index: 4;
+  cursor: ew-resize;
+  touch-action: none;
+}
+.sg-wipe-handle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -1px;
+  width: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent-soft);
+}
+/* The hit area: wider than the line it moves, or the divider is a 2px target. */
+.sg-wipe-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -8px;
+  width: 16px;
+}
+.sg-wipe-handle:focus-visible {
+  outline: none;
+}
+.sg-wipe-handle:focus-visible .sg-wipe-grip {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.sg-wipe-grip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-family: var(--font-anno);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--bg-deep) 45%, transparent);
+}
+
+/* Which side is which, said on the seam itself. The past reads quiet, the
+   present reads accent — the same weight the rest of the canvas gives them. */
+.sg-wipe-chip {
+  position: absolute;
+  top: 52px;
+  font-family: var(--font-anno);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  padding: 3px 10px;
+  border-radius: var(--radius-chip);
+  white-space: nowrap;
+}
+.sg-wipe-chip--original {
+  right: 10px;
+  color: var(--dim);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.sg-wipe-chip--now {
+  left: 10px;
+  color: var(--bg-deep);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+/* The satisfaction line: the headline savings, floating at the seam. Not a
+   panel — a strip that travels with the handle so the numbers are read AT the
+   divide they explain. */
+.sg-wipe-deltas {
+  position: absolute;
+  top: 10px;
+  transform: translateX(-50%);
+  z-index: 4;
+  display: flex;
+  gap: 6px;
+  pointer-events: none;
+}
+.sg-wipe-delta {
+  font-family: var(--font-anno);
+  font-size: 11px;
+  white-space: nowrap;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: var(--radius-chip);
+  padding: 3px 10px;
+}
+.sg-wipe-delta--pain {
+  color: var(--text);
+  border-color: var(--line);
+}
+
+/* The entrance, and the only motion the mode owns: the layers arrive rather
+   than pop. The class is stated by the component only when motion is wanted,
+   so reduced motion never mounts a transition to disable — the media query
+   below is belt and braces for a stale preference read. */
+.sg-wipe--animate {
+  animation: sg-wipe-in 160ms ease-out;
+}
+@keyframes sg-wipe-in {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sg-wipe--animate {
+    animation: none;
+  }
+}

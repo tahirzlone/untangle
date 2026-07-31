@@ -44,7 +44,7 @@ import { PeekCard, peekAnchor, PEEK_DELAY_MS, type PeekAnchor } from './PeekCard
 import { SignalNode } from './SignalNode';
 import { SignalEdge } from './SignalEdge';
 import { VersionStrip } from './VersionStrip';
-import { XrayLayer } from './XrayLayer';
+import { WipeCompare } from './WipeCompare';
 import { Scorecard, type ScorecardReport } from './Scorecard';
 import { useCinematic, type TourResult } from './optimize';
 import { CAMERA_MS, FLIP_MS, GHOST_MS, MOTION_VARS, prefersReducedMotion } from './motion';
@@ -355,10 +355,12 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const [report, setReport] = useState<ScorecardReport | null>(null);
   /** Which button's export failed, or null while nothing has gone wrong. */
   const [exportFailed, setExportFailed] = useState<ExportSource | null>(null);
-  /** Is VS ORIGINAL down — held under a pointer, or latched by the keyboard? */
-  const [xray, setXray] = useState(false);
+  /** Is the VS ORIGINAL wipe open? A mode, not a hold — ESC or the toggle ends it. */
+  const [wipe, setWipe] = useState(false);
   /** The pane's transform, mirrored onto the comparison while it is showing. */
-  const [xrayTransform, setXrayTransform] = useState('');
+  const [wipeTransform, setWipeTransform] = useState('');
+  /** The clip the live canvas wears while wiping — the divider states it. */
+  const [wipeClip, setWipeClip] = useState<string | null>(null);
   /** Is CRITICAL PATH down? */
   const [showPath, setShowPath] = useState(false);
   /** Which edge tags had to move to be readable, and by how much. */
@@ -416,15 +418,25 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
    * Kept with the workflow it belongs to, so a second file dropped on the viewer
    * cannot be compared against the first one's ghost.
    *
-   * The lane plan is worked out here too, with the layout it belongs to and once
-   * per session: the ghost's back-edges have to take the same routes the live
-   * graph's do, or an edge that never changed would be drawn in two different
-   * places and the comparison would be reporting a difference nobody made.
+   * This is the comparison's FALLBACK geometry: where the user has arranged the
+   * graph by hand, the snapshot below outranks it — see `originalPositions`.
    */
   const originalLayout = useRef<{
     of: Workflow;
     laidOut: LaidOutGraph;
-    backPlan: Map<string, BackEdgePlan>;
+  } | null>(null);
+  /**
+   * Where React Flow had every card at the FIRST apply of this session — the
+   * user's own arrangement of V0, drags included, taken at the last moment it is
+   * still on screen. VS ORIGINAL draws the original at these positions, so a
+   * layout someone shaped by hand is compared as they shaped it rather than as
+   * ELK first dealt it. Keyed by the workflow, like the layout above, so a
+   * second file never inherits the first one's arrangement; both routes into an
+   * apply — the drawer's button and the cinematic — pass through the capture.
+   */
+  const originalPositions = useRef<{
+    of: Workflow;
+    at: Map<string, { x: number; y: number }>;
   } | null>(null);
   /**
    * The card focus is owed once the next version is on screen, or null when
@@ -495,13 +507,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
       // `original` is a stable object for the life of a session, so this costs the
       // effect no extra runs — it is the same pass, remembered.
       if (original && graph === original) {
-        originalLayout.current = {
-          of: original,
-          laidOut: g,
-          // ELK's own positions, not the live boxes: the comparison is of the
-          // graph as it was LAID OUT, so its lanes are planned against that.
-          backPlan: planBackEdges(g.nodes, g.edges),
-        };
+        originalLayout.current = { of: original, laidOut: g };
       }
       setLaidOut(g);
       // Fed the list it replaces, so React Flow's measurements survive the swap —
@@ -522,8 +528,16 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
    * the glow onto whatever is now the worst route, so the toggle shows the work
    * changing rather than a fact about the original graph. Nothing is computed at
    * all while the toggle is up — a graph nobody asked about answers `NO_PATH`.
+   *
+   * Stood down while the wipe is open — that mode is a single-purpose view, and
+   * a route glowing on only one side of the divider would read as a difference
+   * between the versions. The toggle's own state survives underneath: leave the
+   * wipe and the glow is back where it was.
    */
-  const path = useMemo(() => (showPath ? criticalPath(graph) : NO_PATH), [graph, showPath]);
+  const path = useMemo(
+    () => (showPath && !wipe ? criticalPath(graph) : NO_PATH),
+    [graph, showPath, wipe],
+  );
   const criticalNodes = useMemo(() => new Set(path.nodeIds), [path]);
   const criticalEdges = useMemo(() => new Set(path.edgeKeys), [path]);
 
@@ -871,6 +885,22 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     [closeDrawer, nodes, workflow],
   );
 
+  /**
+   * The comparison's memory, written at the one moment it can be: the first
+   * apply, while the cards on screen are still V0's — wherever the user dragged
+   * them. After this the morph relayouts the canvas and the arrangement is gone
+   * from everywhere but here. Keyed by the workflow and taken once: a later
+   * apply, an undo-and-branch, a tour — none of them get to overwrite what the
+   * original looked like when it stopped being the graph on screen.
+   */
+  const snapshotOriginal = useCallback(() => {
+    if (originalPositions.current?.of === workflow) return;
+    originalPositions.current = {
+      of: workflow,
+      at: new Map(nodes.map((n) => [n.id, { x: n.position.x, y: n.position.y }])),
+    };
+  }, [nodes, workflow]);
+
   const onApply = useCallback(
     (airtableRecordId: string) => {
       if (!session) return;
@@ -882,6 +912,10 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
         // this is defence in depth: a refusal changes nothing and claims nothing.
         return;
       }
+      // After the reducer said yes, before anything re-renders: `nodes` still
+      // holds the arrangement this patch was applied to. A refusal above must
+      // not freeze a snapshot for an apply that never happened.
+      snapshotOriginal();
       // Read off the version the patch was applied to, where the row still exists:
       // the replacement is the step this one became, and the morph needs it in case
       // the card the panel is open on is the card being eaten.
@@ -893,7 +927,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
       if (applied) celebrate(applied.nodeId, applied.effect.metrics);
       morphTo(next, applied?.effect.replaceWith?.id ?? null);
     },
-    [celebrate, graph, morphTo, session],
+    [celebrate, graph, morphTo, session, snapshotOriginal],
   );
 
   const onUndo = useCallback(() => {
@@ -991,10 +1025,15 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
           // a cascade took this row with the step it described
         }
       }
-      if (applied > 0) morphTo(next);
+      if (applied > 0) {
+        // The instant tour is still a first apply: same capture, same moment —
+        // after the reducer took something, before the one commit below.
+        snapshotOriginal();
+        morphTo(next);
+      }
       return { applied, session: next };
     },
-    [morphTo, session],
+    [morphTo, session, snapshotOriginal],
   );
 
   const onTourDone = useCallback(({ applied, session: ended }: TourResult) => {
@@ -1096,9 +1135,9 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
    *
    * ONE flag, deliberately, and every mode that owns the canvas raises it: a card
    * mid-drag (the pointer is doing something, not asking something), the tour
-   * driving the camera, the report holding the screen, and a DRAWER already open
-   * on a step. The wipe compare will raise it too when it lands — this is the
-   * line it joins, so the peek never has to grow a second suppression route.
+   * driving the camera, the report holding the screen, a DRAWER already open on a
+   * step, and the WIPE holding the two versions apart — a peek is a question
+   * about the live graph, and the wipe is answering a different one.
    *
    * The drawer is in the list because a one-shot hide at the click was not enough,
    * and the reason is worth stating: opening the panel re-frames the canvas, the
@@ -1109,7 +1148,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
    * A peek is a question about a step; while the answer is open there is nothing
    * left to ask.
    */
-  const peekSuppressed = dragging || !canvasIdle || selectedId !== null;
+  const peekSuppressed = dragging || !canvasIdle || selectedId !== null || wipe;
 
   const hidePeek = useCallback(() => {
     window.clearTimeout(peekTimer.current);
@@ -1172,14 +1211,15 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const onNodeClick = useCallback(
     (_: unknown, node: SignalRFNode) => {
       // While the tour runs the canvas is being driven, not browsed: a panel
-      // opening over the camera would be a second thing moving.
-      if (!canvasIdle) return;
+      // opening over the camera would be a second thing moving. The wipe is the
+      // same refusal for a different mode — comparing is not browsing.
+      if (!canvasIdle || wipe) return;
       // Nothing about the peek here: selecting a step raises `peekSuppressed`,
       // which is the one place that decides this — and it keeps deciding it for
       // as long as the panel is open, which a hide at the click could not.
       select(node.id);
     },
-    [canvasIdle, select],
+    [canvasIdle, select, wipe],
   );
 
   /**
@@ -1195,7 +1235,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const onPaneKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>) => {
       if (!OPEN_KEYS.includes(e.key)) return;
-      if (!canvasIdle) return; // the tour or its report has the canvas
+      if (!canvasIdle || wipe) return; // the tour, its report, or the wipe has the canvas
       const focused = document.activeElement;
       const wrapper = focused instanceof Element ? focused.closest('.react-flow__node') : null;
       const id = wrapper?.getAttribute('data-id');
@@ -1205,7 +1245,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
       e.preventDefault();
       select(id);
     },
-    [canvasIdle, nodes, select],
+    [canvasIdle, nodes, select, wipe],
   );
   // Selection is dropped here rather than left to the rebuild the effect will
   // do: ELK is async, and a ring that lingers until it answers reads as a button
@@ -1221,57 +1261,93 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   // version.
   // -------------------------------------------------------------------------
 
-  /**
-   * VS ORIGINAL, pressed. The transform is taken at the press, so the comparison
-   * lands in the coordinate space the cards are drawn in right now — see
-   * `onViewportMove` for what keeps it there.
-   */
-  const holdXray = useCallback(() => {
-    setXrayTransform(readViewportTransform());
-    setXray(true);
-  }, []);
-
-  const releaseXray = useCallback(() => setXray(false), []);
+  /** ESC left focus on a handle that is about to unmount — spent by the effect below. */
+  const focusAfterWipe = useRef(false);
 
   /**
-   * The same control, reached without a pointer.
-   *
-   * A hold is not a gesture a keyboard has: holding Space fires keydown on repeat
-   * and holding Enter is not a hold at all, so the key TOGGLES — press to compare,
-   * press again to stop. `preventDefault` keeps Space from scrolling the pane and
-   * stops the browser turning either key into a click on top of this.
+   * VS ORIGINAL, toggled. A single-purpose mode: the drawer closes on the way
+   * in, and the transform is taken at the press so the comparison lands in the
+   * coordinate space the cards are drawn in right now — see `onViewportMove`
+   * for what keeps it there.
    */
-  const onXrayKey = useCallback((e: KeyboardEvent<HTMLButtonElement>) => {
-    if (!OPEN_KEYS.includes(e.key)) return;
-    // auto-repeat is one press, not fifty
-    if (e.repeat) return;
-    e.preventDefault();
-    setXrayTransform(readViewportTransform());
-    setXray((on) => !on);
+  const toggleWipe = useCallback(() => {
+    if (wipe) {
+      setWipe(false);
+      return;
+    }
+    closeDrawer();
+    setWipeTransform(readViewportTransform());
+    setWipe(true);
+  }, [closeDrawer, wipe]);
+
+  /** ESC's way out. The toggle keeps the keyboard: its control gets focus back. */
+  const exitWipe = useCallback(() => {
+    focusAfterWipe.current = true;
+    setWipe(false);
   }, []);
+
+  // Focus lands after the commit that unmounts the handle it was standing on —
+  // the same bargain the scorecard's close makes, for the same reason.
+  useEffect(() => {
+    if (wipe || !focusAfterWipe.current) return;
+    focusAfterWipe.current = false;
+    document.querySelector<HTMLElement>('[data-testid="wipe-btn"]')?.focus();
+  }, [wipe]);
+
+  // The clip does not outlive the mode: whichever way the wipe closed, a stale
+  // divider position must not paint for a commit when the mode next opens —
+  // the remounted divider always starts in the middle.
+  useEffect(() => {
+    if (!wipe) setWipeClip(null);
+  }, [wipe]);
 
   /**
    * Keeps the comparison under the graph while the pane moves beneath it.
    *
    * React Flow reports every viewport change here — a drag of the canvas, a
-   * wheel zoom, the cinematic's own camera — and the layer is a sibling of the
-   * pane rather than a child of it, so this is what makes the two move together.
-   * Off, it costs one comparison per frame of a pan and nothing else.
+   * wheel zoom — and the original layer is a sibling of the pane rather than a
+   * child of it, so this is what makes the two halves of the wipe move as one
+   * world. Off, it costs one comparison per frame of a pan and nothing else.
    */
   const onViewportMove = useCallback(
     (_: unknown, viewport: Viewport) => {
-      if (!xray) return;
-      setXrayTransform(`translate(${viewport.x}px,${viewport.y}px) scale(${viewport.zoom})`);
+      if (!wipe) return;
+      setWipeTransform(`translate(${viewport.x}px,${viewport.y}px) scale(${viewport.zoom})`);
     },
-    [xray],
+    [wipe],
   );
 
-  // The button goes when the cursor walks back to V0 — there is nothing left to
-  // compare — and a comparison latched on by the keyboard would otherwise be left
-  // showing with the control that turns it off no longer on screen.
+  // The mode goes when the cursor stands on V0 again — a fresh file dropped on
+  // the viewer, or a history walk that got all the way back. Comparing V0 with
+  // V0 is a picture of one graph drawn twice, so the mode must not survive it.
   useEffect(() => {
-    if (versionAt === 0) setXray(false);
+    if (versionAt === 0) setWipe(false);
   }, [versionAt]);
+
+  /**
+   * How far the original must travel so its way IN stands exactly on the live
+   * one — what makes the two sides of the divider read as one continuous
+   * workflow. Anchored on the first `input` (in the original's own order) that
+   * still stands in the live graph; a graph whose inputs were all consumed
+   * anchors on the first surviving step instead, and one sharing nothing stays
+   * where its own layout put it.
+   */
+  const wipeShift = useMemo(() => {
+    const NONE = { dx: 0, dy: 0 };
+    if (!wipe || !original) return NONE;
+    const layout = originalLayout.current?.of === original ? originalLayout.current.laidOut : null;
+    if (!layout) return NONE;
+    const snap = originalPositions.current?.of === workflow ? originalPositions.current.at : null;
+    const liveAt = new Map(nodes.map((n) => [n.id, n.position]));
+    const anchor =
+      original.nodes.find((n) => n.kind === 'input' && liveAt.has(n.id)) ??
+      original.nodes.find((n) => liveAt.has(n.id));
+    if (!anchor) return NONE;
+    const from = snap?.get(anchor.id) ?? layout.nodes.find((n) => n.id === anchor.id);
+    const to = liveAt.get(anchor.id);
+    if (!from || !to) return NONE;
+    return { dx: to.x - from.x, dy: to.y - from.y };
+  }, [nodes, original, wipe, workflow]);
 
   const togglePath = useCallback(() => setShowPath((on) => !on), []);
 
@@ -1388,10 +1464,12 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
               SUGGESTIONS DISABLED — DUPLICATE IDS
             </span>
           )}
-          {session && (hasAppliable || running) ? (
+          {session && (hasAppliable || running) && !wipe ? (
             // One slot, two jobs: the way in while there is a tour to start, the way
             // out while one is running. A second button appearing beside the first
-            // would put the stop control somewhere the eye has not been.
+            // would put the stop control somewhere the eye has not been. Absent
+            // while the wipe is open — a tour would morph the live half of a
+            // comparison someone is in the middle of reading.
             <button
               type="button"
               className={`sg-optimize${running ? ' sg-optimize--cancel' : ''}`}
@@ -1403,12 +1481,15 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
           ) : null}
           {/* Absent while the tour runs: the camera is travelling and the cards are
               mid-morph, so a capture taken now is a picture of a version nobody has
-              seen yet. It comes back the moment the run stops. */}
+              seen yet. It comes back the moment the run stops. Disabled while the
+              wipe is open — the mode is transient, and a capture of a half-clipped
+              canvas is a picture of neither version. */}
           {running ? null : (
             <button
               type="button"
               className="sg-ghost-btn"
               data-testid="export-btn"
+              disabled={wipe}
               onClick={exportFromToolbar}
             >
               EXPORT
@@ -1420,22 +1501,16 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
             </span>
           ) : null}
           {/* Only once there is a difference to see: at V0 this would hold the
-              graph up against itself. */}
-          {versionAt > 0 ? (
+              graph up against itself. Absent while the tour runs, like EXPORT —
+              opening a comparison under a moving camera would be two modes
+              fighting for the same canvas. */}
+          {versionAt > 0 && !running ? (
             <button
               type="button"
               className="sg-ghost-btn"
-              data-testid="xray-btn"
-              aria-pressed={xray}
-              onPointerDown={holdXray}
-              onPointerUp={releaseXray}
-              // A press that slides off the button never gets its pointerup, and a
-              // gesture the browser takes over (a scroll, a system swipe) never
-              // gets one either — without both of these the original would be
-              // stuck on screen with nothing left to release it.
-              onPointerLeave={releaseXray}
-              onPointerCancel={releaseXray}
-              onKeyDown={onXrayKey}
+              data-testid="wipe-btn"
+              aria-pressed={wipe}
+              onClick={toggleWipe}
             >
               VS ORIGINAL
             </button>
@@ -1445,6 +1520,9 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
             className="sg-ghost-btn"
             data-testid="critpath-btn"
             aria-pressed={showPath}
+            // Stood down inside the wipe, not hidden: the toggle's state survives
+            // the mode, so the control stays where the eye left it.
+            disabled={wipe}
             onClick={togglePath}
           >
             CRITICAL PATH
@@ -1461,13 +1539,18 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
             generated by <b>{meta.model}</b>
           </span>
         </div>
-        <VersionStrip
-          count={versionCount}
-          at={versionAt}
-          onJump={onJump}
-          onUndo={onUndo}
-          onRedo={onRedo}
-        />
+        {/* Away while the wipe is open: UNDO, REDO and the chips all move the
+            live half of the comparison — leave the mode first. The strip is
+            back, exactly as it was, the moment the wipe closes. */}
+        {wipe ? null : (
+          <VersionStrip
+            count={versionCount}
+            at={versionAt}
+            onJump={onJump}
+            onUndo={onUndo}
+            onRedo={onRedo}
+          />
+        )}
         {/* The right-hand rail. A column, not a slot: the panels that stand here
             stack under the toolbar, and the drawer draws over all of them. */}
         {showImpact ? (
@@ -1493,18 +1576,23 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
             onPaneClick={closeDrawer}
             onInit={takeInstance}
             onMove={onViewportMove}
-            // Stated on the pane rather than on the layer, because the layer is
-            // what steps back: the live graph carries the class so the comparison
-            // underneath reads at full strength against a slightly dimmed present.
-            className={xray ? 'sg-live--xray' : undefined}
+            // The OVER half of the wipe: the live canvas, clipped from the left
+            // up to wherever the divider stands. On the React Flow ROOT, which
+            // is untransformed — a clip anywhere inside the viewport would be
+            // panned and zoomed along with the world it is meant to divide.
+            style={wipe && wipeClip ? { clipPath: wipeClip } : undefined}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             fitView
             fitViewOptions={{ padding: 0.12 }}
             minZoom={0.2}
             maxZoom={2}
-            nodesDraggable
-            elementsSelectable
+            // Comparing is not editing: while the wipe is open the cards take no
+            // drag and no ring, so the one thing moving is the divider. Pan and
+            // zoom stay live — both layers share the transform, so the world
+            // moves whole.
+            nodesDraggable={!wipe}
+            elementsSelectable={!wipe}
             // How far the pointer may slip and still count as a click. React Flow
             // hands this to d3-drag's clickDistance, which swallows the trailing
             // click of any gesture that travelled further. The default is 0 — and
@@ -1520,13 +1608,21 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
             nodesConnectable={false}
             proOptions={{ hideAttribution: true }}
           />
-          {/* The original, under the live graph and out of everything's way —
-              see the z-index note on `.sg-xray` in canvas.css. */}
-          {xray && originalLayout.current?.of === original ? (
-            <XrayLayer
+          {/* The wipe: the original under the live graph, the divider over both —
+              see the z-index notes in wipe.css. `summary` is non-null whenever
+              `session` is, and the mode cannot open without one. */}
+          {wipe && summary && original && originalLayout.current?.of === original ? (
+            <WipeCompare
+              original={original}
               laidOut={originalLayout.current.laidOut}
-              backPlan={originalLayout.current.backPlan}
-              transform={xrayTransform}
+              snapshot={
+                originalPositions.current?.of === workflow ? originalPositions.current.at : null
+              }
+              shift={wipeShift}
+              transform={wipeTransform}
+              summary={summary}
+              onClip={setWipeClip}
+              onExit={exitWipe}
             />
           ) : null}
           {ghosts.length > 0 ? (

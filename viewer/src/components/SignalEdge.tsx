@@ -18,8 +18,12 @@ import './edge.css';
  *
  * Resolved rather than written out here, so the palette stays the one source: an
  * unresolvable token states nothing rather than inventing a colour.
+ *
+ * Exported for the wipe compare, whose original layer draws edges outside React
+ * Flow and has to draw them in exactly this ink — a second vocabulary would let
+ * an unchanged edge read differently on the two sides of one divider.
  */
-function edgeInk(kind: EdgeKind, critical: boolean, offPath: boolean) {
+export function edgeInk(kind: EdgeKind, critical: boolean, offPath: boolean) {
   const token = tokenReader();
   return {
     stroke: critical

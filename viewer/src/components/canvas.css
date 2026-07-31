@@ -135,6 +135,17 @@
   border-color: var(--accent);
   background: var(--accent-soft);
 }
+/* A control the current mode has stood down — EXPORT and CRITICAL PATH while
+   the wipe is open. The same treatment UNDO and REDO already wear in
+   versions.css, stated once at the class every ghost button shares. */
+.sg-ghost-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.sg-ghost-btn:disabled:hover {
+  color: var(--dim);
+  border-color: var(--line);
+}
 @media (prefers-reduced-motion: reduce) {
   .sg-ghost-btn { transition: none; }
 }
@@ -248,72 +259,8 @@
   transition: transform var(--flip-ms, 480ms) cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* ---------------------------------------------------------------------------
-   VS ORIGINAL. The graph as it arrived, held under the graph it became, in the
-   pane's own coordinate space — the layer carries React Flow's transform, so the
-   two pictures line up card for card at any pan or zoom.
-
-   No transition on any of this, under any motion setting: a comparison you hold
-   has to be there the instant you press and gone the instant you let go, and a
-   fade would put the answer half a beat behind the question.
-   --------------------------------------------------------------------------- */
-.sg-xray {
-  position: absolute;
-  inset: 0;
-  /* Under everything React Flow draws (its wrapper is a z-index:0 stacking
-     context) and over the canvas backdrop, which belongs to an ancestor and so
-     cannot be reached from inside this stacking context at all. */
-  z-index: -1;
-  pointer-events: none;
-  transform-origin: 0 0;
-}
-.sg-xray-edges {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  /* the routes are drawn in graph coordinates and run well past the pane */
-  overflow: visible;
-}
-.sg-xray-edge {
-  stroke: var(--dim);
-  stroke-width: var(--edge-stroke);
-  stroke-linecap: var(--edge-cap);
-  opacity: var(--xray-ghost-opacity);
-}
-/* A silhouette of the card, at the same size: the label and the box, nothing
-   else. Doubled-up selector for the same reason `.sg-node.sg-ghost` needs one —
-   these have to outrank `.sg-node`'s own shorthands wherever the bundler puts
-   this file. */
-.sg-node.sg-xray-card {
-  position: absolute;
-  box-sizing: border-box;
-  background: none;
-  box-shadow: none;
-  border-color: color-mix(in srgb, var(--dim) 40%, transparent);
-  color: var(--dim);
-  opacity: var(--xray-ghost-opacity);
-}
-.sg-node.sg-xray-card .sg-label {
-  color: var(--dim);
-}
-/* The present, stepped back a fraction so the past reads against it.
-   This is the LAYER's own step-back, and it is the only one the comparison
-   states: it lands on the whole live graph at once, on the critical route and
-   everything off it alike.
-
-   Which is what lets the two overlays compose without either one being said
-   twice. CRITICAL PATH steps individual ELEMENTS back — see
-   `--critpath-dim-opacity` — and the value it states is stated ONCE, never
-   compounded with this one into a number neither of them means. The contrast
-   the route is drawn by is the same whether or not the comparison is held down;
-   what the comparison changes is where the whole present sits against the past.
-   Nothing here dims the ghost either: it is a picture of a graph that has no
-   route of its own to be on or off. */
-.sg-viewport .react-flow.sg-live--xray {
-  opacity: var(--xray-live-opacity);
-}
+/* VS ORIGINAL lives in wipe.css: the original at full strength under a live
+   canvas clipped at a draggable divider — two layers, one world, no dimming. */
 
 /* Where the consumed cards are held while they leave. Same coordinate space as
    React Flow's own viewport — the layer carries that transform, so the copies sit

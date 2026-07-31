@@ -177,9 +177,13 @@ it('never takes the pointer', async () => {
   const { container } = render(<GraphCanvas workflow={wf} />);
   await cardsOf(wf);
 
-  const layer = await waitFor(
-    () => container.querySelector<SVGElement>('.sg-endpoint-marks')!,
-    LAYOUT_WAIT,
-  );
+  // Asserted, not just returned: waitFor resolves on any non-throwing callback,
+  // so a bare querySelector could hand back null on a loaded machine and fail
+  // the style read below instead of waiting for the layer to mount.
+  const layer = await waitFor(() => {
+    const el = container.querySelector<SVGElement>('.sg-endpoint-marks');
+    expect(el).not.toBeNull();
+    return el!;
+  }, LAYOUT_WAIT);
   expect(layer.style.pointerEvents).toBe('none');
 });
