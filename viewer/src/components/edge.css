@@ -27,6 +27,15 @@
   animation-name: sg-draw-dashed;
 }
 
+/* The most painful run through the graph, while CRITICAL PATH is down. Same
+   three values the path states on itself as presentation attributes — see
+   `edgeInk` in SignalEdge — so the screen and the exported PNG agree. */
+.sg-edge--critical {
+  stroke: var(--accent);
+  stroke-width: var(--edge-stroke-critical);
+  opacity: 1;
+}
+
 .sg-flow-dot {
   fill: var(--accent);
 }

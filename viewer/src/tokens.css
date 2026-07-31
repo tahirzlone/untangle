@@ -28,6 +28,8 @@
   --edge-cap: round;
   --edge-opacity: 0.75;
   --edge-opacity-retry: 0.9;
+  /* the run CRITICAL PATH is pointing at, drawn heavier than the rest */
+  --edge-stroke-critical: 3.5;
   /* pathLength=1 normalizes every curve to one unit, so one dash draws all of it */
   --edge-dash: 1;
   --edge-dash-retry: 0.04 0.02;

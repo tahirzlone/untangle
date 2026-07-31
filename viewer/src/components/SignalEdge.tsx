@@ -18,13 +18,18 @@ import './edge.css';
  * Resolved rather than written out here, so the palette stays the one source: an
  * unresolvable token states nothing rather than inventing a colour.
  */
-function edgeInk(kind: EdgeKind) {
+function edgeInk(kind: EdgeKind, critical: boolean) {
   const token = tokenReader();
   return {
-    stroke: token(kind === 'retry' ? '--ember' : kind === 'branch' ? '--edge-branch' : '--accent'),
-    strokeWidth: token('--edge-stroke'),
+    stroke: critical
+      ? token('--accent')
+      : token(kind === 'retry' ? '--ember' : kind === 'branch' ? '--edge-branch' : '--accent'),
+    // The route the CRITICAL PATH toggle is pointing at draws heavier and at full
+    // strength — the same values `.sg-edge--critical` states in edge.css, so the
+    // screen and the exported PNG agree about which run is the expensive one.
+    strokeWidth: token(critical ? '--edge-stroke-critical' : '--edge-stroke'),
     strokeLinecap: token('--edge-cap') as 'round' | undefined,
-    opacity: token(kind === 'retry' ? '--edge-opacity-retry' : '--edge-opacity'),
+    opacity: critical ? '1' : token(kind === 'retry' ? '--edge-opacity-retry' : '--edge-opacity'),
     // The state the draw-in ENDS on — a retry stays dashed, everything else
     // resolves to one dash over a curve normalized to a single unit. The
     // animation is a CSS keyframe, so it outranks this while it plays and the
@@ -91,9 +96,10 @@ function bezierGeometry(props: EdgeProps, kind: EdgeKind) {
  */
 export function SignalEdge(props: EdgeProps) {
   const data = props.data as
-    | { kind: EdgeKind; label?: string; index: number; back?: BackEdgePlan }
+    | { kind: EdgeKind; label?: string; index: number; back?: BackEdgePlan; critical?: boolean }
     | undefined;
   const kind = data?.kind ?? 'sequence';
+  const critical = data?.critical ?? false;
   // Geometric, never by kind: ELK reverses whichever edges it must to break the
   // retry cycles, so plain `sequence` edges come back right-to-left too. The
   // route plan is optional — without it the path still clears its own two rows.
@@ -112,11 +118,11 @@ export function SignalEdge(props: EdgeProps) {
   // the dot is decoration with a pulse; reduced motion drops it entirely rather
   // than freezing it somewhere arbitrary along the curve
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const ink = edgeInk(kind);
+  const ink = edgeInk(kind, critical);
   return (
     <g className="sg-edge-group" style={{ ['--i' as string]: data?.index ?? 0 }}>
       <path
-        className={`sg-edge sg-edge--${kind}`}
+        className={`sg-edge sg-edge--${kind}${critical ? ' sg-edge--critical' : ''}`}
         d={d}
         fill="none"
         markerEnd="url(#fp-arrow)"

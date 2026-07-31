@@ -1,5 +1,6 @@
 import ELK from 'elkjs/lib/elk.bundled.js';
 import type { ElkNode } from 'elkjs/lib/elk-api';
+import { edgeKey } from './insight';
 import type { EdgeKind, Workflow, WorkflowNode } from './types';
 
 export interface LaidOutNode { id: string; x: number; y: number; width: number; height: number; node: WorkflowNode; }
@@ -26,8 +27,11 @@ export async function layoutWorkflow(workflow: Workflow): Promise<LaidOutGraph> 
       width: NODE_WIDTH,
       height: NODE_HEIGHT,
     })),
+    // An edge's identity is its position in the document — `edgeKey` is where
+    // that is turned into a name, and every other module that has to talk about
+    // an edge (the critical path, React Flow's own edge ids) reads the same one.
     edges: workflow.edges.map((e, i) => ({
-      id: `e${i}`,
+      id: edgeKey(i),
       sources: [e.from],
       targets: [e.to],
     })),

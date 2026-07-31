@@ -155,6 +155,18 @@
     0 4px 18px color-mix(in srgb, var(--bg-deep) 45%, transparent);
 }
 
+/* On the most painful route through this version. Deliberately an OUTLINE and a
+   drop-shadow rather than a border and a box-shadow: those two are already spoken
+   for by pain and by selection, and the glow has to compose with both rather than
+   win an argument with them. `overflow: hidden` on the card does not clip either
+   of these — an outline is drawn outside the border box, and the filter reads the
+   card's finished alpha, so the halo follows the rounded corners. */
+.sg-node--critical {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 40%, transparent));
+}
+
 /* The card whose detail is open. Written last so its ring wins over the heat
    shadows above without either of them being restated — pain still colours the
    meter and the icon, selection owns the border. */

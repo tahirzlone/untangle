@@ -15,6 +15,7 @@ import {
   type Edge,
   type Node,
   type ReactFlowInstance,
+  type Viewport,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import type { Suggestion, Workflow, WorkflowNode } from '../graph/types';
@@ -28,6 +29,7 @@ import {
   type GraphSession,
 } from '../graph/apply';
 import { contentBounds, exportGraphPng } from '../graph/exportPng';
+import { criticalPath, type CriticalPath } from '../graph/insight';
 import { layoutWorkflow, NODE_HEIGHT, NODE_WIDTH, type LaidOutGraph } from '../graph/layout';
 import { planBackEdges, type BackEdgePlan } from '../graph/backEdge';
 import { DetailDrawer } from './DetailDrawer';
@@ -35,6 +37,7 @@ import { ImpactMeter } from './ImpactMeter';
 import { SignalNode } from './SignalNode';
 import { SignalEdge } from './SignalEdge';
 import { VersionStrip } from './VersionStrip';
+import { XrayLayer } from './XrayLayer';
 import { Scorecard, type ScorecardReport } from './Scorecard';
 import { useCinematic, type TourResult } from './optimize';
 import { CAMERA_MS, FLIP_MS, GHOST_MS, prefersReducedMotion } from './motion';
@@ -47,6 +50,8 @@ const edgeTypes = { signal: SignalEdge };
 const NO_SUGGESTIONS: Suggestion[] = [];
 const NO_GHOSTS: GhostCard[] = [];
 const NO_MATCHES: Map<string, Suggestion[]> = new Map();
+/** What the critical path is while the toggle is off: nothing to glow. */
+const NO_PATH: CriticalPath = { nodeIds: [], edgeKeys: [] };
 
 const FLIP_CLASS = 'sg-node-shell--flip';
 const FLIP_PLAY_CLASS = 'sg-node-shell--flip-play';
@@ -100,6 +105,8 @@ interface SignalNodeData extends Record<string, unknown> {
   index: number;
   /** The rows matched to this step — the card's pip counts them. */
   suggestions: Suggestion[];
+  /** On the most painful route through this version, while that is being shown. */
+  critical: boolean;
 }
 type SignalRFNode = Node<SignalNodeData>;
 
@@ -160,6 +167,7 @@ function toRFNodes(
   laidOut: LaidOutGraph,
   matched: Map<string, Suggestion[]>,
   selectedId: string | null,
+  criticalIds: ReadonlySet<string>,
 ): SignalRFNode[] {
   return laidOut.nodes.map((n, i) => ({
     id: n.id,
@@ -185,7 +193,15 @@ function toRFNodes(
     // every node object, and a drawer left open over an unringed card reads as a
     // panel that lost its subject.
     selected: n.id === selectedId,
-    data: { node: n.node, index: i, suggestions: matched.get(n.id) ?? NO_SUGGESTIONS },
+    data: {
+      node: n.node,
+      index: i,
+      suggestions: matched.get(n.id) ?? NO_SUGGESTIONS,
+      // Restored here for the same reason `selected` is: a re-layout replaces
+      // every node object, and a glow that vanished on RESET LAYOUT would read as
+      // the toggle having switched itself off.
+      critical: criticalIds.has(n.id),
+    },
     // draggable/selectable are deliberately unset per node: leaving them
     // undefined is what lets the canvas-level flags below govern all of them.
   }));
@@ -226,6 +242,12 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const [report, setReport] = useState<ScorecardReport | null>(null);
   /** Which button's export failed, or null while nothing has gone wrong. */
   const [exportFailed, setExportFailed] = useState<ExportSource | null>(null);
+  /** Is VS ORIGINAL down — held under a pointer, or latched by the keyboard? */
+  const [xray, setXray] = useState(false);
+  /** The pane's transform, mirrored onto the comparison while it is showing. */
+  const [xrayTransform, setXrayTransform] = useState('');
+  /** Is CRITICAL PATH down? */
+  const [showPath, setShowPath] = useState(false);
 
   const [opened, setOpened] = useState(() => openSession(workflow));
   // A new graph is a new session, adjusted during render rather than in an effect:
@@ -239,6 +261,8 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const versionCount = session ? session.versions.length : 1;
   /** Which version that is — not necessarily the newest, once UNDO has been used. */
   const versionAt = session ? session.cursor : 0;
+  /** The graph as it arrived, which is what VS ORIGINAL compares against. */
+  const original = session ? session.versions[0] : null;
 
   const morphRef = useRef<MorphPlan | null>(null);
   /**
@@ -252,6 +276,16 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const exportTimer = useRef(0);
   const flipped = useRef<HTMLElement[]>([]);
   /**
+   * The original's layout, taken the one time the original IS the live graph.
+   *
+   * V0 never changes, and the canvas always draws it before any patch can land —
+   * so the pass that put the first cards on screen is the pass the comparison
+   * needs, and asking ELK a second time would be asking the same question twice.
+   * Kept with the workflow it belongs to, so a second file dropped on the viewer
+   * cannot be compared against the first one's ghost.
+   */
+  const originalLayout = useRef<{ of: Workflow; laidOut: LaidOutGraph } | null>(null);
+  /**
    * The card focus is owed once the next version is on screen, or null when
    * nothing is owed. Written only when a patch consumed the step the drawer was
    * describing — see `morphTo` and the landing effect below.
@@ -264,6 +298,9 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     selectedRef.current = id;
     setSelectedId(id);
   }, []);
+  // Same bargain for the glow: which steps are on the critical path is not a
+  // reason to run ELK again, so the layout reads the set through a ref.
+  const criticalRef = useRef<ReadonlySet<string>>(new Set());
 
   // The KB's answer, indexed by the step it answers about. Two rows can match the
   // same step, so this is a list per node, not one entry per node. Read off the
@@ -312,13 +349,41 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     let live = true;
     layoutWorkflow(graph).then((g) => {
       if (!live) return;
+      // `original` is a stable object for the life of a session, so this costs the
+      // effect no extra runs — it is the same pass, remembered.
+      if (original && graph === original) originalLayout.current = { of: original, laidOut: g };
       setLaidOut(g);
-      setNodes(toRFNodes(g, matched, selectedRef.current));
+      setNodes(toRFNodes(g, matched, selectedRef.current, criticalRef.current));
     });
     return () => {
       live = false;
     };
-  }, [graph, layoutRun, setNodes, matched]);
+  }, [graph, layoutRun, setNodes, matched, original]);
+
+  /**
+   * The most painful way through the version on screen.
+   *
+   * Recomputed per version, which is the point: consolidating the hot step moves
+   * the glow onto whatever is now the worst route, so the toggle shows the work
+   * changing rather than a fact about the original graph. Nothing is computed at
+   * all while the toggle is up — a graph nobody asked about answers `NO_PATH`.
+   */
+  const path = useMemo(() => (showPath ? criticalPath(graph) : NO_PATH), [graph, showPath]);
+  const criticalNodes = useMemo(() => new Set(path.nodeIds), [path]);
+  const criticalEdges = useMemo(() => new Set(path.edgeKeys), [path]);
+
+  // The glow, onto the cards already on screen. Data rather than a class list
+  // because the card is React Flow's to render — and a patch, not a rebuild,
+  // because turning a toggle on is not a reason to lay the graph out again.
+  useEffect(() => {
+    criticalRef.current = criticalNodes;
+    setNodes((ns) =>
+      ns.map((n) => {
+        const on = criticalNodes.has(n.id);
+        return n.data.critical === on ? n : { ...n, data: { ...n.data, critical: on } };
+      }),
+    );
+  }, [criticalNodes, setNodes]);
 
   /** Every FLIP property this component wrote, taken back off. */
   const clearFlip = useCallback(() => {
@@ -491,9 +556,17 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
         type: 'signal',
         // no points: SignalEdge curves between the ports React Flow reports, so
         // ELK's spline sections are not carried into the render
-        data: { kind: e.kind, label: e.label, index: i, back: backPlan.get(e.id) },
+        data: {
+          kind: e.kind,
+          label: e.label,
+          index: i,
+          back: backPlan.get(e.id),
+          // The ids the path answers in are the ids the layout minted — see
+          // `edgeKey` in graph/insight.ts, which both sides read.
+          critical: criticalEdges.has(e.id),
+        },
       })),
-    [laidOut, backPlan],
+    [laidOut, backPlan, criticalEdges],
   );
 
   /**
@@ -797,6 +870,66 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     setLayoutRun((n) => n + 1);
   }, [closeDrawer]);
 
+  // -------------------------------------------------------------------------
+  // The two overlays. Both are read-only: they change what is on screen and
+  // nothing about the session, so neither one is undoable and neither one is a
+  // version.
+  // -------------------------------------------------------------------------
+
+  /**
+   * VS ORIGINAL, pressed. The transform is taken at the press, so the comparison
+   * lands in the coordinate space the cards are drawn in right now — see
+   * `onViewportMove` for what keeps it there.
+   */
+  const holdXray = useCallback(() => {
+    setXrayTransform(readViewportTransform());
+    setXray(true);
+  }, []);
+
+  const releaseXray = useCallback(() => setXray(false), []);
+
+  /**
+   * The same control, reached without a pointer.
+   *
+   * A hold is not a gesture a keyboard has: holding Space fires keydown on repeat
+   * and holding Enter is not a hold at all, so the key TOGGLES — press to compare,
+   * press again to stop. `preventDefault` keeps Space from scrolling the pane and
+   * stops the browser turning either key into a click on top of this.
+   */
+  const onXrayKey = useCallback((e: KeyboardEvent<HTMLButtonElement>) => {
+    if (!OPEN_KEYS.includes(e.key)) return;
+    // auto-repeat is one press, not fifty
+    if (e.repeat) return;
+    e.preventDefault();
+    setXrayTransform(readViewportTransform());
+    setXray((on) => !on);
+  }, []);
+
+  /**
+   * Keeps the comparison under the graph while the pane moves beneath it.
+   *
+   * React Flow reports every viewport change here — a drag of the canvas, a
+   * wheel zoom, the cinematic's own camera — and the layer is a sibling of the
+   * pane rather than a child of it, so this is what makes the two move together.
+   * Off, it costs one comparison per frame of a pan and nothing else.
+   */
+  const onViewportMove = useCallback(
+    (_: unknown, viewport: Viewport) => {
+      if (!xray) return;
+      setXrayTransform(`translate(${viewport.x}px,${viewport.y}px) scale(${viewport.zoom})`);
+    },
+    [xray],
+  );
+
+  // The button goes when the cursor walks back to V0 — there is nothing left to
+  // compare — and a comparison latched on by the keyboard would otherwise be left
+  // showing with the control that turns it off no longer on screen.
+  useEffect(() => {
+    if (versionAt === 0) setXray(false);
+  }, [versionAt]);
+
+  const togglePath = useCallback(() => setShowPath((on) => !on), []);
+
   /**
    * The graph as a file, from either of the two places that offer it.
    *
@@ -918,6 +1051,36 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
               EXPORT FAILED
             </span>
           ) : null}
+          {/* Only once there is a difference to see: at V0 this would hold the
+              graph up against itself. */}
+          {versionAt > 0 ? (
+            <button
+              type="button"
+              className="sg-ghost-btn"
+              data-testid="xray-btn"
+              aria-pressed={xray}
+              onPointerDown={holdXray}
+              onPointerUp={releaseXray}
+              // A press that slides off the button never gets its pointerup, and a
+              // gesture the browser takes over (a scroll, a system swipe) never
+              // gets one either — without both of these the original would be
+              // stuck on screen with nothing left to release it.
+              onPointerLeave={releaseXray}
+              onPointerCancel={releaseXray}
+              onKeyDown={onXrayKey}
+            >
+              VS ORIGINAL
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="sg-ghost-btn"
+            data-testid="critpath-btn"
+            aria-pressed={showPath}
+            onClick={togglePath}
+          >
+            CRITICAL PATH
+          </button>
           <button
             type="button"
             className="sg-ghost-btn"
@@ -947,6 +1110,11 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
             onNodeClick={onNodeClick}
             onPaneClick={closeDrawer}
             onInit={takeInstance}
+            onMove={onViewportMove}
+            // Stated on the pane rather than on the layer, because the layer is
+            // what steps back: the live graph carries the class so the comparison
+            // underneath reads at full strength against a slightly dimmed present.
+            className={xray ? 'sg-live--xray' : undefined}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             fitView
@@ -970,6 +1138,11 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
             nodesConnectable={false}
             proOptions={{ hideAttribution: true }}
           />
+          {/* The original, under the live graph and out of everything's way —
+              see the z-index note on `.sg-xray` in canvas.css. */}
+          {xray && originalLayout.current?.of === original ? (
+            <XrayLayer laidOut={originalLayout.current.laidOut} transform={xrayTransform} />
+          ) : null}
           {ghosts.length > 0 ? (
             // The cards the patch consumed, held for one 400ms fade at the positions
             // they left. Carrying the pane's transform puts them in the same

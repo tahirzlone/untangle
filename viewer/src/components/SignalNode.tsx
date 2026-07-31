@@ -48,10 +48,13 @@ export function PainMeter({ pain }: { pain: WorkflowNode['painLevel'] }) {
 export function SignalNodeBody({
   node,
   selected = false,
+  critical = false,
   suggestions = [],
 }: {
   node: WorkflowNode;
   selected?: boolean;
+  /** On the most painful route through this version — see `graph/insight.ts`. */
+  critical?: boolean;
   suggestions?: Suggestion[];
 }) {
   return (
@@ -69,7 +72,7 @@ export function SignalNodeBody({
         </span>
       ) : null}
       <div
-        className={`sg-node${PAIN_CLASS[node.painLevel] ?? ''}${selected ? ' sg-node--selected' : ''}`}
+        className={`sg-node${PAIN_CLASS[node.painLevel] ?? ''}${critical ? ' sg-node--critical' : ''}${selected ? ' sg-node--selected' : ''}`}
         data-testid="sg-node"
         data-kind={node.kind}
         data-pain={node.painLevel}
@@ -103,7 +106,7 @@ export function SignalNode({
   selected,
   isConnectable,
 }: {
-  data: { node: WorkflowNode; index: number; suggestions?: Suggestion[] };
+  data: { node: WorkflowNode; index: number; suggestions?: Suggestion[]; critical?: boolean };
   selected?: boolean;
   isConnectable?: boolean;
 }) {
@@ -121,7 +124,12 @@ export function SignalNode({
         className="sg-port"
         isConnectable={isConnectable ?? false}
       />
-      <SignalNodeBody node={data.node} selected={selected} suggestions={data.suggestions} />
+      <SignalNodeBody
+        node={data.node}
+        selected={selected}
+        critical={data.critical}
+        suggestions={data.suggestions}
+      />
       <Handle
         type="source"
         position={Position.Right}
