@@ -58,9 +58,15 @@ it('plots every edge through React Flow and keeps the labels', async () => {
     expect(screen.getAllByTestId('sg-node')).toHaveLength(wf.nodes.length);
   });
 
-  // the whole edge layer reaches the DOM through the real React Flow pipeline
-  expect(container.querySelectorAll('path.sg-edge')).toHaveLength(wf.edges.length);
-  expect(screen.getByText('CI green')).toBeInTheDocument();
+  // The whole edge layer reaches the DOM through the real React Flow pipeline —
+  // which puts it a commit BEHIND the cards, because React Flow renders edges
+  // only once it has the nodes' handle geometry. Waited for rather than asserted
+  // on the frame the cards arrived in: on a loaded machine that one commit is
+  // enough to make this read as a graph with no edges.
+  await waitFor(() => {
+    expect(container.querySelectorAll('path.sg-edge')).toHaveLength(wf.edges.length);
+    expect(screen.getByText('CI green')).toBeInTheDocument();
+  }, LAYOUT_WAIT);
 });
 
 // The old chrome hung extra layers off the root — a frame, two rulers, a

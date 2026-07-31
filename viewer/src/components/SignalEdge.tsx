@@ -1,8 +1,37 @@
 import { EdgeLabelRenderer, getBezierPath, Position, type EdgeProps } from '@xyflow/react';
 import { backEdgePath, type BackEdgePlan } from '../graph/backEdge';
 import { wrapLabel } from '../graph/path';
+import { tokenReader } from '../graph/tokens';
 import type { EdgeKind } from '../graph/types';
 import './edge.css';
+
+/**
+ * The ink edge.css gives this edge, resolved from the tokens they both read.
+ *
+ * Written onto the path as PRESENTATION ATTRIBUTES, which sit below author CSS in
+ * the cascade — so on screen every rule in edge.css still wins, the draw-in still
+ * owns the dash, and nothing here is visible at all. They exist for the export: an
+ * exported PNG is a clone of the DOM with no stylesheet behind it, and CSS-derived
+ * presentation does not survive that trip. Without them a shared graph arrives
+ * with every edge missing; with them the clone has the finished state to draw.
+ *
+ * Resolved rather than written out here, so the palette stays the one source: an
+ * unresolvable token states nothing rather than inventing a colour.
+ */
+function edgeInk(kind: EdgeKind) {
+  const token = tokenReader();
+  return {
+    stroke: token(kind === 'retry' ? '--ember' : kind === 'branch' ? '--edge-branch' : '--accent'),
+    strokeWidth: token('--edge-stroke'),
+    strokeLinecap: token('--edge-cap') as 'round' | undefined,
+    opacity: token(kind === 'retry' ? '--edge-opacity-retry' : '--edge-opacity'),
+    // The state the draw-in ENDS on — a retry stays dashed, everything else
+    // resolves to one dash over a curve normalized to a single unit. The
+    // animation is a CSS keyframe, so it outranks this while it plays and the
+    // export, which has no keyframes, gets the arrival.
+    strokeDasharray: token(kind === 'retry' ? '--edge-dash-retry' : '--edge-dash'),
+  };
+}
 
 /**
  * The condition on a branch, rendered as HTML through EdgeLabelRenderer so it
@@ -83,6 +112,7 @@ export function SignalEdge(props: EdgeProps) {
   // the dot is decoration with a pulse; reduced motion drops it entirely rather
   // than freezing it somewhere arbitrary along the curve
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const ink = edgeInk(kind);
   return (
     <g className="sg-edge-group" style={{ ['--i' as string]: data?.index ?? 0 }}>
       <path
@@ -91,9 +121,12 @@ export function SignalEdge(props: EdgeProps) {
         fill="none"
         markerEnd="url(#fp-arrow)"
         pathLength={1}
+        {...ink}
       />
       {kind === 'sequence' && !isBack && !reduced ? (
-        <circle className="sg-flow-dot" r="3">
+        // the dot's fill is CSS too, and an SVG circle with no fill of its own
+        // exports BLACK — a bead of ink on the graph nobody drew
+        <circle className="sg-flow-dot" r="3" fill={ink.stroke}>
           <animateMotion dur="3.2s" repeatCount="indefinite" path={d} />
         </circle>
       ) : null}

@@ -4,10 +4,12 @@ import {
   EXPORT_MAX_WIDTH,
   EXPORT_PADDING,
   EXPORT_SCALE,
+  contentBounds,
   exportFilename,
   exportGraphPng,
   exportSize,
   kebab,
+  unionRects,
 } from './exportPng';
 
 // jsdom cannot rasterize a thing, so the rasterizer is a stub: what this suite
@@ -118,7 +120,7 @@ it('never scales past 2x, however small the graph', () => {
 
 it('hands the rasterizer the resolved background, not a colour of its own', async () => {
   const el = stubViewport('rgb(1, 2, 3)');
-  await exportGraphPng({ viewportEl: el, nodesBounds: BOUNDS, title: 'Whatever', version: 0 });
+  await exportGraphPng({ viewportEl: el, bounds: BOUNDS, title: 'Whatever', version: 0 });
 
   expect(rasterize).toHaveBeenCalledTimes(1);
   const [node, options] = rasterize.mock.calls[0];
@@ -129,7 +131,7 @@ it('hands the rasterizer the resolved background, not a colour of its own', asyn
 
 it('asks for a padded, centred, 2x frame of the graph', async () => {
   const el = stubViewport();
-  await exportGraphPng({ viewportEl: el, nodesBounds: BOUNDS, title: 'Whatever', version: 0 });
+  await exportGraphPng({ viewportEl: el, bounds: BOUNDS, title: 'Whatever', version: 0 });
 
   const options = rasterize.mock.calls[0][1];
   const { width, height } = exportSize(BOUNDS);
@@ -146,7 +148,7 @@ it('asks for a padded, centred, 2x frame of the graph', async () => {
 it('downloads what came back, under the graph’s name', async () => {
   await exportGraphPng({
     viewportEl: stubViewport(),
-    nodesBounds: BOUNDS,
+    bounds: BOUNDS,
     title: 'Payments — Refund Flow',
     version: 2,
   });
@@ -160,7 +162,73 @@ it('lets a failed capture through to the caller, and downloads nothing', async (
   rasterize.mockRejectedValue(new Error('tainted canvas'));
 
   await expect(
-    exportGraphPng({ viewportEl: stubViewport(), nodesBounds: BOUNDS, title: 'Nope', version: 0 }),
+    exportGraphPng({ viewportEl: stubViewport(), bounds: BOUNDS, title: 'Nope', version: 0 }),
   ).rejects.toThrow('tainted canvas');
   expect(downloads.links).toHaveLength(0);
+});
+
+// ---------------------------------------------------------------------------
+// What the picture has to contain
+// ---------------------------------------------------------------------------
+
+it('unions rects into the smallest one holding them all', () => {
+  expect(unionRects([BOUNDS])).toEqual(BOUNDS);
+  expect(
+    unionRects([
+      { x: 0, y: 0, width: 100, height: 100 },
+      { x: -40, y: 20, width: 10, height: 10 },
+      { x: 90, y: 150, width: 60, height: 20 },
+    ]),
+  ).toEqual({ x: -40, y: 0, width: 190, height: 170 });
+  // nothing to hold is not a picture with a negative size
+  expect(unionRects([])).toEqual({ x: 0, y: 0, width: 0, height: 0 });
+});
+
+/** A rendered edge path, with the geometry jsdom cannot work out supplied. */
+function stubEdgePath(box: { x: number; y: number; width: number; height: number }): void {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('class', 'sg-edge');
+  // jsdom implements no SVG geometry at all, so the one measurement this needs
+  // is the one it is handed
+  (path as unknown as { getBBox: () => DOMRect }).getBBox = () => box as DOMRect;
+  svg.append(path);
+  document.body.append(svg);
+}
+
+/** An edge tag, positioned the way EdgeTag positions itself. */
+function stubTag(x: number, y: number, width: number, height: number): void {
+  const tag = document.createElement('div');
+  tag.className = 'sg-edge-tag';
+  tag.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
+  Object.defineProperty(tag, 'offsetWidth', { value: width });
+  Object.defineProperty(tag, 'offsetHeight', { value: height });
+  document.body.append(tag);
+}
+
+// Node bounds alone clip the picture: a back-edge's return lane runs BELOW the
+// lowest card, and the tag on it hangs off the side of the frame.
+it('frames the cards, the lanes the edges take, and the tags on them', () => {
+  stubEdgePath({ x: 100, y: 700, width: 600, height: 60 });
+  stubTag(-20, 300, 80, 20);
+
+  const bounds = contentBounds(BOUNDS);
+
+  // left edge comes from the tag (-20 - 80/2), bottom from the lane (700 + 60)
+  expect(bounds.x).toBe(-60);
+  expect(bounds.y).toBe(0);
+  expect(bounds.x + bounds.width).toBe(800);
+  expect(bounds.y + bounds.height).toBe(760);
+});
+
+// jsdom cannot measure an SVG, and a browser without an edge layer has nothing
+// to add — either way the cards alone are an honest frame.
+it('falls back to the cards when there is nothing else to measure', () => {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('class', 'sg-edge');
+  svg.append(path);
+  document.body.append(svg);
+
+  expect(contentBounds(BOUNDS)).toEqual(BOUNDS);
 });

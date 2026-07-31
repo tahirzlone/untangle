@@ -51,7 +51,7 @@ const exportBtn = () => screen.getByTestId('export-btn');
 
 /** The one call the rasterizer took, once it has been made. */
 async function captured() {
-  await waitFor(() => expect(rasterize).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(rasterize).toHaveBeenCalledTimes(1), LAYOUT_WAIT);
   return rasterize.mock.calls[0][1];
 }
 
@@ -65,7 +65,7 @@ it('exports the graph on screen, in the theme it is drawn in', async () => {
   expect(options?.backgroundColor).toBe(BG);
   expect(options?.width).toBeGreaterThan(0);
 
-  await waitFor(() => expect(downloads.links).toHaveLength(1));
+  await waitFor(() => expect(downloads.links).toHaveLength(1), LAYOUT_WAIT);
   expect(downloads.links[0].download).toBe(
     'flowprint-add-e2e-tests-to-an-existing-web-app-v0.png',
   );
@@ -84,7 +84,7 @@ it('names the file after the version the cursor is on', async () => {
     await waitFor(() => expect(cardLabels()).toContain(RESEARCH_MCP), LAYOUT_WAIT);
 
     fireEvent.click(exportBtn());
-    await waitFor(() => expect(downloads.links).toHaveLength(1));
+    await waitFor(() => expect(downloads.links).toHaveLength(1), LAYOUT_WAIT);
     expect(downloads.links[0].download).toBe('flowprint-ship-a-feature-end-to-end-v1.png');
   } finally {
     restore();
@@ -120,7 +120,7 @@ it('exports from the scorecard, and stays open afterwards', async () => {
     render(<GraphCanvas workflow={enriched} />);
     await cardsOf(enriched);
     fireEvent.click(screen.getByTestId('optimize-btn'));
-    const card = await screen.findByTestId('scorecard');
+    const card = await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
 
     const button = screen.getByTestId('export-png');
     expect(button).toBeEnabled();
@@ -128,7 +128,7 @@ it('exports from the scorecard, and stays open afterwards', async () => {
     expect(card).not.toHaveTextContent('EXPORT ARRIVES WITH T3');
 
     fireEvent.click(button);
-    await waitFor(() => expect(downloads.links).toHaveLength(1));
+    await waitFor(() => expect(downloads.links).toHaveLength(1), LAYOUT_WAIT);
     // V2 of this graph: the run applied both patches on offer
     expect(downloads.links[0].download).toBe('flowprint-ship-a-feature-end-to-end-v2.png');
     // the panel is a report, not a wizard — exporting is not leaving
@@ -167,7 +167,7 @@ it('says so inside the scorecard when that is where the press came from', async 
     render(<GraphCanvas workflow={enriched} />);
     await cardsOf(enriched);
     fireEvent.click(screen.getByTestId('optimize-btn'));
-    await screen.findByTestId('scorecard');
+    await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
 
     fireEvent.click(screen.getByTestId('export-png'));
 

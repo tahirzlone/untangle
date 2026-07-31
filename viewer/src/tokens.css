@@ -15,6 +15,23 @@
   --ember: #F97316;
   --ember-hot: #EF4444;
 
+  /* Edge presentation.
+     Tokens rather than values buried in edge.css, because the SVG has to state
+     these on itself as presentation attributes: an exported PNG is a clone of
+     the DOM with no stylesheet behind it, and CSS-derived presentation does not
+     survive the trip. Both files read these, so neither can drift.
+     --edge-branch is color-mix(in srgb, var(--accent) 45%, var(--line)) worked
+     out once and frozen: an attribute has to carry a colour that resolves with
+     no custom properties in scope, which is what the export's clone gets. */
+  --edge-branch: #5D7F38;
+  --edge-stroke: 2;
+  --edge-cap: round;
+  --edge-opacity: 0.75;
+  --edge-opacity-retry: 0.9;
+  /* pathLength=1 normalizes every curve to one unit, so one dash draws all of it */
+  --edge-dash: 1;
+  --edge-dash-retry: 0.04 0.02;
+
   /* Suggestion categories — one ink per kind of resource, mirroring the select
      colours the Airtable rows already wear, so a card in the drawer reads the
      same colour as its row in the KB. Categories outside the three Claude ones

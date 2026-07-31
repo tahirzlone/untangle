@@ -27,7 +27,7 @@ import {
   undo,
   type GraphSession,
 } from '../graph/apply';
-import { exportGraphPng } from '../graph/exportPng';
+import { contentBounds, exportGraphPng } from '../graph/exportPng';
 import { layoutWorkflow, NODE_HEIGHT, NODE_WIDTH, type LaidOutGraph } from '../graph/layout';
 import { planBackEdges, type BackEdgePlan } from '../graph/backEdge';
 import { DetailDrawer } from './DetailDrawer';
@@ -819,7 +819,10 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
       setExportFailed(null);
       exportGraphPng({
         viewportEl,
-        nodesBounds: getNodesBounds(nodes),
+        // Cards, the lanes the edges take around them, and the tags on those
+        // edges: a back-edge's return run and a tag hanging off its point both
+        // sit outside the node bounds, and framing on the cards clips them.
+        bounds: contentBounds(getNodesBounds(nodes)),
         title: graph.meta.title,
         version: versionAt,
       }).catch((err: unknown) => {

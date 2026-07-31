@@ -1,5 +1,6 @@
 import { getViewportForBounds, type Rect } from '@xyflow/react';
 import { toPng } from 'html-to-image';
+import { resolveToken } from './tokens';
 
 /**
  * The graph, as a file you can put in a slide.
@@ -92,23 +93,79 @@ export function exportFilename(title: string, version: number): string {
   return `flowprint-${kebab(title)}-v${version}.png`;
 }
 
+/** The smallest rect holding every rect handed in, or an empty one from nothing. */
+export function unionRects(rects: Rect[]): Rect {
+  if (rects.length === 0) return { x: 0, y: 0, width: 0, height: 0 };
+  const box = rects.reduce(
+    (b, r) => ({
+      left: Math.min(b.left, r.x),
+      top: Math.min(b.top, r.y),
+      right: Math.max(b.right, r.x + r.width),
+      bottom: Math.max(b.bottom, r.y + r.height),
+    }),
+    {
+      left: Number.POSITIVE_INFINITY,
+      top: Number.POSITIVE_INFINITY,
+      right: Number.NEGATIVE_INFINITY,
+      bottom: Number.NEGATIVE_INFINITY,
+    },
+  );
+  return { x: box.left, y: box.top, width: box.right - box.left, height: box.bottom - box.top };
+}
+
 /**
- * The canvas ink, as the page currently resolves it.
+ * Where the edges actually go, in flow coordinates.
  *
- * Read at call time rather than written here as a hex literal: the theme owns its
- * colours, and an exported PNG whose background was pinned in TypeScript would go
- * on being the old background after a token changed.
+ * Measured off the paths rather than worked out from the routes: `getBBox`
+ * answers in the SVG's own user space, which IS flow space (React Flow's edge
+ * layer is an untransformed child of the transformed viewport), and it covers
+ * everything a route can do — a back-edge's return lane running below the lowest
+ * card, a bezier's belly — without this file knowing how any of it is planned.
  *
- * The element first, because that is where a browser answers with the inherited
- * value; the document root second, because jsdom does not implement custom
- * property inheritance and the suite would otherwise be testing nothing. Nothing
- * third: an unresolved token exports a transparent background, which is at least
- * not a colour this file invented.
+ * jsdom implements no SVG geometry, so there `getBBox` is simply absent and the
+ * edges contribute nothing. That is a measurement gap in the suite, not a
+ * silently wrong number: the node bounds still frame the picture.
  */
-function resolveToken(el: HTMLElement, name: string): string | undefined {
-  const own = getComputedStyle(el).getPropertyValue(name).trim();
-  if (own) return own;
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || undefined;
+export function edgeRects(root: ParentNode = document): Rect[] {
+  const rects: Rect[] = [];
+  for (const path of root.querySelectorAll<SVGGraphicsElement>('path.sg-edge')) {
+    if (typeof path.getBBox !== 'function') continue;
+    const { x, y, width, height } = path.getBBox();
+    rects.push({ x, y, width, height });
+  }
+  return rects;
+}
+
+/**
+ * Where the edge tags sit, in flow coordinates.
+ *
+ * A tag is an HTML chip in React Flow's edge-label layer, centred on its point by
+ * the same `translate(-50%, -50%) translate(Xpx, Ypx)` EdgeTag writes — so the
+ * point is read back off that transform and the chip's own box comes from its
+ * offset size, which is unscaled because the layer above it carries the zoom.
+ */
+export function tagRects(root: ParentNode = document): Rect[] {
+  const rects: Rect[] = [];
+  for (const tag of root.querySelectorAll<HTMLElement>('.sg-edge-tag')) {
+    const at = tag.style.transform.match(/translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/);
+    if (!at) continue;
+    const width = tag.offsetWidth;
+    const height = tag.offsetHeight;
+    rects.push({ x: Number(at[1]) - width / 2, y: Number(at[2]) - height / 2, width, height });
+  }
+  return rects;
+}
+
+/**
+ * Everything the picture has to contain: the cards, the edges between them, and
+ * the tags on those edges.
+ *
+ * Node bounds alone are not the graph. A back-edge's return lane runs below the
+ * lowest card by design, and a tag hangs half its own width past the point it is
+ * centred on — framing on the cards clips both.
+ */
+export function contentBounds(nodeBounds: Rect, root: ParentNode = document): Rect {
+  return unionRects([nodeBounds, ...edgeRects(root), ...tagRects(root)]);
 }
 
 /** Hands the browser a file, the only way a page can: an anchor, clicked. */
@@ -122,8 +179,11 @@ function download(dataUrl: string, filename: string): void {
 export interface ExportRequest {
   /** React Flow's viewport element — everything the graph is drawn inside. */
   viewportEl: HTMLElement;
-  /** Where the cards are, in graph space: what the picture has to contain. */
-  nodesBounds: Rect;
+  /**
+   * What the picture has to contain, in graph space — cards, edges and tags.
+   * `contentBounds` is how a caller works that out; node bounds alone clip.
+   */
+  bounds: Rect;
   /** The workflow's title, which the file is named after. */
   title: string;
   /** The version on screen, which the file is named after too. */
@@ -138,16 +198,16 @@ export interface ExportRequest {
  */
 export async function exportGraphPng({
   viewportEl,
-  nodesBounds,
+  bounds,
   title,
   version,
 }: ExportRequest): Promise<void> {
-  const { width, height, scale } = exportSize(nodesBounds);
+  const { width, height, scale } = exportSize(bounds);
   // The frame was BUILT for this zoom — the padding is already in `width` and
   // `height` — so the bounds are told to fill it at exactly `scale` rather than
   // being fitted a second time and landing a fraction off.
   const { x, y, zoom } = getViewportForBounds(
-    nodesBounds,
+    bounds,
     width,
     height,
     scale,

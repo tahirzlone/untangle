@@ -98,7 +98,7 @@ it('applies every appliable patch at once when motion is not wanted', async () =
 
     fireEvent.click(optimizeBtn());
 
-    const card = await screen.findByTestId('scorecard');
+    const card = await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
     expect(card).toHaveTextContent('OPTIMIZED — 2 upgrades applied');
     // both patches swap one step for one replacement, so the count holds and the
     // saving is in what the steps cost, not in how many there are
@@ -128,7 +128,7 @@ it('skips the sibling the apply before it consumed', async () => {
     await cardsOf(enriched);
 
     fireEvent.click(optimizeBtn());
-    await screen.findByTestId('scorecard');
+    await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
 
     expect(appliedNames()).toEqual(['firecrawl-mcp', 'chrome-devtools-mcp']);
     // the sibling and the two rows the first patch's cascade took are all absent
@@ -246,7 +246,7 @@ it('walks the graph left to right, whatever order the KB answered in', async () 
     await cardsOf(ordered);
 
     fireEvent.click(optimizeBtn());
-    await screen.findByTestId('scorecard');
+    await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
 
     // the KB listed them far, middle, near; the graph reads near, middle, far
     expect(appliedNames()).toEqual(['near-runner', 'mid-runner', 'far-runner']);
@@ -372,7 +372,7 @@ it('reports the branch the cursor is on, not the future it left behind', async (
     await waitFor(() => expect(cardLabels()).toContain(VERIFY), LAYOUT_WAIT);
 
     fireEvent.click(optimizeBtn());
-    const card = await screen.findByTestId('scorecard');
+    const card = await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
 
     expect(appliedNames()).toEqual(['firecrawl-mcp', 'chrome-devtools-mcp']);
     expect(card).not.toHaveTextContent('browser-verify plugin');
@@ -391,7 +391,7 @@ async function scorecardAfterInstantTour() {
   render(<GraphCanvas workflow={enriched} />);
   await cardsOf(enriched);
   fireEvent.click(optimizeBtn());
-  return screen.findByTestId('scorecard');
+  return screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
 }
 
 // The report is frozen at the moment the run stops. A session that moves under it
@@ -480,7 +480,7 @@ it('will not open the drawer while the scorecard is up', async () => {
     const { container } = render(<GraphCanvas workflow={enriched} />);
     await cardsOf(enriched);
     fireEvent.click(optimizeBtn());
-    await screen.findByTestId('scorecard');
+    await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
 
     const wrapper = container.querySelector<HTMLElement>(
       '.react-flow__node[data-id="gather-brief"]',
@@ -509,7 +509,7 @@ it('closes the drawer to start, and keeps it closed for the run', async () => {
     await screen.findByTestId('detail-drawer');
 
     fireEvent.click(optimizeBtn());
-    await screen.findByTestId('scorecard');
+    await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
     expect(screen.queryByTestId('detail-drawer')).not.toBeInTheDocument();
   } finally {
     restore();

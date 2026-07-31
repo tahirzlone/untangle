@@ -2,25 +2,28 @@
    (.edge / .edge-dim / .edge-retry / .flow-dot / .edge-label). The curve itself
    comes from React Flow's getBezierPath against the real ports, so this file
    only carries ink and energy. */
+/* The values come from the tokens the PATH also states on itself — see the
+   presentation attributes in SignalEdge, which the export depends on and which
+   every rule here outranks. One source, so the screen and the PNG cannot drift. */
 .sg-edge {
   stroke: var(--accent);
-  stroke-width: 2;
-  opacity: 0.75;
-  stroke-linecap: round;
+  stroke-width: var(--edge-stroke);
+  opacity: var(--edge-opacity);
+  stroke-linecap: var(--edge-cap);
   /* pathLength=1 normalizes every edge to a single unit, so one dash pair draws
      any length of curve in the same beat */
-  stroke-dasharray: 1;
+  stroke-dasharray: var(--edge-dash);
   stroke-dashoffset: 1;
   animation: sg-draw var(--flow-dur) ease-in-out forwards;
   animation-delay: calc(0.3s + var(--i, 0) * var(--flow-stagger));
 }
 /* branches read as the quieter path — the mock's .edge-dim */
 .sg-edge--branch {
-  stroke: color-mix(in srgb, var(--accent) 45%, var(--line));
+  stroke: var(--edge-branch);
 }
 .sg-edge--retry {
   stroke: var(--ember);
-  opacity: 0.9;
+  opacity: var(--edge-opacity-retry);
   animation-name: sg-draw-dashed;
 }
 
@@ -54,11 +57,11 @@
   to { stroke-dashoffset: 0; }
 }
 @keyframes sg-draw-dashed {
-  to { stroke-dashoffset: 0; stroke-dasharray: 0.04 0.02; }
+  to { stroke-dashoffset: 0; stroke-dasharray: var(--edge-dash-retry); }
 }
 @media (prefers-reduced-motion: reduce) {
   .sg-edge { animation: none; stroke-dashoffset: 0; }
   /* normalized units: pathLength=1 makes the whole curve 1 unit long, so this
      matches the sg-draw-dashed end state instead of rendering solid */
-  .sg-edge--retry { stroke-dasharray: 0.04 0.02; }
+  .sg-edge--retry { stroke-dasharray: var(--edge-dash-retry); }
 }

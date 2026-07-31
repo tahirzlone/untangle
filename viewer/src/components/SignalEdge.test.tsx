@@ -21,6 +21,34 @@ function edgeProps(data: { kind: EdgeKind; label?: string; index: number }): Edg
   return { ...PORTS, data } as EdgeProps;
 }
 
+/**
+ * The palette, where the app keeps it: tokens on the root.
+ *
+ * jsdom loads no stylesheet, so this is the only place `--accent` and the rest
+ * resolve from here — and it is what the edge reads at render time, so an ink
+ * literal in the component would fail these outright.
+ */
+const INK: Record<string, string> = {
+  '--accent': 'rgb(163, 230, 53)',
+  '--ember': 'rgb(249, 115, 22)',
+  '--edge-branch': 'rgb(93, 127, 56)',
+  '--edge-stroke': '2',
+  '--edge-cap': 'round',
+  '--edge-opacity': '0.75',
+  '--edge-opacity-retry': '0.9',
+  '--edge-dash': '1',
+  '--edge-dash-retry': '0.04 0.02',
+};
+
+function installTokens(): () => void {
+  for (const [name, value] of Object.entries(INK)) {
+    document.documentElement.style.setProperty(name, value);
+  }
+  return () => {
+    for (const name of Object.keys(INK)) document.documentElement.style.removeProperty(name);
+  };
+}
+
 function reducedMotion(matches: boolean) {
   const original = window.matchMedia;
   (window as unknown as { matchMedia: unknown }).matchMedia = (query: string) => ({
@@ -152,4 +180,86 @@ it('EdgeTag centres itself on the label point', () => {
   const style = getByTestId('edge-tag').getAttribute('style')!;
   expect(style).toContain('translate(-50%, -50%)');
   expect(style).toContain('translate(120px, 64px)');
+});
+
+// ---------------------------------------------------------------------------
+// Ink the export can see
+// ---------------------------------------------------------------------------
+
+/**
+ * An exported PNG is a clone of the DOM with no stylesheet behind it, and
+ * html-to-image does not carry CSS-derived presentation onto cloned SVG
+ * children — a graph whose edges live entirely in a class exports with no edges
+ * at all. So the path states its own ink as presentation attributes, which sit
+ * BELOW author CSS in the cascade: edge.css still governs every pixel on screen,
+ * including the draw-in that owns the dash, and these only speak once the
+ * stylesheet is gone.
+ */
+it('states a sequence edge’s ink as attributes the export can carry', () => {
+  const restore = installTokens();
+  try {
+    const { container } = render(
+      <svg>
+        <SignalEdge {...edgeProps({ kind: 'sequence', index: 0 })} />
+      </svg>,
+    );
+    const path = container.querySelector('path.sg-edge')!;
+    expect(path.getAttribute('stroke')).toBe(INK['--accent']);
+    expect(path.getAttribute('stroke-width')).toBe(INK['--edge-stroke']);
+    expect(path.getAttribute('stroke-linecap')).toBe(INK['--edge-cap']);
+    expect(path.getAttribute('opacity')).toBe(INK['--edge-opacity']);
+    // the finished state of the draw-in: one dash over a path normalized to 1
+    expect(path.getAttribute('stroke-dasharray')).toBe(INK['--edge-dash']);
+    // and the dot, which would otherwise export as SVG's default black
+    expect(container.querySelector('circle.sg-flow-dot')!.getAttribute('fill')).toBe(
+      INK['--accent'],
+    );
+  } finally {
+    restore();
+  }
+});
+
+it('carries the retry edge’s ember and its dash rhythm', () => {
+  const restore = installTokens();
+  try {
+    const { container } = render(
+      <svg>
+        <SignalEdge {...edgeProps({ kind: 'retry', index: 0 })} />
+      </svg>,
+    );
+    const path = container.querySelector('path.sg-edge')!;
+    expect(path.getAttribute('stroke')).toBe(INK['--ember']);
+    expect(path.getAttribute('opacity')).toBe(INK['--edge-opacity-retry']);
+    // the state sg-draw-dashed ends on — a retry exports dashed, as it is drawn
+    expect(path.getAttribute('stroke-dasharray')).toBe(INK['--edge-dash-retry']);
+  } finally {
+    restore();
+  }
+});
+
+it('carries the branch edge’s quieter ink', () => {
+  const restore = installTokens();
+  try {
+    const { container } = render(
+      <svg>
+        <SignalEdge {...edgeProps({ kind: 'branch', index: 0 })} />
+      </svg>,
+    );
+    expect(container.querySelector('path.sg-edge')!.getAttribute('stroke')).toBe(
+      INK['--edge-branch'],
+    );
+  } finally {
+    restore();
+  }
+});
+
+// Nothing is invented when the tokens are absent: the attribute is left off and
+// the stylesheet — which is all a browser needs — remains in charge.
+it('states nothing it cannot resolve', () => {
+  const { container } = render(
+    <svg>
+      <SignalEdge {...edgeProps({ kind: 'sequence', index: 0 })} />
+    </svg>,
+  );
+  expect(container.querySelector('path.sg-edge')!.hasAttribute('stroke')).toBe(false);
 });
