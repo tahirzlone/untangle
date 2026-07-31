@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!--
+    The signal mark, at tab size. Raw hex on purpose: a favicon is fetched as its
+    own document with no stylesheet behind it, so there is nothing here for a
+    custom property to resolve against. The two values are --bg-deep (#06080D)
+    and --accent (#A3E635) from src/tokens.css — keep them in step.
+
+    Three shapes and no more: the path a flowprint draws, as two nodes and the
+    run between them. Anything finer than this is a smudge at 16px.
+  -->
+  <rect width="32" height="32" rx="7" fill="#06080D"/>
+  <path d="M9 22 L9 13 Q9 10 12 10 L23 10" fill="none" stroke="#A3E635" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="9" cy="22" r="3.5" fill="#A3E635"/>
+</svg>

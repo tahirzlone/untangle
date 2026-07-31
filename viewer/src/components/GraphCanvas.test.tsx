@@ -71,19 +71,25 @@ it('plots every edge through React Flow and keeps the labels', async () => {
 
 // The old chrome hung extra layers off the root — a frame, two rulers, a
 // caption block. Pinning the child list keeps that habit from creeping back:
-// the canvas is a marker def, a toolbar, and the graph itself. Nothing else.
-it('hangs nothing off the root but the defs, the toolbar, and the viewport', async () => {
-  render(<GraphCanvas workflow={wf} />);
+// the canvas is a toolbar and the graph itself. Nothing else.
+it('hangs nothing off the root but the toolbar and the viewport', async () => {
+  const { container } = render(<GraphCanvas workflow={wf} />);
   await waitFor(() => {
     expect(screen.getAllByTestId('sg-node')).toHaveLength(wf.nodes.length);
   });
 
   const canvas = screen.getByTestId('canvas');
   expect([...canvas.children].map((el) => el.getAttribute('class'))).toEqual([
-    'sg-defs',
     'sg-toolbar',
     'sg-viewport',
   ]);
+  // and the arrowhead is inside the layer an export captures, not beside it: a
+  // capture is a clone of that element, and a definition outside it is one the
+  // clone does not have — every shared picture arrived with no arrowheads
+  await waitFor(() => {
+    expect(container.querySelector('.react-flow__viewport > .sg-defs')).not.toBeNull();
+  });
+  expect(container.querySelectorAll('#fp-arrow')).toHaveLength(1);
 });
 
 // React Flow 12 stamps `draggable` (and its own `nopan`) onto the node wrapper
@@ -412,7 +418,10 @@ it('marks the patch the reducer refuses as invalid', async () => {
   fireEvent.click(cardFor(SCAFFOLD, all));
   await screen.findByTestId('detail-drawer');
 
-  expect(screen.getByTestId('sg-sug-apply')).toBeDisabled();
+  // refused, and still focusable so the reason it gives can be read — see the
+  // note on the button in DetailDrawer.tsx
+  expect(screen.getByTestId('sg-sug-apply')).toHaveAttribute('aria-disabled', 'true');
+  expect(screen.getByTestId('sg-sug-apply')).not.toBeDisabled();
   expect(screen.getByTestId('sg-sug-invalid')).toHaveTextContent('PATCH INVALID');
 });
 
@@ -471,7 +480,8 @@ it('counts only the components the applied patch actually saved', async () => {
 
   const meter = await screen.findByTestId('impact-meter');
   await waitFor(() => {
-    expect(meter).toHaveTextContent('−1 steps');
+    // one of a thing, in the singular — see impactLabel
+    expect(meter).toHaveTextContent('−1 step');
     expect(meter).toHaveTextContent('−25 min');
     expect(meter).toHaveTextContent('−1 manual');
   });
@@ -513,7 +523,7 @@ it('UNDO puts the graph and the meter back, keeping the version it stepped off',
   const chips = screen.getAllByTestId('version-chip');
   expect(chips.map((c) => c.textContent)).toEqual(['V0', 'V1']);
   expect(chips[0]).toHaveAttribute('aria-current', 'true');
-  expect(chips[1].className).toContain('sg-vchip--future');
+  expect(chips[1].className).toContain('sg-version--future');
   expect(chips[1]).toBeEnabled();
   expect(screen.getByTestId('undo-btn')).toBeDisabled();
   expect(screen.getByTestId('redo-btn')).toBeEnabled();
@@ -535,7 +545,7 @@ it('REDO walks back into the version UNDO stepped off', async () => {
   // the totals come back with the version, and the buttons swap ends
   await waitFor(() => expect(screen.getByTestId('impact-meter')).toHaveTextContent('−25 min'));
   expect(screen.getAllByTestId('version-chip')[1]).toHaveAttribute('aria-current', 'true');
-  expect(document.querySelectorAll('.sg-vchip--future')).toHaveLength(0);
+  expect(document.querySelectorAll('.sg-version--future')).toHaveLength(0);
   expect(screen.getByTestId('redo-btn')).toBeDisabled();
 });
 
@@ -567,7 +577,7 @@ it('jumps to an intermediate version and keeps the way forward', async () => {
   const chips = screen.getAllByTestId('version-chip');
   expect(chips.map((c) => c.textContent)).toEqual(['V0', 'V1', 'V2']);
   expect(chips[1]).toHaveAttribute('aria-current', 'true');
-  expect(chips[2].className).toContain('sg-vchip--future');
+  expect(chips[2].className).toContain('sg-version--future');
   expect(screen.getByTestId('redo-btn')).toBeEnabled();
   await waitFor(() => expect(screen.getByTestId('impact-meter')).not.toHaveTextContent('tok'));
 
@@ -598,7 +608,7 @@ it('drops the versions after the cursor when a patch is applied from one of them
   const chips = screen.getAllByTestId('version-chip');
   expect(chips.map((c) => c.textContent)).toEqual(['V0', 'V1', 'V2']);
   expect(chips[2]).toHaveAttribute('aria-current', 'true');
-  expect(document.querySelectorAll('.sg-vchip--future')).toHaveLength(0);
+  expect(document.querySelectorAll('.sg-version--future')).toHaveLength(0);
   expect(screen.getByTestId('redo-btn')).toBeDisabled();
   // the branch's own totals, not the abandoned version's
   await waitFor(() => expect(screen.getByTestId('impact-meter')).toHaveTextContent('−6000 tok'));
@@ -771,7 +781,7 @@ it('judges every card against the version on screen, not the original graph', as
 
   fireEvent.click(cardFor('Check it over by hand', screen.getAllByTestId('sg-node')));
   await screen.findByTestId('detail-drawer');
-  expect(screen.getByTestId('sg-sug-apply')).toBeDisabled();
+  expect(screen.getByTestId('sg-sug-apply')).toHaveAttribute('aria-disabled', 'true');
   expect(screen.getByTestId('sg-sug-invalid')).toHaveTextContent('PATCH INVALID');
 });
 

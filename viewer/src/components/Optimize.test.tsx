@@ -446,6 +446,58 @@ it('makes the canvas behind it inert, and gives it back on close', async () => {
   }
 });
 
+/**
+ * Gives the pane and its cards real rectangles, which jsdom otherwise measures as
+ * 0×0 for everything.
+ *
+ * `onScreen` is the set of card ids the pane is showing; every other card is put
+ * far below it. The pane itself gets a plain 1000×700 box at the origin.
+ */
+function stageCards(onScreen: string[]): () => void {
+  const real = Element.prototype.getBoundingClientRect;
+  Element.prototype.getBoundingClientRect = function (this: Element) {
+    if (this.classList.contains('sg-viewport')) {
+      return { x: 0, y: 0, left: 0, top: 0, right: 1000, bottom: 700, width: 1000, height: 700 } as DOMRect;
+    }
+    if (this.classList.contains('react-flow__node')) {
+      const seen = onScreen.includes(this.getAttribute('data-id') ?? '');
+      const top = seen ? 100 : 4000;
+      return { x: 40, y: top, left: 40, top, right: 292, bottom: top + 148, width: 252, height: 148 } as DOMRect;
+    }
+    return real.call(this);
+  };
+  return () => {
+    Element.prototype.getBoundingClientRect = real;
+  };
+}
+
+// A tour that spends every patch takes OPTIMIZE with it, so closing the report
+// hands focus to the graph — and the camera is somewhere down the graph by then.
+// First-in-the-DOM is wherever ELK put it, which scrolls the pane out from under
+// the person who was watching. The card in front of them is the honest target.
+it('hands focus to a card the pane is actually showing', async () => {
+  const restore = reduceMotion();
+  const allowFocus = refuseFocusInsideInert();
+  // the last two steps of the fixture, which is where a left-to-right tour ends up
+  const staged = stageCards(['ship-release']);
+  try {
+    await scorecardAfterInstantTour();
+
+    fireEvent.click(screen.getByTestId('scorecard-close'));
+    await waitFor(() => expect(screen.queryByTestId('scorecard')).not.toBeInTheDocument());
+
+    expect(document.activeElement).toHaveClass('react-flow__node');
+    expect(document.activeElement).toHaveAttribute('data-id', 'ship-release');
+    // and it is not simply the first card in the document, which is the fallback
+    // this replaces
+    expect(document.querySelector('.react-flow__node')).not.toBe(document.activeElement);
+  } finally {
+    staged();
+    allowFocus();
+    restore();
+  }
+});
+
 // Tab out of the panel would land on the masthead, which the backdrop does not
 // cover — so the panel keeps the key rather than trusting the geometry.
 it('keeps Tab inside the panel', async () => {

@@ -1,7 +1,8 @@
 import { EdgeLabelRenderer, getBezierPath, Position, type EdgeProps } from '@xyflow/react';
 import { backEdgePath, type BackEdgePlan } from '../graph/backEdge';
+import type { LabelOffset } from '../graph/labels';
 import { wrapLabel } from '../graph/path';
-import { tokenReader } from '../graph/tokens';
+import { branchInk, tokenReader } from '../graph/tokens';
 import type { EdgeKind } from '../graph/types';
 import './edge.css';
 
@@ -23,7 +24,14 @@ function edgeInk(kind: EdgeKind, critical: boolean) {
   return {
     stroke: critical
       ? token('--accent')
-      : token(kind === 'retry' ? '--ember' : kind === 'branch' ? '--edge-branch' : '--accent'),
+      : kind === 'retry'
+        ? token('--ember')
+        : // Derived from --accent and --line at the moment it is asked for, so the
+          // branch edge follows the palette instead of carrying a mix worked out
+          // against an older one — see `branchInk` in graph/tokens.ts.
+          kind === 'branch'
+          ? branchInk(token)
+          : token('--accent'),
     // The route the CRITICAL PATH toggle is pointing at draws heavier and at full
     // strength — the same values `.sg-edge--critical` states in edge.css, so the
     // screen and the exported PNG agree about which run is the expensive one.
@@ -42,23 +50,42 @@ function edgeInk(kind: EdgeKind, critical: boolean) {
  * The condition on a branch, rendered as HTML through EdgeLabelRenderer so it
  * layers ABOVE the node layer — no in-SVG placement can win, because React Flow
  * paints nodes above the edge SVG.
+ *
+ * `x`/`y` are where the CURVE puts the tag; `offset` is the canvas's answer to
+ * what else is standing there — see `planLabels` in graph/labels.ts. The two are
+ * added for the transform and stated separately in the data attributes, so the
+ * collision pass always re-measures the natural point rather than the one it moved
+ * the chip to last time and drifting a little further on every pass.
  */
 export function EdgeTag({
+  id,
   lines,
   kind,
   x,
   y,
+  offset,
 }: {
+  /** The edge this tag belongs to — how the collision pass names it. */
+  id: string;
   lines: string[];
   kind: EdgeKind;
   x: number;
   y: number;
+  offset?: LabelOffset;
 }) {
+  const dx = offset?.dx ?? 0;
+  const dy = offset?.dy ?? 0;
   return (
     <div
       className={`sg-edge-tag${kind === 'retry' ? ' sg-edge-tag--retry' : ''}`}
-      style={{ position: 'absolute', transform: `translate(-50%, -50%) translate(${x}px, ${y}px)` }}
+      style={{
+        position: 'absolute',
+        transform: `translate(-50%, -50%) translate(${x + dx}px, ${y + dy}px)`,
+      }}
       data-testid="edge-tag"
+      data-tag-id={id}
+      data-tag-x={x}
+      data-tag-y={y}
     >
       {lines.map((l, i) => (
         <span key={i}>{l}</span>
@@ -96,7 +123,15 @@ function bezierGeometry(props: EdgeProps, kind: EdgeKind) {
  */
 export function SignalEdge(props: EdgeProps) {
   const data = props.data as
-    | { kind: EdgeKind; label?: string; index: number; back?: BackEdgePlan; critical?: boolean }
+    | {
+        kind: EdgeKind;
+        label?: string;
+        index: number;
+        back?: BackEdgePlan;
+        critical?: boolean;
+        /** Where the collision pass wants this edge's tag, if not where the curve put it. */
+        tagOffset?: LabelOffset;
+      }
     | undefined;
   const kind = data?.kind ?? 'sequence';
   const critical = data?.critical ?? false;
@@ -138,7 +173,14 @@ export function SignalEdge(props: EdgeProps) {
       ) : null}
       {lines.length > 0 ? (
         <EdgeLabelRenderer>
-          <EdgeTag lines={lines} kind={kind} x={labelX} y={labelY} />
+          <EdgeTag
+            id={props.id}
+            lines={lines}
+            kind={kind}
+            x={labelX}
+            y={labelY}
+            offset={data?.tagOffset}
+          />
         </EdgeLabelRenderer>
       ) : null}
     </g>

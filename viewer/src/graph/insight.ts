@@ -20,8 +20,16 @@ export interface CriticalPath {
   edgeKeys: string[];
 }
 
-/** Nothing to state: an empty graph, or one this cannot honestly answer about. */
-const NO_PATH: CriticalPath = { nodeIds: [], edgeKeys: [] };
+/**
+ * Nothing to state: an empty graph, or one this cannot honestly answer about.
+ *
+ * Exported because the canvas needs the same value for a THIRD reason — the
+ * toggle is up and no path was asked for — and two modules each keeping their own
+ * empty path is two objects that have to be kept identical for no reason. One
+ * frozen constant is also one stable identity, which is what lets the canvas's
+ * memos see "still nothing" instead of a new empty object every render.
+ */
+export const NO_PATH: CriticalPath = { nodeIds: [], edgeKeys: [] };
 
 /**
  * How an edge is named once it is on the canvas.
@@ -46,8 +54,19 @@ interface Run {
   edges: number[];
 }
 
-/** Element-wise, shorter-first — the ordinary dictionary comparison. */
-function compare<T extends string | number>(a: T[], b: T[]): number {
+/**
+ * Element-wise, shorter-first — the ordinary dictionary comparison.
+ *
+ * Exported for its own test rather than only through `criticalPath`. The
+ * shorter-first arm is unreachable from a graph: two routes can only be compared
+ * once their pain totals tie, every step costs at least 1, so a route that
+ * CONTINUES another one always costs more than it and the two can never tie. It is
+ * here to make the ordering a total one — without it two runs where one is a
+ * prefix of the other would compare equal and the tie-break would fall through to
+ * the edge positions, which is a rule about drawing, not about routes. Testing it
+ * where it can actually be reached is the honest way to hold it.
+ */
+export function compareInOrder<T extends string | number>(a: T[], b: T[]): number {
   for (let i = 0; i < Math.min(a.length, b.length); i++) {
     if (a[i] < b[i]) return -1;
     if (a[i] > b[i]) return 1;
@@ -67,9 +86,9 @@ function compare<T extends string | number>(a: T[], b: T[]): number {
  */
 function beats(a: Run, b: Run): boolean {
   if (a.total !== b.total) return a.total > b.total;
-  const ids = compare(a.nodeIds, b.nodeIds);
+  const ids = compareInOrder(a.nodeIds, b.nodeIds);
   if (ids !== 0) return ids < 0;
-  return compare(a.edges, b.edges) < 0;
+  return compareInOrder(a.edges, b.edges) < 0;
 }
 
 /**

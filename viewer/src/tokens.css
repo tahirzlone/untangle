@@ -20,9 +20,13 @@
      these on itself as presentation attributes: an exported PNG is a clone of
      the DOM with no stylesheet behind it, and CSS-derived presentation does not
      survive the trip. Both files read these, so neither can drift.
-     --edge-branch is color-mix(in srgb, var(--accent) 45%, var(--line)) worked
-     out once and frozen: an attribute has to carry a colour that resolves with
-     no custom properties in scope, which is what the export's clone gets. */
+     --edge-branch is the FALLBACK for a mix, not the source of it: an attribute
+     has to carry a colour that resolves with no custom properties in scope, and
+     graph/tokens.ts works one out from --accent and --line at render time so the
+     branch edge follows the palette instead of a value frozen against an older
+     one. This is what that mix resolves to today —
+     color-mix(in srgb, var(--accent) 45%, var(--line)) — kept for a reader that
+     cannot resolve the two halves, so an edge is never left with no colour. */
   --edge-branch: #5D7F38;
   --edge-stroke: 2;
   --edge-cap: round;
@@ -33,6 +37,14 @@
   /* pathLength=1 normalizes every curve to one unit, so one dash draws all of it */
   --edge-dash: 1;
   --edge-dash-retry: 0.04 0.02;
+
+  /* VS ORIGINAL. How faint the graph as it arrived is drawn under the graph it
+     became, and how far the present steps back so the past reads against it.
+     Two numbers rather than literals in canvas.css because they are one decision:
+     the gap between them is what makes the comparison legible, and a change to
+     either alone would close it. */
+  --xray-ghost-opacity: 0.35;
+  --xray-live-opacity: 0.85;
 
   /* Suggestion categories — one ink per kind of resource, mirroring the select
      colours the Airtable rows already wear, so a card in the drawer reads the

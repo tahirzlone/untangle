@@ -3,7 +3,9 @@
    layer; the drawer (6) still wins. */
 .sg-versions {
   position: absolute;
-  top: 52px;
+  /* the toolbar's own height, which grows when its chips wrap — see --toolbar-h
+     in canvas.css */
+  top: var(--toolbar-h, 52px);
   left: 20px;
   z-index: 5;
   display: flex;
@@ -49,12 +51,12 @@
 /* Versions the cursor has stepped back out of. Still there, still one click away —
    dimmed so the strip reads as a position on a line with a way forward, not as a
    row of equal buttons. A patch applied from here branches over them. */
-.sg-vchip--future {
+.sg-version--future {
   opacity: 0.45;
   border-color: var(--dim);
   transition: color 140ms ease, border-color 140ms ease, opacity 140ms ease;
 }
-.sg-vchip--future:hover {
+.sg-version--future:hover {
   opacity: 1;
 }
 
@@ -74,5 +76,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   .sg-version { transition: none; }
-  .sg-vchip--future { transition: none; }
+  .sg-version--future { transition: none; }
 }

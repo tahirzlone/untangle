@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import type { SessionMetrics } from '../graph/apply';
+// the canvas's own reader, not a second copy of the same media query
+import { prefersReducedMotion } from './motion';
 import './impact.css';
 
 const TWEEN_MS = 400;
 /** U+2212, not a hyphen: these are negative quantities set in a mono face. */
 const MINUS = '−';
-
-const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /** The four components, in the order they read as a sentence. */
 const PARTS: { key: keyof SessionMetrics; unit: string }[] = [
@@ -27,9 +27,26 @@ export function impactParts(metrics: SessionMetrics): { key: keyof SessionMetric
   return PARTS.filter((p) => metrics[p.key] !== 0);
 }
 
-/** One component, written the way this theme writes a saving. */
+/**
+ * The units that have a singular, and what it is.
+ *
+ * Only one of the four does. "min", "tok" and "manual" are already the same word
+ * at any count — a saving of one minute is "−1 min", not "−1 mins" — while "−1
+ * steps" is simply wrong, and it is the number the eye lands on first.
+ */
+const SINGULAR: Record<string, string> = { steps: 'step' };
+
+/**
+ * One component, written the way this theme writes a saving.
+ *
+ * The count-up is ceiled, so the word follows the number the chip is SHOWING
+ * rather than the total it is heading for: a tween passing through 1 on its way to
+ * 2 reads "−1 step" for those frames, which is what is on screen.
+ */
 export function impactLabel(value: number, unit: string): string {
-  return `${MINUS}${Math.ceil(value)} ${unit}`;
+  const shown = Math.ceil(value);
+  const word = Math.abs(shown) === 1 ? SINGULAR[unit] ?? unit : unit;
+  return `${MINUS}${shown} ${word}`;
 }
 
 function lerp(from: SessionMetrics, to: SessionMetrics, p: number): SessionMetrics {
@@ -117,7 +134,17 @@ export function ImpactMeter({ metrics }: { metrics: SessionMetrics }) {
   if (parts.length === 0) return null;
 
   return (
-    <span className="sg-impact" data-testid="impact-meter" role="group" aria-label="impact">
+    <span
+      className="sg-impact"
+      data-testid="impact-meter"
+      role="group"
+      aria-label="impact"
+      // A patch applied from the drawer changes these totals while focus is still
+      // in the panel, several hundred pixels away — without this the one thing an
+      // APPLY visibly does is the one thing a screen reader is never told about.
+      // Polite, because the graph morphing is the headline and this is its receipt.
+      aria-live="polite"
+    >
       {parts.map((p) => (
         <span className="sg-impact-chip" data-testid="impact-part" key={p.key}>
           {impactLabel(shown[p.key], p.unit)}

@@ -7,6 +7,7 @@ import {
   useState,
   type KeyboardEvent,
 } from 'react';
+import { createPortal } from 'react-dom';
 import {
   getNodesBounds,
   Position,
@@ -29,7 +30,8 @@ import {
   type GraphSession,
 } from '../graph/apply';
 import { contentBounds, exportGraphPng } from '../graph/exportPng';
-import { criticalPath, type CriticalPath } from '../graph/insight';
+import { criticalPath, NO_PATH } from '../graph/insight';
+import { planLabels, type LabelOffset, type LabelTag } from '../graph/labels';
 import { layoutWorkflow, NODE_HEIGHT, NODE_WIDTH, type LaidOutGraph } from '../graph/layout';
 import { planBackEdges, type BackEdgePlan } from '../graph/backEdge';
 import { DetailDrawer } from './DetailDrawer';
@@ -50,8 +52,8 @@ const edgeTypes = { signal: SignalEdge };
 const NO_SUGGESTIONS: Suggestion[] = [];
 const NO_GHOSTS: GhostCard[] = [];
 const NO_MATCHES: Map<string, Suggestion[]> = new Map();
-/** What the critical path is while the toggle is off: nothing to glow. */
-const NO_PATH: CriticalPath = { nodeIds: [], edgeKeys: [] };
+/** No tag had to move — which is the answer on most graphs, and on every one in jsdom. */
+const NO_OFFSETS: Map<string, LabelOffset> = new Map();
 
 const FLIP_CLASS = 'sg-node-shell--flip';
 const FLIP_PLAY_CLASS = 'sg-node-shell--flip-play';
@@ -162,17 +164,30 @@ function openSession(source: Workflow): OpenSession {
  * new version is laid out from scratch, so hand-dragged positions do not survive a
  * morph. Nothing could carry them across honestly: the graph the user arranged is
  * not the graph coming back.
+ *
+ * `prior` is the node list this one replaces, and the one thing carried over from
+ * it is `measured` — React Flow's own record of what the card's DOM actually came
+ * out at. A relayout hands React Flow a brand new object per card, and a card
+ * whose `measured` is absent is a card React Flow considers uninitialized: drag it
+ * and it logs error #015 and clamps the drag against dimensions it does not have.
+ * The measurement is still TRUE across a relayout — the same card at the same size,
+ * moved — so it is merged in rather than waited for a second time.
  */
 function toRFNodes(
   laidOut: LaidOutGraph,
   matched: Map<string, Suggestion[]>,
   selectedId: string | null,
   criticalIds: ReadonlySet<string>,
+  prior: SignalRFNode[] = [],
 ): SignalRFNode[] {
+  const measured = new Map(prior.map((n) => [n.id, n.measured]));
   return laidOut.nodes.map((n, i) => ({
     id: n.id,
     type: 'signal',
     position: { x: n.x, y: n.y },
+    // Absent for a card new to this version — nothing has measured it yet, and
+    // React Flow's ResizeObserver fills it in on the tick after it mounts.
+    ...(measured.get(n.id) ? { measured: measured.get(n.id) } : null),
     // Dimensions are known ahead of measurement — ELK laid the graph out
     // against exactly these numbers. Supplying them means the first paint has
     // correct bounds (no measure round-trip, no hidden nodes) and the edge
@@ -227,6 +242,80 @@ function whereRFHasCard(id: string): { x: number; y: number } | null {
   return at ? { x: Number(at[1]), y: Number(at[2]) } : null;
 }
 
+/**
+ * Every edge tag on the canvas, as the box it occupies in flow coordinates.
+ *
+ * Read off the DOM because a tag's position is the CURVE's answer — `getBezierPath`
+ * hands its midpoint straight to the chip inside SignalEdge — and its size is
+ * whatever the text came out at. Neither number exists anywhere this component can
+ * compute it.
+ *
+ * The point taken is the one the edge chose, not the one the chip is drawn at:
+ * EdgeTag states both, so a pass over an already-nudged graph plans against the
+ * same input as the pass before it and the offsets settle instead of accumulating.
+ * `offsetWidth`/`offsetHeight` are unscaled — the zoom lives on a layer above —
+ * so the box is already in the coordinate space the cards are in.
+ *
+ * jsdom measures nothing, so every box comes back zero-sized and is dropped: the
+ * collision pass is a browser-side refinement, and its rule is tested where it
+ * belongs, on rectangles, in graph/labels.test.ts.
+ */
+function readTagBoxes(root: ParentNode | null): LabelTag[] {
+  const tags: LabelTag[] = [];
+  if (!root) return tags;
+  for (const el of root.querySelectorAll<HTMLElement>('.sg-edge-tag[data-tag-id]')) {
+    const x = Number(el.dataset.tagX);
+    const y = Number(el.dataset.tagY);
+    const width = el.offsetWidth;
+    const height = el.offsetHeight;
+    if (!Number.isFinite(x) || !Number.isFinite(y) || width === 0 || height === 0) continue;
+    tags.push({
+      id: el.dataset.tagId!,
+      // the chip is centred on the point, so its box starts half a chip before it
+      rect: { x: x - width / 2, y: y - height / 2, width, height },
+    });
+  }
+  return tags;
+}
+
+/**
+ * The first card the pane is actually showing, or null when none of them is.
+ *
+ * Rects, not positions: the cards live in flow coordinates behind a pan and a zoom,
+ * and the only honest test of "can this be seen" is where the browser says the
+ * element ended up against where the pane ended up. Document order breaks the tie —
+ * whatever ELK laid out first among the ones on screen.
+ *
+ * jsdom measures every rect as 0×0, so nothing ever intersects and the answer is
+ * always null. That is the fallback behaving, not a gap: the caller drops through
+ * to first-in-document, which is exactly what a pane that has measured nothing has
+ * to offer.
+ */
+function cardInView(): HTMLElement | null {
+  const pane = document.querySelector<HTMLElement>('.sg-viewport');
+  if (!pane) return null;
+  const view = pane.getBoundingClientRect();
+  if (view.width === 0 || view.height === 0) return null;
+  for (const card of document.querySelectorAll<HTMLElement>('.react-flow__node')) {
+    const at = card.getBoundingClientRect();
+    if (at.width === 0 || at.height === 0) continue;
+    const inside =
+      at.left < view.right && view.left < at.right && at.top < view.bottom && view.top < at.bottom;
+    if (inside) return card;
+  }
+  return null;
+}
+
+/** Are these the same set of moves? A new Map of identical offsets is not a change. */
+function sameOffsets(a: Map<string, LabelOffset>, b: Map<string, LabelOffset>): boolean {
+  if (a.size !== b.size) return false;
+  for (const [id, at] of a) {
+    const other = b.get(id);
+    if (!other || other.dx !== at.dx || other.dy !== at.dy) return false;
+  }
+  return true;
+}
+
 export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const [laidOut, setLaidOut] = useState<LaidOutGraph | null>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState<SignalRFNode>([]);
@@ -248,6 +337,13 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const [xrayTransform, setXrayTransform] = useState('');
   /** Is CRITICAL PATH down? */
   const [showPath, setShowPath] = useState(false);
+  /** Which edge tags had to move to be readable, and by how much. */
+  const [tagOffsets, setTagOffsets] = useState<Map<string, LabelOffset>>(NO_OFFSETS);
+  /**
+   * React Flow's transformed layer, once it exists — the element the export
+   * captures, and therefore where the arrowhead definition has to live.
+   */
+  const [defsHost, setDefsHost] = useState<HTMLElement | null>(null);
 
   const [opened, setOpened] = useState(() => openSession(workflow));
   // A new graph is a new session, adjusted during render rather than in an effect:
@@ -265,6 +361,8 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const original = session ? session.versions[0] : null;
 
   const morphRef = useRef<MorphPlan | null>(null);
+  /** The pane, so the tag measurement is scoped to this canvas's own graph. */
+  const paneRef = useRef<HTMLDivElement>(null);
   /**
    * React Flow's own handle, taken at init. The canvas renders `<ReactFlow>`
    * directly rather than inside a provider, so `useReactFlow` is out of reach
@@ -370,7 +468,9 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
         };
       }
       setLaidOut(g);
-      setNodes(toRFNodes(g, matched, selectedRef.current, criticalRef.current));
+      // Fed the list it replaces, so React Flow's measurements survive the swap —
+      // see the note on `toRFNodes` and error #015.
+      setNodes((prev) => toRFNodes(g, matched, selectedRef.current, criticalRef.current, prev));
     });
     return () => {
       live = false;
@@ -538,6 +638,23 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     [],
   );
 
+  /**
+   * Finds React Flow's transformed layer, which is where the arrowhead lives.
+   *
+   * The marker is referenced by `url(#fp-arrow)` — a document-wide lookup — so on
+   * screen it makes no difference at all where the definition is written. It makes
+   * every difference to the EXPORT: a capture is a clone of one element and its
+   * descendants, and a definition outside that element is a definition the clone
+   * does not have. Every arrowhead was missing from every shared picture.
+   *
+   * Reached by query rather than by ref because the element is React Flow's own.
+   * A zero-sized absolutely-positioned `<svg>` paints nothing wherever it sits, so
+   * the layer's transform has nothing to act on.
+   */
+  useEffect(() => {
+    setDefsHost(paneRef.current?.querySelector<HTMLElement>('.react-flow__viewport') ?? null);
+  }, [laidOut]);
+
   // Where the cards actually are, right now — after every drag, not where ELK
   // first put them. The back-edge plan below is only honest if it reads this.
   const boxes = useMemo(
@@ -581,10 +698,40 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
           // The ids the path answers in are the ids the layout minted — see
           // `edgeKey` in graph/insight.ts, which both sides read.
           critical: criticalEdges.has(e.id),
+          // Where the tag goes once everything else on the canvas is accounted
+          // for. Absent for the tags that landed in clear air, which is most.
+          tagOffset: tagOffsets.get(e.id),
         },
       })),
-    [laidOut, backPlan, criticalEdges],
+    [laidOut, backPlan, criticalEdges, tagOffsets],
   );
+
+  /**
+   * Keeps the edge tags out of the cards and out of each other.
+   *
+   * A tag is placed by the curve it belongs to, and the curve knows nothing about
+   * what it passes — so a condition can land squarely on a step's title, or on the
+   * condition next to it. This is the pass that notices. The RULE is pure and lives
+   * in graph/labels.ts; what happens here is the measuring, which needs a browser.
+   *
+   * A frame is waited out first: React Flow pushes our nodes into its own store
+   * from a passive effect and mounts the edge layer in the render after that, so at
+   * this effect's own time the chips are either absent or still at last version's
+   * positions. Re-run whenever the geometry moves — a drag, a relayout, an apply —
+   * because all three change what is standing where.
+   *
+   * `edges` is in the list and `tagOffsets` feeds `edges`, which looks like a loop
+   * and is not: the pass re-measures the point each tag's CURVE chose, never the
+   * one it was moved to, so a second run over an unchanged graph plans the same
+   * moves, the guard below sees no change, and nothing re-renders.
+   */
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const planned = planLabels(readTagBoxes(paneRef.current), boxes);
+      setTagOffsets((prev) => (sameOffsets(prev, planned) ? prev : planned));
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [boxes, edges]);
 
   /**
    * Closing drops the ring with the panel.
@@ -812,15 +959,17 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
    * the test that pins it installs the browser's refusal by hand.
    *
    * Where focus goes: the control the run was started from, or, when a tour spent
-   * every patch on offer and that button went with the work it described, the graph
-   * itself. The first card is a compromise — the honest target is a card actually
-   * in view, and the viewport maths for that is not worth its weight here.
+   * every patch on offer and that button went with the work it described, a card
+   * the user can actually SEE. A tour ends with the camera somewhere down the
+   * graph, and the first card in the DOM is wherever ELK put it — handing focus
+   * there scrolls the pane out from under the person who was watching. First in the
+   * document is the last resort, for a pane that has measured nothing.
    */
   useEffect(() => {
     if (report !== null || !focusAfterReport.current) return;
     focusAfterReport.current = false;
     const button = document.querySelector<HTMLElement>('[data-testid="optimize-btn"]');
-    (button ?? document.querySelector<HTMLElement>('.react-flow__node'))?.focus();
+    (button ?? cardInView() ?? document.querySelector<HTMLElement>('.react-flow__node'))?.focus();
   }, [report]);
 
   /** Is there anything for OPTIMIZE to do? The button exists only if there is. */
@@ -1014,13 +1163,21 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
           version chip to jump the session out from under the panel, no card to open
           an invisible drawer on. It is dropped again the moment the panel closes. */}
       <div className="sg-canvas" data-testid="canvas" inert={report !== null}>
-        <svg className="sg-defs" aria-hidden="true">
-          <defs>
-            <marker id="fp-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-              <path d="M 0 0 L 8 4 L 0 8" fill="none" stroke="context-stroke" strokeWidth="1.5" />
-            </marker>
-          </defs>
-        </svg>
+        {/* Inside React Flow's viewport, which is the element an export captures —
+            see the effect that finds it. On screen the placement is immaterial:
+            `url(#fp-arrow)` is looked up across the whole document either way. */}
+        {defsHost
+          ? createPortal(
+              <svg className="sg-defs" aria-hidden="true">
+                <defs>
+                  <marker id="fp-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+                    <path d="M 0 0 L 8 4 L 0 8" fill="none" stroke="context-stroke" strokeWidth="1.5" />
+                  </marker>
+                </defs>
+              </svg>,
+              defsHost,
+            )
+          : null}
         <div className="sg-toolbar" data-testid="canvas-toolbar">
           <span className="sg-wf-title">{meta.title}</span>
           <span className="sg-chip">
@@ -1119,7 +1276,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
         />
         {/* The pane is a listening post for keys aimed at the focusable cards inside
             it — it takes no focus of its own and adds no keyboard trap. */}
-        <div className="sg-viewport" onKeyDown={onPaneKeyDown}>
+        <div className="sg-viewport" ref={paneRef} onKeyDown={onPaneKeyDown}>
           <ReactFlow
             nodes={nodes}
             edges={edges}

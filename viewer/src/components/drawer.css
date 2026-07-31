@@ -3,8 +3,10 @@
    the user can act on. Nothing here restates a token as a literal. */
 .sg-drawer {
   position: absolute;
-  /* clears the toolbar exactly — the two never overlap, so neither has to win */
-  top: 52px;
+  /* clears the toolbar exactly — the two never overlap, so neither has to win.
+     The band wraps to two lines at a narrow window, and --toolbar-h (canvas.css)
+     is what carries that change here. */
+  top: var(--toolbar-h, 52px);
   right: 0;
   bottom: 0;
   width: 360px;
@@ -73,6 +75,7 @@
 }
 
 .sg-drawer-kind {
+  flex: none;
   font-family: var(--font-anno);
   font-size: 9px;
   letter-spacing: 0.16em;
@@ -82,6 +85,21 @@
   border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
   border-radius: var(--radius-chip);
   padding: 3px 10px;
+}
+
+/* The step the panel is about, held beside its kind chip. Quiet and one line:
+   the full label is the heading at the top of the body, and this is what is left
+   of it once that has scrolled away. `min-width: 0` is what lets a flex child
+   shrink far enough for the ellipsis to appear at all. */
+.sg-drawer-subject {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sg-drawer-label {
@@ -225,7 +243,7 @@
   cursor: pointer;
   transition: background 0.15s ease;
 }
-.sg-sug-apply:hover:not(:disabled) {
+.sg-sug-apply:hover:not([aria-disabled='true']) {
   background: color-mix(in srgb, var(--accent) 85%, var(--text));
 }
 .sg-sug-apply:focus-visible {
@@ -233,8 +251,10 @@
   outline-offset: 2px;
 }
 /* A patch the reducer refuses: the control stays where it is and stops being
-   accent, so the card reads as "not this one" rather than as broken chrome. */
-.sg-sug-apply:disabled {
+   accent, so the card reads as "not this one" rather than as broken chrome.
+   Driven by aria-disabled rather than by the native attribute — the button is
+   deliberately still focusable, so the reason it gives can be read. */
+.sg-sug-apply[aria-disabled='true'] {
   color: var(--dim);
   background: var(--line);
   cursor: default;

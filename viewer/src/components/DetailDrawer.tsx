@@ -57,6 +57,9 @@ function SuggestionCard({
   appliable: boolean;
   onApply: () => void;
 }) {
+  // The note the refused button points a screen reader at, named per row: a panel
+  // can list several suggestions and each refusal is about its own patch.
+  const noteId = `sg-sug-invalid-${suggestion.airtableRecordId}`;
   return (
     <article className="sg-sug-card" data-testid="sg-sug-card">
       <div className="sg-sug-head">
@@ -81,17 +84,23 @@ function SuggestionCard({
           {suggestion.install}
         </code>
       ) : null}
+      {/* `aria-disabled`, not `disabled`: a native disabled button is skipped by
+          Tab and mute to a screen reader, so the one control that has something to
+          EXPLAIN would be the one control a keyboard user can never reach. It
+          stays focusable, wears the same quiet styling, points at the note that
+          says why, and does nothing when pressed. */}
       <button
         type="button"
         className="sg-sug-apply"
         data-testid="sg-sug-apply"
-        disabled={!appliable}
-        onClick={onApply}
+        aria-disabled={!appliable}
+        aria-describedby={appliable ? undefined : noteId}
+        onClick={appliable ? onApply : undefined}
       >
         APPLY
       </button>
       {appliable ? null : (
-        <span className="sg-sug-invalid" data-testid="sg-sug-invalid">
+        <span className="sg-sug-invalid" data-testid="sg-sug-invalid" id={noteId}>
           PATCH INVALID
         </span>
       )}
@@ -173,6 +182,15 @@ export function DetailDrawer({
       <div className="sg-drawer-head">
         <span className="sg-drawer-kind" data-testid="drawer-kind">
           {node.kind}
+        </span>
+        {/* The subject, in the row that never scrolls: a long suggestion list
+            carries the full label off the top of the panel, and a panel with no
+            visible subject is a panel about nothing in particular. Truncated,
+            because this is a reminder and the body below states it in full —
+            and hidden from a screen reader for the same reason: the dialog's own
+            name is this label, and the body's heading is it again. */}
+        <span className="sg-drawer-subject" data-testid="drawer-subject" aria-hidden="true">
+          {node.label}
         </span>
         <button
           type="button"

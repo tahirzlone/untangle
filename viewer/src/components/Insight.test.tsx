@@ -165,6 +165,23 @@ it('drops the comparison when the pointer leaves the button', async () => {
   await waitFor(() => expect(screen.queryByTestId('xray-layer')).not.toBeInTheDocument());
 });
 
+// And a gesture the browser takes over — a scroll, a system swipe, a touch the OS
+// decides was something else — never gets its pointerup either. Same ending, a
+// different way of losing the press.
+it('drops the comparison when the browser takes the gesture over', async () => {
+  render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+  await applyOn(CODE);
+  await waitFor(() => expect(screen.getAllByTestId('sg-node')).toHaveLength(5), LAYOUT_WAIT);
+
+  fireEvent.pointerDown(xrayBtn());
+  await waitFor(() => expect(screen.getByTestId('xray-layer')).toBeInTheDocument());
+
+  fireEvent.pointerCancel(xrayBtn());
+  await waitFor(() => expect(screen.queryByTestId('xray-layer')).not.toBeInTheDocument());
+  expect(xrayBtn()).toHaveAttribute('aria-pressed', 'false');
+});
+
 // A hold is not a gesture a keyboard has. Space and Enter toggle instead — the
 // same control, reached the only way it can be reached without a pointer.
 it('toggles from the keyboard, where holding is not a gesture', async () => {

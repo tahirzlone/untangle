@@ -21,12 +21,33 @@ const BROKEN_ID = 'recD2vT6yG4kQnP8s';
 const dryRun = (id: string) => id !== BROKEN_ID;
 
 it('states the node in full: kind, label, pain, description', () => {
-  render(<DetailDrawer node={node()} onClose={() => {}} />);
+  const n = node();
+  render(<DetailDrawer node={n} onClose={() => {}} />);
 
   expect(screen.getByTestId('detail-drawer')).toBeInTheDocument();
-  expect(screen.getByText('Debug flaky selectors & timing races')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: n.label })).toBeInTheDocument();
   expect(screen.getByTestId('drawer-kind')).toHaveTextContent('process');
   expect(screen.getByText(/Re-run single specs over and over/)).toBeInTheDocument();
+});
+
+// A suggestion list can run longer than the panel, and the heading goes off the
+// top with it — leaving a panel of cards about no step in particular. The subject
+// is repeated in the row that never scrolls, and the body keeps it in full.
+it('holds the step it is about in the header the scrolling never touches', () => {
+  const n = node();
+  render(<DetailDrawer node={n} onClose={() => {}} />);
+
+  const subject = screen.getByTestId('drawer-subject');
+  expect(subject).toHaveTextContent(n.label);
+  expect(subject.closest('.sg-drawer-head')).not.toBeNull();
+  expect(screen.getByTestId('drawer-scroll')).not.toContainElement(subject);
+  // the body states it at full size — nothing is lost to the truncation above
+  expect(screen.getByTestId('drawer-scroll')).toContainElement(
+    screen.getByRole('heading', { name: n.label }),
+  );
+  // and a reader is not told the same label three times: the dialog is named by
+  // it and the heading states it, so the header's echo is a visual anchor only
+  expect(subject).toHaveAttribute('aria-hidden', 'true');
 });
 
 // The card clamps its description to three lines; the drawer is where the whole
@@ -179,11 +200,45 @@ it('refuses the patch the dry run cannot apply', () => {
   );
 
   const button = screen.getByTestId('sg-sug-apply');
-  expect(button).toBeDisabled();
-  expect(screen.getByTestId('sg-sug-invalid')).toHaveTextContent('PATCH INVALID');
+  const note = screen.getByTestId('sg-sug-invalid');
+  expect(note).toHaveTextContent('PATCH INVALID');
+  // Refused, and SAYING so: a native disabled button is skipped by Tab and mute to
+  // a screen reader, which would hide the one control that has an explanation.
+  expect(button).toHaveAttribute('aria-disabled', 'true');
+  expect(button).not.toBeDisabled();
+  expect(button).toHaveAttribute('aria-describedby', note.id);
+  expect(note.id).toBeTruthy();
 
+  // still reachable, and still does nothing
+  button.focus();
+  expect(document.activeElement).toBe(button);
   fireEvent.click(button);
   expect(onApply).not.toHaveBeenCalled();
+});
+
+// Two rows on one panel are two refusals, and each button has to point at its own
+// note — a shared id would send a reader to whichever one the DOM happened to
+// carry first.
+it('names each refusal note after the row it is about', () => {
+  const rows = [
+    { ...ROWS[0], airtableRecordId: BROKEN_ID },
+    { ...ROWS[1], airtableRecordId: 'recBROKENTWO00000' },
+  ];
+  render(
+    <DetailDrawer
+      node={node({ id: 'scaffold-repo' })}
+      onClose={() => {}}
+      suggestions={rows}
+      canApply={() => false}
+      onApply={() => {}}
+    />,
+  );
+
+  const ids = screen.getAllByTestId('sg-sug-invalid').map((n) => n.id);
+  expect(new Set(ids).size).toBe(2);
+  expect(screen.getAllByTestId('sg-sug-apply').map((b) => b.getAttribute('aria-describedby'))).toEqual(
+    ids,
+  );
 });
 
 // The list is as long as the KB made it. A close control that scrolls away with

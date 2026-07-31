@@ -3,6 +3,11 @@
    here the canvas is the whole workspace, so it runs full-bleed inside
    .app-main with no radius and no border. */
 .sg-canvas {
+  /* How much of the top the toolbar is holding. Everything that has to clear it
+     reads this rather than repeating 52 — the viewport, the drawer, the version
+     strip — so the narrow layout below, where the chips wrap onto a second line,
+     moves all four with one number. */
+  --toolbar-h: 52px;
   position: absolute;
   inset: 0;
   overflow: hidden;
@@ -24,17 +29,25 @@
 
 .sg-defs { position: absolute; width: 0; height: 0; }
 
+/* One band across the top, and a WRAPPING one: at a narrow window the chips run
+   onto a second line rather than off the edge. Without the wrap the row overflows
+   and the controls at its end — RESET LAYOUT, the provenance chip — are reachable
+   only by a horizontal scroll the canvas does not offer, which is a trap rather
+   than a layout. `min-height` and not `height`, so the second line has somewhere
+   to go. */
 .sg-toolbar {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 52px;
+  min-height: var(--toolbar-h);
   z-index: 5;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  padding: 0 20px;
+  align-content: center;
+  gap: 8px 12px;
+  padding: 8px 20px;
   background: color-mix(in srgb, var(--bg) 82%, transparent);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
@@ -45,7 +58,14 @@
   font-size: 14px;
   letter-spacing: 0.01em;
   color: var(--text);
+  /* a title long enough to fill the band on its own truncates rather than pushing
+     every control past the right edge */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
 .sg-chip {
   font-family: var(--font-anno);
   font-size: 10px;
@@ -66,6 +86,21 @@
   color: var(--ember);
   border-color: color-mix(in srgb, var(--ember) 45%, transparent);
   letter-spacing: 0.08em;
+}
+
+/* Below this the row cannot hold the title, the chips, the meter and the controls
+   on one line, so it takes two — and everything under it starts that much lower.
+   Written after the rules it overrides, because a media query adds no specificity
+   of its own: source order is the only thing making these win. */
+@media (max-width: 1000px) {
+  .sg-canvas {
+    --toolbar-h: 92px;
+  }
+  /* the provenance chip stops being pushed to the far right: on a wrapped row
+     that strands it alone on a line with a gap where the rest of the row was */
+  .sg-chip--end {
+    margin-left: 0;
+  }
 }
 
 /* The one thing in the toolbar you can press. It reads as a chip until you
@@ -148,10 +183,25 @@
 .sg-viewport .react-flow__node.draggable { cursor: grab; }
 .sg-viewport .react-flow__node.dragging { cursor: grabbing; }
 
+/* Where the keyboard is. React Flow makes every card focusable and then states
+   `outline: none` on `.react-flow__node.selectable:focus-visible`, which leaves a
+   keyboard user moving an invisible cursor through the graph — the one place on
+   the canvas where the position matters most.
+
+   Doubled-up class, for the same reason `.sg-node.sg-ghost` needs one: with the
+   ancestor this comes to four selectors against React Flow's three, so it wins on
+   specificity rather than on which stylesheet the bundler happens to emit last.
+   Written on the node and not on the card inside it, because the wrapper is what
+   React Flow gives the tabindex to. */
+.sg-viewport .react-flow__node.react-flow__node:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* z-index: 0 gives the viewport its own stacking context, so React Flow's
    internal layers (nodes, edge labels) resolve against each other and can
    never climb over the toolbar. */
-.sg-viewport { position: absolute; inset: 52px 0 0 0; z-index: 0; }
+.sg-viewport { position: absolute; inset: var(--toolbar-h) 0 0 0; z-index: 0; }
 .sg-viewport .react-flow { background: transparent; }
 /* chips ride above the node layer — stated explicitly so the intent survives
    any future change to React Flow's own stacking */
@@ -206,7 +256,7 @@
   stroke: var(--dim);
   stroke-width: var(--edge-stroke);
   stroke-linecap: var(--edge-cap);
-  opacity: 0.35;
+  opacity: var(--xray-ghost-opacity);
 }
 /* A silhouette of the card, at the same size: the label and the box, nothing
    else. Doubled-up selector for the same reason `.sg-node.sg-ghost` needs one —
@@ -219,14 +269,14 @@
   box-shadow: none;
   border-color: color-mix(in srgb, var(--dim) 40%, transparent);
   color: var(--dim);
-  opacity: 0.35;
+  opacity: var(--xray-ghost-opacity);
 }
 .sg-node.sg-xray-card .sg-label {
   color: var(--dim);
 }
 /* The present, stepped back a fraction so the past reads against it. */
 .sg-viewport .react-flow.sg-live--xray {
-  opacity: 0.85;
+  opacity: var(--xray-live-opacity);
 }
 
 /* Where the consumed cards are held while they leave. Same coordinate space as

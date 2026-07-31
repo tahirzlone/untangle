@@ -27,8 +27,13 @@
   background: var(--surface);
   border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
   border-radius: var(--radius-card);
-  /* the accent bloom the canvas uses on a card it wants read, at panel scale */
-  box-shadow: 0 0 0 1px var(--accent-soft), 0 24px 60px rgba(0, 0, 0, 0.55);
+  /* the accent bloom the canvas uses on a card it wants read, at panel scale.
+     The drop is --bg-deep at 55%, the same way drawer.css states its own: a
+     shadow is the surface UNDER the panel showing through, and the theme has a
+     token for that surface. */
+  box-shadow:
+    0 0 0 1px var(--accent-soft),
+    0 24px 60px color-mix(in srgb, var(--bg-deep) 55%, transparent);
   animation: sg-scorecard-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 

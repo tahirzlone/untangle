@@ -39,7 +39,7 @@ export function VersionStrip({
           key={i}
           type="button"
           className={`sg-version${i === at ? ' sg-version--at' : ''}${
-            i > at ? ' sg-vchip--future' : ''
+            i > at ? ' sg-version--future' : ''
           }`}
           data-testid="version-chip"
           aria-current={i === at ? 'true' : undefined}

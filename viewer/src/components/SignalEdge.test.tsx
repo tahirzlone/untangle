@@ -17,7 +17,12 @@ const PORTS = {
   targetPosition: Position.Left,
 };
 
-function edgeProps(data: { kind: EdgeKind; label?: string; index: number }): EdgeProps {
+function edgeProps(data: {
+  kind: EdgeKind;
+  label?: string;
+  index: number;
+  critical?: boolean;
+}): EdgeProps {
   return { ...PORTS, data } as EdgeProps;
 }
 
@@ -31,8 +36,10 @@ function edgeProps(data: { kind: EdgeKind; label?: string; index: number }): Edg
 const INK: Record<string, string> = {
   '--accent': 'rgb(163, 230, 53)',
   '--ember': 'rgb(249, 115, 22)',
+  '--line': 'rgb(35, 42, 59)',
   '--edge-branch': 'rgb(93, 127, 56)',
   '--edge-stroke': '2',
+  '--edge-stroke-critical': '3.5',
   '--edge-cap': 'round',
   '--edge-opacity': '0.75',
   '--edge-opacity-retry': '0.9',
@@ -157,7 +164,7 @@ it('withholds the flow dot on a back-edge even when it is a sequence edge', () =
 
 it('EdgeTag renders one span per wrapped line', () => {
   const { getByTestId } = render(
-    <EdgeTag lines={['flaky selector /', 'timing race']} kind="retry" x={10} y={50} />,
+    <EdgeTag id="e0" lines={['flaky selector /', 'timing race']} kind="retry" x={10} y={50} />,
   );
   const spans = getByTestId('edge-tag').querySelectorAll('span');
   expect(spans).toHaveLength(2);
@@ -167,19 +174,38 @@ it('EdgeTag renders one span per wrapped line', () => {
 
 it('EdgeTag marks retry edges and leaves other kinds unmarked', () => {
   const { getByTestId, unmount } = render(
-    <EdgeTag lines={['retrying']} kind="retry" x={0} y={0} />,
+    <EdgeTag id="e0" lines={['retrying']} kind="retry" x={0} y={0} />,
   );
   expect(getByTestId('edge-tag').classList.contains('sg-edge-tag--retry')).toBe(true);
   unmount();
-  const { getByTestId: get2 } = render(<EdgeTag lines={['CI green']} kind="branch" x={0} y={0} />);
+  const { getByTestId: get2 } = render(
+    <EdgeTag id="e1" lines={['CI green']} kind="branch" x={0} y={0} />,
+  );
   expect(get2('edge-tag').classList.contains('sg-edge-tag--retry')).toBe(false);
 });
 
 it('EdgeTag centres itself on the label point', () => {
-  const { getByTestId } = render(<EdgeTag lines={['mid']} kind="sequence" x={120} y={64} />);
+  const { getByTestId } = render(
+    <EdgeTag id="e0" lines={['mid']} kind="sequence" x={120} y={64} />,
+  );
   const style = getByTestId('edge-tag').getAttribute('style')!;
   expect(style).toContain('translate(-50%, -50%)');
   expect(style).toContain('translate(120px, 64px)');
+});
+
+// The collision pass answers in offsets from the point the curve chose, and the
+// chip has to state BOTH: the point it moves to, and the point it was moved from.
+// Re-measuring the moved position would let a tag walk a nudge further away on
+// every pass over the same unchanged graph.
+it('EdgeTag applies the collision offset and still states where its curve put it', () => {
+  const { getByTestId } = render(
+    <EdgeTag id="e3" lines={['CI green']} kind="branch" x={120} y={64} offset={{ dx: 0, dy: -12 }} />,
+  );
+  const tag = getByTestId('edge-tag');
+  expect(tag.getAttribute('style')).toContain('translate(120px, 52px)');
+  expect(tag.dataset.tagId).toBe('e3');
+  expect(tag.dataset.tagX).toBe('120');
+  expect(tag.dataset.tagY).toBe('64');
 });
 
 // ---------------------------------------------------------------------------
@@ -237,7 +263,10 @@ it('carries the retry edge’s ember and its dash rhythm', () => {
   }
 });
 
-it('carries the branch edge’s quieter ink', () => {
+// Derived from --accent and --line at render time rather than read off a frozen
+// token: the installed palette here is the real one, and the mix of it IS the
+// stated --edge-branch — so this goes red the day the two stop agreeing.
+it('carries the branch edge’s quieter ink, mixed from the palette', () => {
   const restore = installTokens();
   try {
     const { container } = render(
@@ -248,6 +277,29 @@ it('carries the branch edge’s quieter ink', () => {
     expect(container.querySelector('path.sg-edge')!.getAttribute('stroke')).toBe(
       INK['--edge-branch'],
     );
+  } finally {
+    restore();
+  }
+});
+
+// The route CRITICAL PATH is pointing at draws heavier and at full strength. Same
+// values `.sg-edge--critical` states in edge.css, carried as attributes for the
+// same reason every other ink is: the export has no stylesheet to read them from,
+// and a shared picture must agree with the screen about which run is expensive.
+it('states the critical run’s heavier ink as attributes too', () => {
+  const restore = installTokens();
+  try {
+    const { container } = render(
+      <svg>
+        <SignalEdge {...edgeProps({ kind: 'branch', index: 0, critical: true })} />
+      </svg>,
+    );
+    const path = container.querySelector('path.sg-edge')!;
+    expect(path.classList.contains('sg-edge--critical')).toBe(true);
+    // accent, not the branch's quieter mix — the route outranks the kind
+    expect(path.getAttribute('stroke')).toBe(INK['--accent']);
+    expect(path.getAttribute('stroke-width')).toBe(INK['--edge-stroke-critical']);
+    expect(path.getAttribute('opacity')).toBe('1');
   } finally {
     restore();
   }
