@@ -81,3 +81,55 @@ describe('workflow contract', () => {
     expect(validateWorkflow(doc).valid).toBe(false);
   });
 });
+
+describe('optimized prompt fields (optional, additive)', () => {
+  it('accepts a document that carries neither prompt field', () => {
+    const doc = valid();
+    expect(doc.meta.promptIntro).toBeUndefined();
+    expect(doc.suggestions[0].promptFragment).toBeUndefined();
+    expect(validateWorkflow(doc)).toEqual({ valid: true, errors: [] });
+  });
+
+  it('accepts a suggestion carrying a promptFragment', () => {
+    const doc = valid();
+    doc.suggestions[0].promptFragment =
+      'Use example/rss-mcp to pull the articles instead of fetching and parsing each feed by hand.';
+    expect(validateWorkflow(doc)).toEqual({ valid: true, errors: [] });
+  });
+
+  it('rejects an empty-string promptFragment', () => {
+    const doc = valid();
+    doc.suggestions[0].promptFragment = '';
+    const res = validateWorkflow(doc);
+    expect(res.valid).toBe(false);
+    expect(res.errors.join()).toMatch(/promptFragment/);
+  });
+
+  it('rejects a non-string promptFragment', () => {
+    const doc = valid();
+    doc.suggestions[0].promptFragment = ['use it here'];
+    expect(validateWorkflow(doc).valid).toBe(false);
+  });
+
+  it('accepts meta.promptIntro', () => {
+    const doc = valid();
+    doc.meta.promptIntro =
+      'Send a weekly newsletter built from my RSS reads. Gather the last seven days of articles, pick the five best, and assemble the issue for review.';
+    expect(validateWorkflow(doc)).toEqual({ valid: true, errors: [] });
+  });
+
+  it('rejects an empty-string meta.promptIntro', () => {
+    const doc = valid();
+    doc.meta.promptIntro = '';
+    const res = validateWorkflow(doc);
+    expect(res.valid).toBe(false);
+    expect(res.errors.join()).toMatch(/promptIntro/);
+  });
+
+  it('still rejects unknown properties alongside the new ones', () => {
+    const doc = valid();
+    doc.meta.promptIntro = 'Ship the weekly issue.';
+    doc.meta.promptOutro = 'and then some';
+    expect(validateWorkflow(doc).valid).toBe(false);
+  });
+});

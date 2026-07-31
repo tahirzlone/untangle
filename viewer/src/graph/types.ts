@@ -23,6 +23,11 @@ export interface WorkflowMeta {
   generatedAt: string;
   model: string;
   kbSource: 'airtable' | 'none';
+  /**
+   * The task rewritten as the opening paragraph of an agent prompt. Optional:
+   * without it the optimized prompt opens with `task` verbatim.
+   */
+  promptIntro?: string;
 }
 
 export type SuggestionCategory =
@@ -61,6 +66,12 @@ export interface Suggestion {
   category: SuggestionCategory;
   claim: string;
   install?: string;
+  /**
+   * Imperative instructions for using this resource at this step, written by the
+   * generator. Optional: without it the optimized prompt falls back to a line
+   * templated from `name`, `category`, `claim`, and `install`.
+   */
+  promptFragment?: string;
   effect: Effect;
 }
 

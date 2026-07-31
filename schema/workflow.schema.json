@@ -15,7 +15,8 @@
         "title": { "type": "string", "minLength": 1 },
         "generatedAt": { "type": "string", "format": "date-time" },
         "model": { "type": "string", "minLength": 1 },
-        "kbSource": { "enum": ["airtable", "none"] }
+        "kbSource": { "enum": ["airtable", "none"] },
+        "promptIntro": { "type": "string", "minLength": 1 }
       }
     },
     "nodes": {
@@ -42,6 +43,7 @@
           "category": { "enum": ["Claude Skill", "Claude Plugin", "MCP Server", "Connector", "Other"] },
           "claim": { "type": "string", "minLength": 1 },
           "install": { "type": "string" },
+          "promptFragment": { "type": "string", "minLength": 1 },
           "effect": {
             "type": "object",
             "additionalProperties": false,

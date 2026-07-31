@@ -23,7 +23,7 @@ Write to `out/<slug>.workflow.json` where `<slug>` is a kebab-case slug of the t
 
 Document shape:
 
-- `meta`: `task` (the user's words), `title` (your concise name), `generatedAt` (ISO 8601 UTC), `model` (your model id), `kbSource` (`"airtable"` or `"none"` — the knowledge-base stage below decides which)
+- `meta`: `task` (the user's words), `title` (your concise name), `generatedAt` (ISO 8601 UTC), `model` (your model id), `kbSource` (`"airtable"` or `"none"` — the knowledge-base stage below decides which), `promptIntro` (optional — see "The optimized prompt" below)
 - `nodes`, `edges` per the rules above
 - `suggestions`: filled by the knowledge-base stage below; `[]` when no knowledge base is linked or nothing matched
 
@@ -263,6 +263,7 @@ One object per match, in `suggestions`:
 | `category` | the row's `Category`, verbatim — **except** that the schema's enum is `Claude Skill`, `Claude Plugin`, `MCP Server`, `Connector`, `Other`. Airtable's `GitHub Trending` choice is not in that enum: write `Other` for those rows. Any other value outside the enum also becomes `Other` |
 | `claim` | the row's `Improvement Claim`, verbatim. Blank or absent → write one line yourself in the same plain style, grounded ONLY in that row's own `Description` / `Why Noteworthy`. Never invent a repo, a feature, or a capability the row does not support |
 | `install` | the row's `Install`, verbatim. Blank or absent → **omit the key entirely** rather than writing an empty string |
+| `promptFragment` | optional — the instructions for using this resource at this step, written by you. See "The optimized prompt" below; omit the key when you have nothing grounded to say |
 | `effect` | the patch — see step 6 |
 
 ### 6. The `effect` patch
@@ -326,6 +327,49 @@ Walk the list; the validator catches most of it, but a caught error costs a roun
 - [ ] post-patch counts still ≥ 3 nodes and ≥ 2 edges
 - [ ] `metrics` are four non-negative integers
 - [ ] `meta.kbSource` matches what you actually did
+- [ ] every `promptFragment` is 2–4 imperative sentences that name the resource, say when in the flow to use it, and say what it replaces
+- [ ] no `promptFragment` asserts a capability its row does not claim, and none leans on another suggestion being applied
+- [ ] wherever a fragment mentions installing, the row's `Install` is quoted verbatim
+- [ ] `meta.promptIntro` keeps every requirement the user stated, adds none, and names no resources
+- [ ] neither prompt field is an empty string — the key is omitted instead
+
+## The optimized prompt
+
+The viewer assembles an **optimized prompt** the user can paste straight into Claude: `meta.promptIntro` first, then the `promptFragment` of every suggestion they applied, in flow order, then a closing line naming any `install` no fragment mentioned. Both fields are optional prose that you write — without them the viewer templates a serviceable line per suggestion out of `name` / `category` / `claim` / `install`, so a file that omits them still works. Author them last: after the suggestions and effects are settled, before the validation loop.
+
+These fields are prose about rows you already fetched, so the HARD RULES above cover them unchanged — a fragment may not name a resource that is not a suggestion in this graph, and it may not describe a capability its row does not claim. **Never write an empty string:** the schema rejects `""`. Nothing grounded to say → omit the key.
+
+### `meta.promptIntro` — the opening
+
+One paragraph, 2–4 sentences, rewriting `meta.task` as the opening of a prompt addressed to Claude instead of a description of what the user wants.
+
+- Imperative, second person: "Build the weekly issue…", never "The user would like…".
+- Carry over every requirement the user actually stated, and add none. No stack, deadline, tone, or acceptance criterion they did not give you.
+- One sentence may frame the shape of the work the graph found — the phases, the review gate, the delivered artifact. No more than one.
+- Name **no** resources. The fragments introduce those one at a time, each at the step where it belongs.
+- Write it whatever the knowledge base did: a vanilla graph with `kbSource: "none"` still deserves a clean opening.
+- Can't beat `meta.task` verbatim? Omit the key — the viewer falls back to the user's own words, which is never wrong.
+
+### `suggestions[].promptFragment` — one instruction per resource
+
+Per suggestion, 2–4 sentences telling Claude to use THAT resource at THAT point in the work. Four things every fragment does:
+
+1. **Names the resource** exactly as the suggestion's `name`.
+2. **Says when in the flow** to reach for it — anchored to the work the target node describes, in the task's own vocabulary ("before you rank anything", "once the tests exist"), so the fragments read as a sequence when the viewer concatenates them.
+3. **Says what it replaces** — the manual work this effect removes or merges, named as work rather than as node ids.
+4. **Stays inside the row's claim.** Every capability it asserts must be supported by that row's `Improvement Claim`, `Description`, or `Capability Tags`. No flags, subcommands, config keys, or API shapes you have not seen in the row — inventing one is the same offence as inventing a resource.
+
+And three things a fragment never does:
+
+- **Install boilerplate by default.** Mention installing only when the resource must be added before that step can run, and then only by quoting the row's `Install` verbatim in one short closing sentence. Skip it for anything the session already has — nothing is lost, because the viewer closes the prompt with the installs no fragment mentioned.
+- **Talk about the graph.** This is instruction for doing the work, not a tour of the diagram: no "this node", "the suggestion above", "as the graph shows".
+- **Lean on its neighbours.** The user may apply this suggestion and no other, so the fragment has to read correctly as the only one in the prompt. Never refer to another fragment or another resource.
+
+Grounded in a row named `example/rss-mcp`, claim *"Fetches and filters feeds in one tool call instead of manual parsing."*, install `claude mcp add rss -- npx rss-mcp`:
+
+> **Write this** — "Use the example/rss-mcp server to gather the articles instead of fetching each feed and parsing the XML by hand. Call it once with the feed list and a 7-day window before you rank anything, then work from what it returns. Add it first with `claude mcp add rss -- npx rss-mcp`."
+
+> **Not this** — "example/rss-mcp is a fast, powerful RSS tool that handles all your feed needs." It names no moment in the flow, replaces nothing the user can point at, and "handles all your feed needs" is a capability the row never claimed.
 
 ## Validation loop (mandatory)
 
