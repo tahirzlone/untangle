@@ -14,6 +14,7 @@ import type { LaidOutGraph } from '../graph/layout';
 import { impactLabel, impactParts, painLabel, type ImpactSummary } from '../graph/metrics';
 import { wrapLabel } from '../graph/path';
 import type { Suggestion, Workflow } from '../graph/types';
+import { EndpointMarks, type EndpointBox } from './EndpointMarks';
 import { prefersReducedMotion } from './motion';
 import { SignalNodeBody } from './SignalNode';
 import { edgeInk, EdgeTag } from './SignalEdge';
@@ -152,6 +153,11 @@ export function WipeCompare({
   const onPointerDown = useCallback(
     (e: PointerEvent<HTMLDivElement>) => {
       e.preventDefault();
+      // preventDefault on pointerdown suppresses the compatibility mousedown —
+      // and with it the focus a click would have given the handle. Focus is
+      // taken explicitly, or the keyboard dies the moment a pan of the canvas
+      // moves it elsewhere and no click on the handle can bring it back.
+      e.currentTarget.focus();
       draggingRef.current = true;
       // jsdom has no active pointers to capture; a browser keeps the drag even
       // when the pointer outruns the handle's 12px hit area.
@@ -286,6 +292,20 @@ export function WipeCompare({
     [backPlan, boxes, laidOut],
   );
 
+  // The endpoint marks, hung off the original's input and output. The cards
+  // they belong to stand identically in both versions — endpoints survive
+  // every patch — so a wipe across them must not make the marks blink in and
+  // out: they are the same component, the same geometry and the same token
+  // ink as the live layer's, drawn against the boxes the original stands in.
+  const markBoxes = useMemo<EndpointBox[]>(
+    () =>
+      original.nodes.flatMap((n) => {
+        const box = boxes.get(n.id);
+        return box ? [{ id: n.id, kind: n.kind, ...box }] : [];
+      }),
+    [original, boxes],
+  );
+
   // The satisfaction line: what the session saved, stated in the same
   // vocabulary every other surface states it in. Steps and minutes are the
   // headline and appear only when they moved — impactParts' own honesty rule —
@@ -327,6 +347,8 @@ export function WipeCompare({
               />
             ))}
           </svg>
+          {/* Under the cards, exactly the berth the live layer's marks keep. */}
+          <EndpointMarks boxes={markBoxes} />
           {original.nodes.map((n) => {
             const box = boxes.get(n.id);
             if (!box) return null;

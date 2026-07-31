@@ -13,6 +13,7 @@ import {
 import { createSession } from '../graph/apply';
 import { layoutWorkflow } from '../graph/layout';
 import { impactSummary } from '../graph/metrics';
+import { dotCentre, entryPath, exitPath } from './EndpointMarks';
 import { GraphCanvas } from './GraphCanvas';
 import { WipeCompare } from './WipeCompare';
 
@@ -93,6 +94,20 @@ function underBox(id: string): { x: number; y: number } {
     .find((el) => el.getAttribute('data-id') === id);
   if (!card) throw new Error(`no original card for ${id}`);
   return { x: parseFloat(card.style.left), y: parseFloat(card.style.top) };
+}
+
+/** The full box the original layer drew a card in — what the marks hang off. */
+function underRect(id: string): { x: number; y: number; width: number; height: number } {
+  const card = screen
+    .getAllByTestId('wipe-card')
+    .find((el) => el.getAttribute('data-id') === id);
+  if (!card) throw new Error(`no original card for ${id}`);
+  return {
+    x: parseFloat(card.style.left),
+    y: parseFloat(card.style.top),
+    width: parseFloat(card.style.width),
+    height: parseFloat(card.style.height),
+  };
 }
 
 const wrapper = (container: HTMLElement, id: string) =>
@@ -254,6 +269,36 @@ it('follows a pointer drag, and stops following when the pointer lifts', async (
   expect(liveClip(container)).toBe('inset(0 0 0 300px)');
 });
 
+/**
+ * The keyboard AFTER the pointer, which is where the first cut died: its
+ * pointerdown prevented default, which in a browser suppresses the focus a
+ * click confers — pan the canvas once and no click on the handle could ever
+ * bring the arrows back. The grab itself must hand the keyboard over, and the
+ * arrows are fired at whatever HOLDS focus — not at the handle by name —
+ * because that is the question a real keyboard asks.
+ */
+it('keeps the keyboard through a pointer drag: grabbing the handle focuses it', async () => {
+  const { container } = render(<GraphCanvas workflow={enriched} />);
+  await onV1(container);
+  await openWipe();
+
+  // the mount-time focus is gone — a pan, a click on the pane, anything.
+  // Blurred off whatever HOLDS it, not off the handle by name: under a loaded
+  // run the drawer's own focus-return can land after the wipe opens.
+  (document.activeElement as HTMLElement | null)?.blur();
+  expect(document.activeElement).toBe(document.body);
+
+  point('pointerDown', handle(), 700);
+  point('pointerUp', handle(), 700);
+  await waitFor(() => expect(liveClip(container)).toBe('inset(0 0 0 700px)'));
+  expect(document.activeElement).toBe(handle());
+
+  fireEvent.keyDown(document.activeElement!, { key: 'ArrowLeft' });
+  await waitFor(() => expect(liveClip(container)).toBe('inset(0 0 0 668px)'));
+  fireEvent.keyDown(document.activeElement!, { key: 'Home' });
+  await waitFor(() => expect(liveClip(container)).toBe('inset(0 0 0 0px)'));
+});
+
 // The fraction is what survives a resize, not the pixel: the divider keeps
 // dividing the pane it can see.
 it('keeps its split of the pane when the window resizes mid-wipe', async () => {
@@ -292,6 +337,32 @@ it('renders the original at full fidelity: real cards, real edges, its own pips'
   for (const p of paths) expect(p.getAttribute('marker-end')).toBe('url(#fp-arrow)');
   // and the conditions on those edges ride along as tags
   expect(under.getByText('all green')).toBeInTheDocument();
+});
+
+// The endpoints survive every patch, so their marks are the one piece of ink
+// that stands in BOTH versions at the same place — a wipe across them must
+// show one continuous mark, not a mark that blinks out on the original side.
+it('hangs the endpoint marks off the original layer, same geometry as the live ones', async () => {
+  const { container } = render(<GraphCanvas workflow={enriched} />);
+  await onV1(container);
+  await openWipe();
+
+  const under = within(screen.getByTestId('wipe-under'));
+  // the entry stroke and chevron, into the input's left port — drawn against
+  // the box the original card actually stands in
+  const entry = under.getByTestId('sg-mark-entry');
+  expect(entry.getAttribute('data-id')).toBe('gather-brief');
+  const input = { id: 'gather-brief', kind: 'input' as const, ...underRect('gather-brief') };
+  expect(entry.getAttribute('d')).toBe(entryPath(input));
+  // the exit run and its terminal dot, after the output's right port
+  const exit = under.getByTestId('sg-mark-exit');
+  expect(exit.getAttribute('data-id')).toBe('ship-release');
+  const output = { id: 'ship-release', kind: 'output' as const, ...underRect('ship-release') };
+  expect(exit.getAttribute('d')).toBe(exitPath(output));
+  const dot = under.getByTestId('sg-mark-dot');
+  const centre = dotCentre(output);
+  expect(parseFloat(dot.getAttribute('cx')!)).toBeCloseTo(centre.cx, 1);
+  expect(parseFloat(dot.getAttribute('cy')!)).toBeCloseTo(centre.cy, 1);
 });
 
 it('is a picture, not a graph: hidden from readers and closed to the pointer', async () => {
