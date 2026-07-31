@@ -66,6 +66,14 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The two shape lines read as one statement about the graph, so they sit closer
+   together than the panel's own 14px rhythm. */
+.sg-scorecard-shape {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
 .sg-scorecard-count {
   margin: 0;
   font-family: var(--font-anno);

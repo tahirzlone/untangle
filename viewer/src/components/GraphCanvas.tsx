@@ -34,10 +34,12 @@ import { contentBounds, exportGraphPng } from '../graph/exportPng';
 import { criticalPath, NO_PATH } from '../graph/insight';
 import { planLabels, type LabelOffset, type LabelTag } from '../graph/labels';
 import { layoutWorkflow, NODE_HEIGHT, NODE_WIDTH, type LaidOutGraph } from '../graph/layout';
+import { impactSummary } from '../graph/metrics';
 import { planBackEdges, type BackEdgePlan } from '../graph/backEdge';
+import { CelebrationLayer, useCelebration } from './Celebration';
 import { DetailDrawer } from './DetailDrawer';
 import { EndpointMarks, type EndpointBox } from './EndpointMarks';
-import { ImpactMeter } from './ImpactMeter';
+import { ImpactPanel } from './ImpactPanel';
 import { PeekCard, peekAnchor, PEEK_DELAY_MS, type PeekAnchor } from './PeekCard';
 import { SignalNode } from './SignalNode';
 import { SignalEdge } from './SignalEdge';
@@ -105,9 +107,9 @@ function reportOn(session: GraphSession): ScorecardReport {
       .slice(0, session.cursor)
       .map((id) => byId.get(id))
       .filter((s): s is Suggestion => s !== undefined),
-    metrics: session.metrics,
-    before: session.versions[0].nodes.length,
-    after: current(session).nodes.length,
+    // The same summary the panel is reading, taken as a value: it is a function of
+    // the session rather than a view onto it, so freezing it here is enough.
+    impact: impactSummary(session),
   };
 }
 
@@ -373,6 +375,8 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const [peek, setPeek] = useState<{ id: string; at: PeekAnchor } | null>(null);
   /** Is a card being dragged right now? */
   const [dragging, setDragging] = useState(false);
+  /** The savings currently rising off a step that was just patched. */
+  const { floats, celebrate } = useCelebration();
 
   const [opened, setOpened] = useState(() => openSession(workflow));
   // A new graph is a new session, adjusted during render rather than in an effect:
@@ -881,12 +885,15 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
       // Read off the version the patch was applied to, where the row still exists:
       // the replacement is the step this one became, and the morph needs it in case
       // the card the panel is open on is the card being eaten.
-      const replacement =
-        graph.suggestions.find((s) => s.airtableRecordId === airtableRecordId)?.effect.replaceWith
-          ?.id ?? null;
-      morphTo(next, replacement);
+      const applied = graph.suggestions.find((s) => s.airtableRecordId === airtableRecordId);
+      // Before the morph, while the step this patch was applied to is still where
+      // the user pressed it: what the patch bought rises off that card. Both routes
+      // in — the drawer's own APPLY and the cinematic's — come through here, so the
+      // tour celebrates each of its patches for the same reason a hand press does.
+      if (applied) celebrate(applied.nodeId, applied.effect.metrics);
+      morphTo(next, applied?.effect.replaceWith?.id ?? null);
     },
-    [graph, morphTo, session],
+    [celebrate, graph, morphTo, session],
   );
 
   const onUndo = useCallback(() => {
@@ -1054,6 +1061,24 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     () => graph.suggestions.some((s) => canApply(s.airtableRecordId)),
     [canApply, graph],
   );
+
+  /**
+   * Every figure the impact panel states, recomputed whenever the session moves.
+   *
+   * A function of the session and nothing else, so an UNDO walks the totals, the
+   * pain and the chart back together — see graph/metrics.ts.
+   */
+  const summary = useMemo(() => (session ? impactSummary(session) : null), [session]);
+
+  /**
+   * Is there an optimization story to tell at all?
+   *
+   * A graph the KB matched nothing to can never be optimized, and a panel reading
+   * "NOTHING APPLIED YET" over it forever would be chrome making a promise the
+   * graph cannot keep. Once a patch HAS landed the panel stays, even after the
+   * last appliable row is spent — that is the moment it is most worth reading.
+   */
+  const showImpact = summary !== null && (hasAppliable || versionCount > 1);
 
   /**
    * Is the canvas answering to the user at all?
@@ -1358,9 +1383,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
             max pain <span className="sg-chip-hot">{'●'.repeat(maxPain)}</span>
           </span>
           <span className="sg-chip">{meta.kbSource === 'airtable' ? 'AIRTABLE' : 'KB NOT LINKED'}</span>
-          {session ? (
-            <ImpactMeter metrics={session.metrics} />
-          ) : (
+          {session ? null : (
             <span className="sg-chip sg-chip--refused" data-testid="suggestions-disabled">
               SUGGESTIONS DISABLED — DUPLICATE IDS
             </span>
@@ -1445,6 +1468,13 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
           onUndo={onUndo}
           onRedo={onRedo}
         />
+        {/* The right-hand rail. A column, not a slot: the panels that stand here
+            stack under the toolbar, and the drawer draws over all of them. */}
+        {showImpact ? (
+          <div className="sg-rail" data-testid="canvas-rail">
+            <ImpactPanel summary={summary} />
+          </div>
+        ) : null}
         {/* The pane is a listening post for keys aimed at the focusable cards inside
             it — it takes no focus of its own and adds no keyboard trap. */}
         <div className="sg-viewport" ref={paneRef} onKeyDown={onPaneKeyDown}>
@@ -1555,6 +1585,9 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
           exportFailed={exportFailed === 'scorecard'}
         />
       ) : null}
+      {/* Portalled onto the document by the layer itself, for the same reason the
+          peek is: these are screen overlays, not part of the graph. */}
+      <CelebrationLayer floats={floats} />
     </>
   );
 }

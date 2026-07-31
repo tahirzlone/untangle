@@ -97,6 +97,23 @@ export function captureDownloads(): { links: HTMLAnchorElement[]; restore: () =>
   };
 }
 
+/**
+ * The impact panel's numerals, keyed by the component each one states — e.g.
+ * `{ stepsSaved: '1', estTimeSavedMin: '25' }`.
+ *
+ * Empty while nothing has been applied, and never carrying a key for a component
+ * the applied patches did not move: the panel states what changed and nothing
+ * else, and a helper that invented zeroes would hide that.
+ */
+export function impactStats(): Record<string, string> {
+  const stats: Record<string, string> = {};
+  for (const stat of screen.queryAllByTestId('impact-metric')) {
+    const key = stat.getAttribute('data-part') ?? '';
+    stats[key] = stat.querySelector('.sg-impact-value')?.textContent ?? '';
+  }
+  return stats;
+}
+
 /** Reports the whole session as unwanted motion, the way a real OS setting does. */
 export function reduceMotion(): () => void {
   const original = window.matchMedia;

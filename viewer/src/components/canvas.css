@@ -198,6 +198,25 @@
   outline-offset: 2px;
 }
 
+/* The right-hand rail: where the panels that report on the graph stand, under the
+   toolbar and over the canvas. A column with a gap rather than a single slot, so a
+   second panel joins by being rendered beside the first.
+
+   Sized by its children — the rail is only as wide and as tall as what is in it,
+   so the graph under the empty part of the column still takes a pointer. Same 5 as
+   the toolbar and the version strip; the drawer (6) draws over all three. */
+.sg-rail {
+  position: absolute;
+  top: var(--toolbar-h, 52px);
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 10px 0;
+}
+
 /* z-index: 0 gives the viewport its own stacking context, so React Flow's
    internal layers (nodes, edge labels) resolve against each other and can
    never climb over the toolbar. */

@@ -7,6 +7,7 @@ import {
   cardLabels,
   cardsOf,
   fixture,
+  impactStats,
   LAYOUT_WAIT,
   mouse,
   reduceMotion,
@@ -454,21 +455,28 @@ it('extinguishes the ember when the hottest step is the one replaced', async () 
 it('counts only the components the applied patch actually saved', async () => {
   render(<GraphCanvas workflow={enriched} />);
   await cardsOf(enriched);
-  expect(screen.queryByTestId('impact-meter')).not.toBeInTheDocument();
+  // the panel is standing by with the baseline, stating no saving it has not made
+  expect(screen.getByTestId('impact-panel')).toBeInTheDocument();
+  expect(screen.getByTestId('impact-none')).toHaveTextContent('NOTHING APPLIED YET');
+  expect(impactStats()).toEqual({});
 
   // the docs MCP claims an honest zero on tokens — it reads pages, it does not save them
   await applyOn(RESEARCH);
 
-  const meter = await screen.findByTestId('impact-meter');
   await waitFor(() => {
-    // one of a thing, in the singular — see impactLabel
-    expect(meter).toHaveTextContent('−1 step');
-    expect(meter).toHaveTextContent('−25 min');
-    expect(meter).toHaveTextContent('−1 manual');
+    expect(impactStats()).toEqual({
+      stepsSaved: '1',
+      estTimeSavedMin: '25',
+      manualInterventionsRemoved: '1',
+    });
   });
-  // no chip claims a saving the row did not: "−0 tok" would be a lie about a zero
-  expect(meter).not.toHaveTextContent('tok');
-  expect(screen.getAllByTestId('impact-part')).toHaveLength(3);
+  // one of a thing, in the singular — see impactUnit
+  expect(
+    document.querySelector('[data-part="stepsSaved"] .sg-impact-unit'),
+  ).toHaveTextContent(/^step$/);
+  // no numeral claims a saving the row did not: "0 tok" would be a lie about a zero
+  expect(screen.getByTestId('impact-panel')).not.toHaveTextContent('tok');
+  expect(screen.queryByTestId('impact-none')).not.toBeInTheDocument();
 });
 
 it('shows the version strip only once there is more than one version', async () => {
@@ -499,7 +507,8 @@ it('UNDO puts the graph and the meter back, keeping the version it stepped off',
   expect(cardLabels()).not.toContain(RESEARCH_MCP);
   expect(screen.getAllByTestId('sg-badge')).toHaveLength(4);
   // back at V0 there is nothing saved…
-  expect(screen.queryByTestId('impact-meter')).not.toBeInTheDocument();
+  await waitFor(() => expect(impactStats()).toEqual({}));
+  expect(screen.getByTestId('impact-none')).toHaveTextContent('NOTHING APPLIED YET');
   // …but the version undone is still on the strip, dimmed and one click away
   const chips = screen.getAllByTestId('version-chip');
   expect(chips.map((c) => c.textContent)).toEqual(['V0', 'V1']);
@@ -524,7 +533,7 @@ it('REDO walks back into the version UNDO stepped off', async () => {
 
   expect(cardLabels()).not.toContain(RESEARCH);
   // the totals come back with the version, and the buttons swap ends
-  await waitFor(() => expect(screen.getByTestId('impact-meter')).toHaveTextContent('−25 min'));
+  await waitFor(() => expect(impactStats().estTimeSavedMin).toBe('25'));
   expect(screen.getAllByTestId('version-chip')[1]).toHaveAttribute('aria-current', 'true');
   expect(document.querySelectorAll('.sg-version--future')).toHaveLength(0);
   expect(screen.getByTestId('redo-btn')).toBeDisabled();
@@ -546,8 +555,8 @@ it('jumps to an intermediate version and keeps the way forward', async () => {
     'V1',
     'V2',
   ]);
-  // the second patch is the one with a token saving, so the third chip appears with it
-  await waitFor(() => expect(screen.getByTestId('impact-meter')).toHaveTextContent('−9000 tok'));
+  // the second patch is the one with a token saving, so that numeral appears with it
+  await waitFor(() => expect(impactStats().estTokensSaved).toBe('9000'));
 
   fireEvent.click(screen.getAllByTestId('version-chip')[1]);
   await waitFor(() => expect(cardLabels()).toContain(VERIFY), LAYOUT_WAIT);
@@ -560,7 +569,7 @@ it('jumps to an intermediate version and keeps the way forward', async () => {
   expect(chips[1]).toHaveAttribute('aria-current', 'true');
   expect(chips[2].className).toContain('sg-version--future');
   expect(screen.getByTestId('redo-btn')).toBeEnabled();
-  await waitFor(() => expect(screen.getByTestId('impact-meter')).not.toHaveTextContent('tok'));
+  await waitFor(() => expect(impactStats().estTokensSaved).toBeUndefined());
 
   // and the chip is the way back too
   fireEvent.click(chips[2]);
@@ -592,7 +601,7 @@ it('drops the versions after the cursor when a patch is applied from one of them
   expect(document.querySelectorAll('.sg-version--future')).toHaveLength(0);
   expect(screen.getByTestId('redo-btn')).toBeDisabled();
   // the branch's own totals, not the abandoned version's
-  await waitFor(() => expect(screen.getByTestId('impact-meter')).toHaveTextContent('−6000 tok'));
+  await waitFor(() => expect(impactStats().estTokensSaved).toBe('6000'));
 });
 
 // The cursor moves through the same morph an APPLY does — the version swap is what

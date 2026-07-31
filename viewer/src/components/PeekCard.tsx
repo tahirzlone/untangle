@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
+import { impactLabel, impactParts } from '../graph/metrics';
 import type { Suggestion } from '../graph/types';
 import { CategoryChip } from './DetailDrawer';
-import { impactLabel, impactParts } from './ImpactMeter';
 import './peek.css';
 
 /**

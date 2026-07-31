@@ -42,6 +42,17 @@ export const MOTION_VARS = {
   '--ghost-ms': `${GHOST_MS}ms`,
 } as const;
 
+/**
+ * The celebration float: how long one saving takes to rise off the applied step
+ * and fade. Read by TypeScript (the timer that drops the float) and written onto
+ * the element as its animation duration — see Celebration.tsx on why this one is
+ * not a CSS variable like the two above.
+ */
+export const FLOAT_MS = 900;
+
+/** The gap between one saving in a burst and the next, so they rise as a run. */
+export const FLOAT_STAGGER_MS = 90;
+
 /** The cinematic's camera travel onto the next step. */
 export const CAMERA_MS = 400;
 

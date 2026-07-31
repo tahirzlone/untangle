@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, type KeyboardEvent } from 'react';
-import type { SessionMetrics } from '../graph/apply';
+import { impactLabel, impactParts, painLabel, type ImpactSummary } from '../graph/metrics';
 import type { Suggestion } from '../graph/types';
 import { CategoryChip } from './DetailDrawer';
-import { impactLabel, impactParts } from './ImpactMeter';
 import './scorecard.css';
 
 /**
@@ -11,17 +10,15 @@ import './scorecard.css';
  * Deliberately a snapshot and not a view of the session: the panel is a report on
  * something the user watched happen, and a session that moves underneath it — a
  * version jump, an undo — must not be able to rewrite that account into
- * "0 upgrades applied" while it is still on screen.
+ * "0 upgrades applied" while it is still on screen. The summary is a VALUE
+ * computed off the session rather than a window onto it, which is what makes
+ * holding one enough to hold the account still.
  */
 export interface ScorecardReport {
   /** The rows behind the version the run finished on, in the order they landed. */
   applied: Suggestion[];
-  /** The totals for those rows — the same numbers the toolbar meter carried. */
-  metrics: SessionMetrics;
-  /** Steps in the original graph. */
-  before: number;
-  /** Steps in the graph the run finished on. */
-  after: number;
+  /** Every figure the impact panel is stating, as it stood when the run stopped. */
+  impact: ImpactSummary;
 }
 
 /** Everything the browser will stop on inside the panel, in tab order. */
@@ -91,7 +88,8 @@ export function Scorecard({
     wrap.focus();
   }, []);
 
-  const parts = impactParts(report.metrics);
+  const { impact } = report;
+  const parts = impactParts(impact.totals);
   const n = report.applied.length;
 
   return (
@@ -120,15 +118,26 @@ export function Scorecard({
           <div className="sg-scorecard-metrics" role="group" aria-label="impact">
             {parts.map((p) => (
               <span className="sg-scorecard-metric" data-testid="scorecard-metric" key={p.key}>
-                {impactLabel(report.metrics[p.key], p.unit)}
+                {impactLabel(impact.totals[p.key], p.unit)}
               </span>
             ))}
           </div>
         ) : null}
 
-        <p className="sg-scorecard-count" data-testid="scorecard-count">
-          {report.before} → {report.after} nodes
-        </p>
+        {/* What the graph is now, against what it was: the two counts the panel
+            states as COMPLEXITY, and the pain the work costs after them. Stated
+            here too because the report is what gets shared — a scorecard that
+            only counted savings would leave the reader to take the shape of the
+            graph on trust. */}
+        <div className="sg-scorecard-shape">
+          <p className="sg-scorecard-count" data-testid="scorecard-count">
+            {impact.complexityBefore.nodes} → {impact.complexityNow.nodes} nodes ·{' '}
+            {impact.complexityBefore.edges} → {impact.complexityNow.edges} edges
+          </p>
+          <p className="sg-scorecard-count" data-testid="scorecard-pain">
+            pain {impact.painBefore} → {impact.painNow} ({painLabel(impact.painPct)})
+          </p>
+        </div>
 
         <ul className="sg-scorecard-list" data-testid="scorecard-list">
           {report.applied.map((s) => (

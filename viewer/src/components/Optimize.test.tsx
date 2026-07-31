@@ -6,6 +6,7 @@ import {
   cardLabels,
   cardsOf,
   fixture,
+  impactStats,
   LAYOUT_WAIT,
   reduceMotion,
 } from '../test/harness';
@@ -100,15 +101,22 @@ it('applies every appliable patch at once when motion is not wanted', async () =
 
     const card = await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
     expect(card).toHaveTextContent('OPTIMIZED — 2 upgrades applied');
-    // both patches swap one step for one replacement, so the count holds and the
-    // saving is in what the steps cost, not in how many there are
-    expect(card).toHaveTextContent('6 → 6 nodes');
+    // both patches swap one step for one replacement, so the counts hold and the
+    // saving is in what the steps COST, not in how many there are — which is the
+    // whole reason the report states the pain as well as the shape
+    expect(screen.getByTestId('scorecard-count')).toHaveTextContent('6 → 6 nodes · 6 → 6 edges');
+    expect(screen.getByTestId('scorecard-pain')).toHaveTextContent('pain 18 → 12 (−33%)');
 
-    // the scorecard and the toolbar meter read off the same totals, formatted the
-    // same way — 25+40 minutes, 9000 tokens, 1+3 manual steps
+    // the scorecard and the impact panel read off the same totals — 25+40 minutes,
+    // 9000 tokens, 1+3 manual steps
     const shown = screen.getAllByTestId('scorecard-metric').map((el) => el.textContent);
     expect(shown).toEqual(['−2 steps', '−65 min', '−9000 tok', '−4 manual']);
-    expect(shown).toEqual(screen.getAllByTestId('impact-part').map((el) => el.textContent));
+    expect(impactStats()).toEqual({
+      stepsSaved: '2',
+      estTimeSavedMin: '65',
+      estTokensSaved: '9000',
+      manualInterventionsRemoved: '4',
+    });
 
     // the export is live and has a suite of its own; what matters here is that
     // the panel's second action is an offer rather than a placeholder

@@ -1,22 +1,252 @@
-/* Impact meter — what the applied patches saved, in the toolbar beside the KB chip.
-   Accent-bordered rather than accent-filled: this is the graph's own good news, and
-   it must not out-shout the one button in the toolbar. */
+/* Impact panel — what the applied patches have done to the workflow, on the right
+   of the canvas under the toolbar. The numbers used to be four chips in the
+   toolbar beside the graph's title, which is where a caption goes, not a result;
+   here they are the second thing on the screen after the graph itself.
+
+   Signal surfaces only: --surface panel on --line, --surface-2 for the tiles held
+   inside it, accent for anything the applied patches earned. */
 .sg-impact {
-  display: inline-flex;
+  position: relative;
+  box-sizing: border-box;
+  width: 236px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  /* attached to the right edge of the canvas, so only the left corners are cut */
+  border-right: none;
+  border-radius: var(--radius-card) 0 0 var(--radius-card);
+  box-shadow: -14px 0 34px color-mix(in srgb, var(--bg-deep) 45%, transparent);
+}
+
+/* Collapsed: a slim tab holding the same title, at the same edge. The panel
+   stands over the right side of the graph, and a step underneath it is a step you
+   cannot read — so the way back is where the way out was. */
+.sg-impact--closed {
+  width: auto;
+}
+
+/* The announcement, and the only part of the panel a screen reader is TOLD about
+   rather than left to find. Off-screen rather than hidden: `display: none` would
+   take the live region out of the accessibility tree, and a region that is not
+   there announces nothing. */
+.sg-impact-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sg-impact-tab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  color: var(--dim);
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+.sg-impact-tab:hover {
+  color: var(--accent);
+}
+.sg-impact-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  /* inset, because the panel's own border sits a pixel outside this control */
+  outline-offset: -2px;
+}
+.sg-impact--closed .sg-impact-tab {
+  writing-mode: vertical-rl;
+  gap: 8px;
+  padding: 14px 7px;
+  border-bottom: none;
+}
+/* the chevron stays upright while the title turns on its side */
+.sg-impact--closed .sg-impact-chev {
+  writing-mode: horizontal-tb;
+}
+
+.sg-impact-title {
+  font-family: var(--font-anno);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+}
+.sg-impact-chev {
+  font-family: var(--font-anno);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.sg-impact-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  /* a session with a long history still has to fit on the screen it is drawn on */
+  max-height: 62vh;
+  overflow-y: auto;
+}
+
+/* The savings, at the size the news deserves. Two columns, because four numerals
+   in a row at this size would each be too small to be the point. */
+.sg-impact-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 11px 8px;
+}
+.sg-impact-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.sg-impact-num {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--accent);
+  /* the numerals count up, so a digit must not resize the column per frame */
+  font-variant-numeric: tabular-nums;
+}
+/* Which way the number went, said once — the numeral itself carries no minus. */
+.sg-impact-arrow {
+  font-size: 13px;
+  color: color-mix(in srgb, var(--accent) 65%, transparent);
+}
+.sg-impact-unit {
+  font-family: var(--font-anno);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+/* Before the first apply, and after one that claimed nothing. Quiet: the panel is
+   stating that there is nothing to state. */
+.sg-impact-none {
+  margin: 0;
+  font-family: var(--font-anno);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--dim);
+}
+
+.sg-impact-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.sg-impact-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 9px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.sg-impact-cap {
+  font-family: var(--font-anno);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  color: var(--dim);
+}
+.sg-impact-tile-num {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+/* A graph that came out of a patch hurting MORE than it went in. Ember, the ink
+   this canvas states heat in — the number is honest and it is not good news. */
+.sg-impact-tile-num--worse {
+  color: var(--ember);
+}
+.sg-impact-tile-sub {
+  font-family: var(--font-anno);
+  font-size: 9px;
+  line-height: 1.5;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* One bar per version, all drawn against the pain the graph arrived with: the
+   accent is what the work still costs, and the track behind it is what the
+   applied patches took off. Pure CSS — a chart this small is two boxes and a
+   percentage, and a library would be a dependency to draw a rectangle. */
+.sg-impact-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.sg-impact-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sg-impact-bar {
+  display: grid;
+  grid-template-columns: 20px 1fr 22px;
   align-items: center;
   gap: 6px;
 }
-
-.sg-impact-chip {
+.sg-impact-bar-label,
+.sg-impact-bar-value {
   font-family: var(--font-anno);
-  font-size: 10px;
-  line-height: 1;
-  color: var(--accent);
-  background: var(--accent-soft);
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  border-radius: var(--radius-chip);
-  padding: 4px 9px;
-  white-space: nowrap;
-  /* the numbers count up, so the chip must not resize on every frame */
+  font-size: 9px;
+  color: var(--dim);
   font-variant-numeric: tabular-nums;
+}
+.sg-impact-bar-value {
+  text-align: right;
+}
+.sg-impact-bar-track {
+  height: 7px;
+  border-radius: var(--radius-chip);
+  background: var(--line);
+  overflow: hidden;
+}
+.sg-impact-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--accent) 40%, var(--line));
+  transition: width 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+/* The version on the canvas, in the same accent the strip fills its chip with. */
+.sg-impact-bar--at .sg-impact-bar-fill {
+  background: var(--accent);
+}
+.sg-impact-bar--at .sg-impact-bar-label,
+.sg-impact-bar--at .sg-impact-bar-value {
+  color: var(--text);
+}
+/* Versions the cursor has stepped back out of — the same 0.45 the version strip
+   dims its future chips by, because it is the same fact about the same versions. */
+.sg-impact-bar--future {
+  opacity: 0.45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sg-impact-tab { transition: none; }
+  .sg-impact-bar-fill { transition: none; }
 }

@@ -1,0 +1,56 @@
+/* Celebration floats — what one patch bought, rising off the step that bought it.
+   The panel on the right holds the running totals; this is the receipt for the
+   press itself, at the place the press happened. */
+.sg-floats {
+  position: fixed;
+  inset: 0;
+  /* the same layer the peek draws on: the topmost transient thing on the screen,
+     and gone within a second of arriving */
+  z-index: 8;
+  /* never a target — a number rising past the cursor must not swallow the click
+     the user makes next */
+  pointer-events: none;
+}
+
+/* Anchored on the card's own top edge, in screen pixels: the stack sits just
+   above the step and rises from there. The offset lives on the container so the
+   animation below owns the transform outright. */
+.sg-float {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.sg-float-line {
+  font-family: var(--font-anno);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--accent);
+  /* the accent bloom the canvas uses on anything it wants read at a glance */
+  text-shadow: 0 0 14px var(--accent-soft);
+  font-variant-numeric: tabular-nums;
+  /* FLOAT_MS and FLOAT_STAGGER_MS are written onto the element by Celebration.tsx
+     — the layer is portalled onto the body, outside the canvas root the motion
+     variables are stamped on. `both` holds the first frame through the stagger. */
+  animation-name: sg-float-up;
+  animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
+  animation-fill-mode: both;
+}
+
+@keyframes sg-float-up {
+  from { opacity: 0; transform: translateY(6px) scale(0.96); }
+  18% { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-38px) scale(1); }
+}
+
+/* Nothing is mounted at all under this setting — see `celebrate`, which returns
+   before a float is ever made. This is belt and braces: if one did land, it would
+   land where it was going rather than travelling there. */
+@media (prefers-reduced-motion: reduce) {
+  .sg-float-line { animation: none; }
+}
