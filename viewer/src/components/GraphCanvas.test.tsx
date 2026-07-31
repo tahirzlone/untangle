@@ -11,6 +11,7 @@ import {
   reduceMotion,
 } from '../test/harness';
 import { GraphCanvas } from './GraphCanvas';
+import { FLIP_MS, GHOST_MS, MOTION_VARS } from './motion';
 
 const wf = fixture(gallery, 'gallery');
 /** The KB-matched graph: two suggestions on one node, one patch the reducer refuses. */
@@ -852,6 +853,27 @@ it('inverts the surviving shells for the FLIP, then clears the properties', asyn
 
   await waitFor(() => expect(flipping()).toHaveLength(0), { timeout: 2000 });
   expect(shell.style.getPropertyValue('--flip-dx')).toBe('');
+});
+
+// The morph's two durations are stated in TypeScript — the timers that tear the
+// FLIP class off and unmount the ghosts wait on them — and CSS is what actually
+// runs them. This is the join: the canvas stamps them onto its root, and the
+// stylesheet reads the properties instead of repeating the numbers.
+it('hands the morph durations to CSS as custom properties', async () => {
+  render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+
+  const canvas = screen.getByTestId('canvas');
+  // WITH the unit: a custom property is substituted as raw text, and a bare
+  // `480` in a time position would invalidate the whole shorthand silently.
+  expect(canvas.style.getPropertyValue('--flip-ms')).toBe(`${FLIP_MS}ms`);
+  expect(canvas.style.getPropertyValue('--ghost-ms')).toBe(`${GHOST_MS}ms`);
+  expect(getComputedStyle(canvas).getPropertyValue('--flip-ms')).toBe(`${FLIP_MS}ms`);
+  expect(getComputedStyle(canvas).getPropertyValue('--ghost-ms')).toBe(`${GHOST_MS}ms`);
+
+  // Nothing else rides along: canvas.css names exactly these two, and a property
+  // stamped here that the stylesheet does not read is dead weight nobody trips on.
+  expect(Object.keys(MOTION_VARS)).toEqual(['--flip-ms', '--ghost-ms']);
 });
 
 // A second file dropped on the viewer is a second session. Without that reset the

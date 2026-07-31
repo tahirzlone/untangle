@@ -218,10 +218,15 @@
 .sg-node-shell--flip {
   transform: translate(var(--flip-dx, 0px), var(--flip-dy, 0px));
 }
-/* Written after --flip so its identity transform wins on the second pass. */
+/* Written after --flip so its identity transform wins on the second pass.
+
+   The duration comes from `--flip-ms`, which GraphCanvas stamps on `.sg-canvas`
+   out of FLIP_MS in motion.ts — the same constant the timer that tears the class
+   off waits on. The literal here is only the fallback for a shell outside a
+   mounted canvas; retune in motion.ts and both sides move. */
 .sg-node-shell--flip-play {
   transform: none;
-  transition: transform 480ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform var(--flip-ms, 480ms) cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 /* ---------------------------------------------------------------------------
@@ -301,7 +306,9 @@
   box-sizing: border-box;
   /* the heat draining out of a step that is no longer part of the work */
   border-color: color-mix(in srgb, var(--ember) 45%, var(--line));
-  animation: sg-ghost-out 400ms ease-in forwards;
+  /* GHOST_MS, stamped on `.sg-canvas` — same contract as `--flip-ms` above: the
+     canvas unmounts the ghost on that timer, so the fade must not outlast it. */
+  animation: sg-ghost-out var(--ghost-ms, 400ms) ease-in forwards;
 }
 
 /* The wait is a signal, not a fade: the caption warms toward the accent and

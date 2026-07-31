@@ -25,6 +25,23 @@ const LAYOUT_BEAT_MS = 220;
  */
 export const SETTLE_MS = FLIP_MS + LAYOUT_BEAT_MS;
 
+/**
+ * The two morph durations, in the form CSS can read them.
+ *
+ * canvas.css writes `transition: transform var(--flip-ms, 480ms) …` and
+ * `animation: sg-ghost-out var(--ghost-ms, 400ms) …`; the canvas stamps this
+ * object onto its root so the numbers above are the ones that actually run. The
+ * literals in the stylesheet are the fallback for a canvas that never mounted —
+ * retuning happens here, in one place, and both sides move together.
+ *
+ * The `ms` suffix is not decoration: a custom property is substituted as raw
+ * text, and a bare `480` in a time position makes the whole shorthand invalid.
+ */
+export const MOTION_VARS = {
+  '--flip-ms': `${FLIP_MS}ms`,
+  '--ghost-ms': `${GHOST_MS}ms`,
+} as const;
+
 /** The cinematic's camera travel onto the next step. */
 export const CAMERA_MS = 400;
 

@@ -261,6 +261,11 @@ export function jump(session: GraphSession, index: number): GraphSession {
  * Not the same action as `jump(session, 0)`, which draws the same graph while
  * keeping every version after it one click away. This one is the wipe — the
  * session that comes back is indistinguishable from a freshly opened one.
+ *
+ * No control on the canvas calls it: the viewer's start-over is dropping the file
+ * again, which builds a fresh session the same way. It stays exported as the
+ * reducer's start-over primitive — the thing that names what a wipe IS, pinned by
+ * its own test — so a future control has it rather than reinventing it.
  */
 export function reset(session: GraphSession): GraphSession {
   return createSession(session.versions[0]);

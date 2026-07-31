@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type KeyboardEvent,
 } from 'react';
 import { createPortal } from 'react-dom';
@@ -42,7 +43,7 @@ import { VersionStrip } from './VersionStrip';
 import { XrayLayer } from './XrayLayer';
 import { Scorecard, type ScorecardReport } from './Scorecard';
 import { useCinematic, type TourResult } from './optimize';
-import { CAMERA_MS, FLIP_MS, GHOST_MS, prefersReducedMotion } from './motion';
+import { CAMERA_MS, FLIP_MS, GHOST_MS, MOTION_VARS, prefersReducedMotion } from './motion';
 import './canvas.css';
 
 const nodeTypes = { signal: SignalNode };
@@ -54,6 +55,13 @@ const NO_GHOSTS: GhostCard[] = [];
 const NO_MATCHES: Map<string, Suggestion[]> = new Map();
 /** No tag had to move — which is the answer on most graphs, and on every one in jsdom. */
 const NO_OFFSETS: Map<string, LabelOffset> = new Map();
+
+/**
+ * The morph's two durations, handed to the stylesheet. Built once at module load
+ * — the object is constant, so it never re-renders anything by identity — and
+ * cast because React's CSSProperties has no room for custom properties.
+ */
+const MOTION_STYLE = MOTION_VARS as CSSProperties;
 
 const FLIP_CLASS = 'sg-node-shell--flip';
 const FLIP_PLAY_CLASS = 'sg-node-shell--flip-play';
@@ -1162,7 +1170,10 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
           it, nothing behind the backdrop takes a click, a Tab or a keystroke — no
           version chip to jump the session out from under the panel, no card to open
           an invisible drawer on. It is dropped again the moment the panel closes. */}
-      <div className="sg-canvas" data-testid="canvas" inert={report !== null}>
+      {/* The morph durations ride on the root: every shell that FLIPs and every
+          ghost that fades is inside this element, so one stamp reaches them all
+          and the numbers CSS animates on are the ones TypeScript waits for. */}
+      <div className="sg-canvas" data-testid="canvas" inert={report !== null} style={MOTION_STYLE}>
         {/* Inside React Flow's viewport, which is the element an export captures —
             see the effect that finds it. On screen the placement is immaterial:
             `url(#fp-arrow)` is looked up across the whole document either way. */}
