@@ -1,7 +1,22 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import enrichedDoc from '../test/fixtures/enriched.workflow.json';
 import { applyOn, cardLabels, cardsOf, fixture, LAYOUT_WAIT } from '../test/harness';
+import { backEdgePath, planBackEdges } from '../graph/backEdge';
+import { edgeKey } from '../graph/insight';
 import { GraphCanvas } from './GraphCanvas';
+
+// The real routing, watched rather than replaced: the ghost has to plan its lanes
+// ONCE per session, so the suite needs to count the calls without changing what
+// any of them do.
+vi.mock('../graph/backEdge', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../graph/backEdge')>();
+  return { ...actual, planBackEdges: vi.fn(actual.planBackEdges) };
+});
+const planned = vi.mocked(planBackEdges);
+
+beforeEach(() => {
+  planned.mockClear();
+});
 
 /**
  * The two read-only overlays: the original held under the live graph, and the
@@ -43,6 +58,9 @@ const BRANCHED = {
     { from: 'manual-b', to: 'ship', kind: 'sequence' },
     { from: 'intake', to: 'auto', kind: 'branch', label: 'overnight' },
     { from: 'auto', to: 'ship', kind: 'branch' },
+    // spans the whole graph right-to-left, so its return run has to clear every
+    // row between the two ends — the case the lane plan exists for
+    { from: 'ship', to: 'intake', kind: 'retry', label: 'breaks' },
   ],
   suggestions: [
     {
@@ -186,6 +204,90 @@ it('takes the comparison away when the cursor walks back to the original', async
 
   expect(screen.queryByTestId('xray-layer')).not.toBeInTheDocument();
   expect(screen.queryByTestId('xray-btn')).not.toBeInTheDocument();
+});
+
+/** The spanning retry edge, keyed the way the layout keys it: position 5. */
+const RETURN_RUN = edgeKey(5);
+
+/** Puts the graph on V1 with the comparison held down. */
+async function heldOverV1() {
+  await cardsOf(branched);
+  await applyOn(HAND_COPY);
+  await waitFor(() => expect(cardLabels()).toContain('Reconcile in one pass'), LAYOUT_WAIT);
+  fireEvent.pointerDown(xrayBtn());
+  await waitFor(() => expect(screen.getByTestId('xray-layer')).toBeInTheDocument());
+}
+
+/** The original's geometry, read back off the picture the comparison drew. */
+function ghostBoxes() {
+  return screen.getAllByTestId('sg-xray-card').map((el) => ({
+    id: el.getAttribute('data-id') ?? '',
+    x: parseFloat(el.style.left),
+    y: parseFloat(el.style.top),
+    width: parseFloat(el.style.width),
+    height: parseFloat(el.style.height),
+  }));
+}
+
+// A back-edge that only clears the two rows it connects cuts through whatever
+// stands between them — and, worse in a COMPARE tool, draws an unchanged edge
+// hundreds of pixels away from where the live graph draws the same edge. The
+// ghost plans its lanes the way the live graph does, off its own layout.
+it('routes a ghost back-edge through the original’s own lane plan', async () => {
+  render(<GraphCanvas workflow={branched} />);
+  await heldOverV1();
+
+  const boxes = ghostBoxes();
+  const at = new Map(boxes.map((b) => [b.id, b]));
+  const plan = planBackEdges(
+    boxes,
+    branched.edges.map((e, i) => ({ id: edgeKey(i), from: e.from, to: e.to })),
+  );
+  const lane = plan.get(RETURN_RUN);
+  const ship = at.get('ship')!;
+  const intake = at.get('intake')!;
+
+  // the plan is doing real work on this graph: the run drops below a card that
+  // belongs to neither end, which is exactly what the fallback cannot know
+  expect(lane).toBeDefined();
+  expect(lane!.floorY).toBeGreaterThan(
+    Math.max(ship.y + ship.height, intake.y + intake.height),
+  );
+
+  const routed = backEdgePath({
+    sx: ship.x + ship.width,
+    sy: ship.y + ship.height / 2,
+    tx: intake.x,
+    ty: intake.y + intake.height / 2,
+    ...lane,
+  }).d;
+  const drawn = [...document.querySelectorAll('.sg-xray-edge')].map((p) => p.getAttribute('d'));
+  expect(drawn).toContain(routed);
+});
+
+// The plan belongs to a layout that never changes, so it is worked out with that
+// layout and kept — not recomputed every time the button goes down.
+it('plans the original’s lanes once per session, not once per render', async () => {
+  render(<GraphCanvas workflow={branched} />);
+  // the ghost plans against ELK's own nodes, which carry the workflow step; the
+  // live graph plans against React Flow's boxes, which do not
+  const ghostPlans = () =>
+    planned.mock.calls.filter(([nodes]) => nodes.some((n) => 'node' in n)).length;
+
+  await heldOverV1();
+  expect(ghostPlans()).toBe(1);
+
+  // release, hold again, and put the glow on top: three more renders of the layer
+  fireEvent.pointerUp(xrayBtn());
+  await waitFor(() => expect(screen.queryByTestId('xray-layer')).not.toBeInTheDocument());
+  fireEvent.pointerDown(xrayBtn());
+  await waitFor(() => expect(screen.getByTestId('xray-layer')).toBeInTheDocument());
+  fireEvent.click(critBtn());
+  await waitFor(() =>
+    expect(document.querySelectorAll('.sg-node--critical').length).toBeGreaterThan(0),
+  );
+
+  expect(ghostPlans()).toBe(1);
 });
 
 // ---------------------------------------------------------------------------

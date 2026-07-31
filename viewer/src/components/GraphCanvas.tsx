@@ -283,8 +283,17 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
    * needs, and asking ELK a second time would be asking the same question twice.
    * Kept with the workflow it belongs to, so a second file dropped on the viewer
    * cannot be compared against the first one's ghost.
+   *
+   * The lane plan is worked out here too, with the layout it belongs to and once
+   * per session: the ghost's back-edges have to take the same routes the live
+   * graph's do, or an edge that never changed would be drawn in two different
+   * places and the comparison would be reporting a difference nobody made.
    */
-  const originalLayout = useRef<{ of: Workflow; laidOut: LaidOutGraph } | null>(null);
+  const originalLayout = useRef<{
+    of: Workflow;
+    laidOut: LaidOutGraph;
+    backPlan: Map<string, BackEdgePlan>;
+  } | null>(null);
   /**
    * The card focus is owed once the next version is on screen, or null when
    * nothing is owed. Written only when a patch consumed the step the drawer was
@@ -351,7 +360,15 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
       if (!live) return;
       // `original` is a stable object for the life of a session, so this costs the
       // effect no extra runs — it is the same pass, remembered.
-      if (original && graph === original) originalLayout.current = { of: original, laidOut: g };
+      if (original && graph === original) {
+        originalLayout.current = {
+          of: original,
+          laidOut: g,
+          // ELK's own positions, not the live boxes: the comparison is of the
+          // graph as it was LAID OUT, so its lanes are planned against that.
+          backPlan: planBackEdges(g.nodes, g.edges),
+        };
+      }
       setLaidOut(g);
       setNodes(toRFNodes(g, matched, selectedRef.current, criticalRef.current));
     });
@@ -1141,7 +1158,11 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
           {/* The original, under the live graph and out of everything's way —
               see the z-index note on `.sg-xray` in canvas.css. */}
           {xray && originalLayout.current?.of === original ? (
-            <XrayLayer laidOut={originalLayout.current.laidOut} transform={xrayTransform} />
+            <XrayLayer
+              laidOut={originalLayout.current.laidOut}
+              backPlan={originalLayout.current.backPlan}
+              transform={xrayTransform}
+            />
           ) : null}
           {ghosts.length > 0 ? (
             // The cards the patch consumed, held for one 400ms fade at the positions

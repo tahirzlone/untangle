@@ -1,5 +1,5 @@
 import { getBezierPath, Position } from '@xyflow/react';
-import { backEdgePath } from '../graph/backEdge';
+import { backEdgePath, type BackEdgePlan } from '../graph/backEdge';
 import type { LaidOutGraph } from '../graph/layout';
 
 /**
@@ -14,8 +14,22 @@ import type { LaidOutGraph } from '../graph/layout';
  *
  * Nothing here takes a pointer or reaches a screen reader: the live graph is the
  * one you interact with, and this is a picture of what it used to be.
+ *
+ * `backPlan` is the original's own lane plan, worked out once with its layout —
+ * the SAME pass the live graph routes by. Without it a ghost back-edge could only
+ * clear the two rows it connects, so it would cut through whatever else stands in
+ * its span AND sit hundreds of pixels above the live run of the very same edge:
+ * a difference the compare tool would be inventing.
  */
-export function XrayLayer({ laidOut, transform }: { laidOut: LaidOutGraph; transform: string }) {
+export function XrayLayer({
+  laidOut,
+  backPlan,
+  transform,
+}: {
+  laidOut: LaidOutGraph;
+  backPlan: Map<string, BackEdgePlan>;
+  transform: string;
+}) {
   const at = new Map(laidOut.nodes.map((n) => [n.id, n]));
 
   const routes = laidOut.edges.flatMap((e) => {
@@ -28,11 +42,11 @@ export function XrayLayer({ laidOut, transform }: { laidOut: LaidOutGraph; trans
     const tx = to.x;
     const ty = to.y + to.height / 2;
     // The same two routes SignalEdge picks between, chosen by the same geometric
-    // test — a run that goes backwards takes a lane under the cards rather than a
-    // bezier straight through them.
+    // test and — for the backwards one — routed through the same lane plan, so a
+    // run that has not moved between versions is drawn in the same place twice.
     const d =
       tx < sx
-        ? backEdgePath({ sx, sy, tx, ty }).d
+        ? backEdgePath({ sx, sy, tx, ty, ...backPlan.get(e.id) }).d
         : getBezierPath({
             sourceX: sx,
             sourceY: sy,
@@ -57,6 +71,9 @@ export function XrayLayer({ laidOut, transform }: { laidOut: LaidOutGraph; trans
           key={n.id}
           className="sg-node sg-xray-card"
           data-testid="sg-xray-card"
+          // the same handle React Flow stamps on a live card, so the two pictures
+          // can be read against each other card by card
+          data-id={n.id}
           style={{ left: n.x, top: n.y, width: n.width, height: n.height }}
         >
           <div className="sg-node-head">
