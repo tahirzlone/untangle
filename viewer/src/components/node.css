@@ -203,6 +203,77 @@
     0 4px 18px color-mix(in srgb, var(--bg-deep) 45%, transparent);
 }
 
+/* ---------------------------------------------------------------------------
+   The two ends of the work.
+
+   Written LAST, after the heat, the route and the selection: `.sg-node--hot` and
+   `.sg-node--selected` both restate `border-color` as a shorthand, which would
+   take the rail straight back off a painful or open first step. Source order is
+   what keeps it on — the same bargain `.sg-node--selected` itself makes with the
+   heat shadows above it.
+   --------------------------------------------------------------------------- */
+
+/* The way in: a rail down the leading edge, on the side the work arrives from.
+   The 2px the rail adds comes out of the padding, so the one card wearing it
+   sets its text at the same place as every other card. */
+.sg-node--start {
+  border-left: 3px solid var(--accent);
+  padding-left: 12px;
+}
+
+/* The way out: the header row filled, which is the loudest thing the card can do
+   without changing its size — the last step reads as arrived at rather than
+   passed through. The bleed is the card's own padding, given back, so the fill
+   reaches the border on three sides and the card's clip rounds it. */
+.sg-node--end .sg-node-head {
+  margin: -12px -14px 6px;
+  padding: 10px 14px;
+  background: var(--accent);
+}
+.sg-node--end .sg-label {
+  color: var(--bg-deep);
+}
+/* The abbreviation, read back out of the fill it now sits on. Two classes, like
+   `.sg-node--hot .sg-icon` above and written after it, so an output step that is
+   also the most painful one keeps ONE treatment rather than half of each. */
+.sg-node--end .sg-icon {
+  background: color-mix(in srgb, var(--bg-deep) 16%, transparent);
+  color: var(--bg-deep);
+  border-color: color-mix(in srgb, var(--bg-deep) 32%, transparent);
+}
+
+/* Which end this is, said in a word. Sits half off the TOP-LEFT corner — the pip
+   owns the right one — and outside the card for the same reason the pip is
+   outside it: the card clips its own overflow to keep its rounded border.
+
+   Directly above the rail on a start card, so the two read as one gesture. */
+.sg-endpoint {
+  position: absolute;
+  top: -9px;
+  left: 12px;
+  /* over the neighbouring card's shadow, under the drawer — the pip's z-index */
+  z-index: 2;
+  font-family: var(--font-anno);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  line-height: 1;
+  color: var(--bg-deep);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-chip);
+  padding: 3px 8px;
+}
+
+/* The END chip is the same chip INVERTED, because it lands on the accent header
+   the end card wears: a filled pill on a filled row is a pill that disappears
+   into it, leaving a word floating with no shape of its own. Punched out of the
+   fill instead, it reads on the header AND on the canvas above it. */
+.sg-endpoint[data-endpoint='end'] {
+  color: var(--accent);
+  background: var(--bg-deep);
+}
+
 /* Ends on `--shell-opacity` rather than on 1, so a card that mounts into an
    already-stepped-back graph — the replacement a patch leaves behind while
    CRITICAL PATH is down — arrives at the strength it belongs at. */

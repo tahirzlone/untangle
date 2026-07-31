@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { createEvent, fireEvent, screen, waitFor } from '@testing-library/react';
 import { loadWorkflow } from '../graph/load';
 import type { Workflow } from '../graph/types';
 
@@ -51,6 +51,28 @@ export async function applyOn(label: string, index = 0) {
   fireEvent.click(cardFor(label, screen.getAllByTestId('sg-node')));
   await screen.findByTestId('detail-drawer');
   fireEvent.click(screen.getAllByTestId('sg-sug-apply')[index]);
+}
+
+/**
+ * One step of a pointer gesture, with `event.view` populated.
+ *
+ * Real pointers slip, and React Flow hands `nodeClickDistance` to d3-drag, which
+ * swallows the trailing click of any gesture that travelled further. d3-drag
+ * works in mouse events, so the whole gesture is reachable from jsdom — with one
+ * catch: it binds its mousemove/mouseup listeners to `event.view` and hands that
+ * same window to `yesdrag`, which is what installs (or doesn't) the click guard.
+ * jsdom's MouseEvent constructor refuses a `view` member here, so it is defined
+ * on the instance instead. That field is the only thing supplied by hand;
+ * everything the assertions depend on is real d3-drag driving real React Flow.
+ */
+export function mouse(
+  type: 'mouseDown' | 'mouseMove' | 'mouseUp' | 'click',
+  target: Element | Window,
+  x: number,
+) {
+  const event = createEvent[type](target, { clientX: x, clientY: 100, button: 0 });
+  Object.defineProperty(event, 'view', { value: window });
+  fireEvent(target, event);
 }
 
 /**

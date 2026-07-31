@@ -36,7 +36,9 @@ import { planLabels, type LabelOffset, type LabelTag } from '../graph/labels';
 import { layoutWorkflow, NODE_HEIGHT, NODE_WIDTH, type LaidOutGraph } from '../graph/layout';
 import { planBackEdges, type BackEdgePlan } from '../graph/backEdge';
 import { DetailDrawer } from './DetailDrawer';
+import { EndpointMarks, type EndpointBox } from './EndpointMarks';
 import { ImpactMeter } from './ImpactMeter';
+import { PeekCard, peekAnchor, PEEK_DELAY_MS, type PeekAnchor } from './PeekCard';
 import { SignalNode } from './SignalNode';
 import { SignalEdge } from './SignalEdge';
 import { VersionStrip } from './VersionStrip';
@@ -364,6 +366,13 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
    * captures, and therefore where the arrowhead definition has to live.
    */
   const [defsHost, setDefsHost] = useState<HTMLElement | null>(null);
+  /**
+   * The step the pointer has rested on long enough to be asking about, and where
+   * its card was when it did. Null whenever nothing is being peeked at.
+   */
+  const [peek, setPeek] = useState<{ id: string; at: PeekAnchor } | null>(null);
+  /** Is a card being dragged right now? */
+  const [dragging, setDragging] = useState(false);
 
   const [opened, setOpened] = useState(() => openSession(workflow));
   // A new graph is a new session, adjusted during render rather than in an effect:
@@ -392,6 +401,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const ghostTimer = useRef(0);
   const flipTimer = useRef(0);
   const exportTimer = useRef(0);
+  const peekTimer = useRef(0);
   const flipped = useRef<HTMLElement[]>([]);
   /**
    * The original's layout, taken the one time the original IS the live graph.
@@ -675,6 +685,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
       window.clearTimeout(ghostTimer.current);
       window.clearTimeout(flipTimer.current);
       window.clearTimeout(exportTimer.current);
+      window.clearTimeout(peekTimer.current);
     },
     [],
   );
@@ -707,6 +718,27 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
         width: n.width ?? NODE_WIDTH,
         height: n.height ?? NODE_HEIGHT,
       })),
+    [nodes],
+  );
+
+  /**
+   * The cards the entry and exit marks hang off — every `input` and every
+   * `output`, wherever the layout put them and wherever the user has dragged
+   * them since. Read off `nodes` rather than off ELK's answer for that reason:
+   * drag the first step and its arrival stroke goes with it.
+   */
+  const endpointBoxes = useMemo<EndpointBox[]>(
+    () =>
+      nodes
+        .filter((n) => n.data.node.kind === 'input' || n.data.node.kind === 'output')
+        .map((n) => ({
+          id: n.id,
+          kind: n.data.node.kind,
+          x: n.position.x,
+          y: n.position.y,
+          width: n.width ?? NODE_WIDTH,
+          height: n.height ?? NODE_HEIGHT,
+        })),
     [nodes],
   );
 
@@ -1034,6 +1066,66 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
    */
   const canvasIdle = !running && report === null;
 
+  /**
+   * Is the canvas in a state where a peek would be an interruption?
+   *
+   * ONE flag, deliberately, and every mode that owns the canvas raises it: a card
+   * mid-drag (the pointer is doing something, not asking something), the tour
+   * driving the camera, and the report holding the screen. The wipe compare will
+   * raise it too when it lands — this is the line it joins, so the peek never has
+   * to grow a second suppression route.
+   */
+  const peekSuppressed = dragging || !canvasIdle;
+
+  const hidePeek = useCallback(() => {
+    window.clearTimeout(peekTimer.current);
+    setPeek((open) => (open === null ? open : null));
+  }, []);
+
+  /**
+   * The pointer came to rest on a step the KB matched.
+   *
+   * The wait is what makes this a question rather than a flicker: a pointer
+   * crossing the graph on its way somewhere else passes over cards in a few
+   * frames each, and a peek that opened on contact would be a panel strobing
+   * along the route. 150ms is the pointer saying it meant this one — which is
+   * timing, not motion, so it stands at every motion setting; what
+   * prefers-reduced-motion drops is the entrance the card arrives with.
+   *
+   * The card's box is read at the END of the wait, off the DOM, because that is
+   * where the pointer actually is by then and because React Flow owns where the
+   * wrapper sits. A card that left in the meantime raises nothing.
+   */
+  const onNodeMouseEnter = useCallback(
+    (_: unknown, node: SignalRFNode) => {
+      if (peekSuppressed) return;
+      // Never on an unmatched step: the peek states what the KB matched, and on a
+      // card it matched nothing to there is nothing to state.
+      if (node.data.suggestions.length === 0) return;
+      window.clearTimeout(peekTimer.current);
+      peekTimer.current = window.setTimeout(() => {
+        const wrapper = document.querySelector<HTMLElement>(
+          `.react-flow__node[data-id="${node.id}"]`,
+        );
+        if (!wrapper) return;
+        setPeek({ id: node.id, at: peekAnchor(wrapper.getBoundingClientRect(), window.innerWidth) });
+      }, PEEK_DELAY_MS);
+    },
+    [peekSuppressed],
+  );
+
+  /** Leaving is instant, and cancels a peek that had not opened yet. */
+  const onNodeMouseLeave = useCallback(() => hidePeek(), [hidePeek]);
+
+  // A mode taking the canvas mid-peek drops it — the panel would otherwise hang
+  // over a drag it is not about, or over a camera it cannot follow.
+  useEffect(() => {
+    if (peekSuppressed) hidePeek();
+  }, [hidePeek, peekSuppressed]);
+
+  const onNodeDragStart = useCallback(() => setDragging(true), []);
+  const onNodeDragStop = useCallback(() => setDragging(false), []);
+
   // Drag and click share the same gesture; React Flow tells them apart by
   // distance, and the tolerance is set on the ReactFlow element below — see the
   // note on `nodeClickDistance`, which is load-bearing for this handler ever
@@ -1043,9 +1135,13 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
       // While the tour runs the canvas is being driven, not browsed: a panel
       // opening over the camera would be a second thing moving.
       if (!canvasIdle) return;
+      // The question has been answered in full: a peek left standing beside the
+      // panel would be the same row said twice, and the pointer need not move
+      // for the click to have happened.
+      hidePeek();
       select(node.id);
     },
-    [canvasIdle, select],
+    [canvasIdle, hidePeek, select],
   );
 
   /**
@@ -1200,6 +1296,10 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   // panel's subject can honestly come from, and a step the last patch consumed
   // has no entry here — which closes the drawer on its own.
   const selected = selectedId ? graph.nodes.find((n) => n.id === selectedId) ?? null : null;
+  // Derived from the id for the same reason the panel's subject is: a patch can
+  // consume the very step the pointer is resting on, and a peek about a card that
+  // is no longer there would outlive its subject. No card, no peek.
+  const peeked = peek ? nodes.find((n) => n.id === peek.id) ?? null : null;
 
   return (
     <>
@@ -1216,13 +1316,19 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
             `url(#fp-arrow)` is looked up across the whole document either way. */}
         {defsHost
           ? createPortal(
-              <svg className="sg-defs" aria-hidden="true">
-                <defs>
-                  <marker id="fp-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-                    <path d="M 0 0 L 8 4 L 0 8" fill="none" stroke="context-stroke" strokeWidth="1.5" />
-                  </marker>
-                </defs>
-              </svg>,
+              <>
+                <svg className="sg-defs" aria-hidden="true">
+                  <defs>
+                    <marker id="fp-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+                      <path d="M 0 0 L 8 4 L 0 8" fill="none" stroke="context-stroke" strokeWidth="1.5" />
+                    </marker>
+                  </defs>
+                </svg>
+                {/* In the same layer, and for the same reason: the marks are part
+                    of the graph, so they belong inside the element the export
+                    captures and inside the transform the cards are drawn by. */}
+                <EndpointMarks boxes={endpointBoxes} />
+              </>,
               defsHost,
             )
           : null}
@@ -1330,6 +1436,13 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
             edges={edges}
             onNodesChange={onNodesChange}
             onNodeClick={onNodeClick}
+            // The peek's whole gesture: rest on a card, leave it. Deliberately no
+            // focus handler beside them — the keyboard route opens the drawer, and
+            // a panel that raised itself on every Tab would be talking over it.
+            onNodeMouseEnter={onNodeMouseEnter}
+            onNodeMouseLeave={onNodeMouseLeave}
+            onNodeDragStart={onNodeDragStart}
+            onNodeDragStop={onNodeDragStop}
             onPaneClick={closeDrawer}
             onInit={takeInstance}
             onMove={onViewportMove}
@@ -1395,6 +1508,9 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
             </div>
           ) : null}
         </div>
+        {/* Portalled onto the document by the card itself, so it is never clipped
+            by the pane it is drawn beside and never scaled by the zoom. */}
+        {peek && peeked ? <PeekCard suggestions={peeked.data.suggestions} at={peek.at} /> : null}
         {selected ? (
           session ? (
             <DetailDrawer

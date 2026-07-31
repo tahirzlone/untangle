@@ -1,0 +1,95 @@
+/* The hover peek — the KB's first row on a step, stated beside it.
+   Signal surfaces only: --surface-2 (a step up from the drawer's --surface, so a
+   panel behind it still reads as the deeper thing), --line border, mono for
+   anything that is an instruction rather than prose. */
+.sg-peek {
+  position: fixed;
+  /* above the toolbar (5) and the drawer (6): the peek is the topmost transient
+     thing on the screen, and it is gone the moment the pointer leaves */
+  z-index: 8;
+  box-sizing: border-box;
+  /* never a target — the pointer is resting on the CARD, and a panel that took
+     the pointer would take the hover it was raised by with it */
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 11px 13px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--bg-deep) 60%, transparent);
+  animation: sg-peek-in 120ms ease-out;
+}
+
+.sg-peek-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sg-peek-name {
+  font-family: var(--font-anno);
+  font-size: 11px;
+  color: var(--accent);
+  /* repo names run long and the card is 260px — wrap rather than overflow */
+  overflow-wrap: anywhere;
+}
+
+.sg-peek-claim {
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text);
+  /* shorthand, not margin-bottom: the <p> would keep its UA margin otherwise and
+     open a gap the flex gap already accounts for */
+  margin: 0;
+  /* the whole claim if it is short, three lines of it if it is not — the drawer
+     is where a long one is read in full */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.sg-peek-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+/* What the row claims it saves — the one number that makes a peek worth reading. */
+.sg-peek-metric {
+  font-family: var(--font-anno);
+  font-size: 11px;
+  color: var(--accent);
+}
+.sg-peek-more {
+  font-family: var(--font-anno);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--dim);
+}
+/* Where the peek ends and the drawer begins. Pushed to the far end of the row so
+   it reads as a footnote rather than as part of the claim. */
+.sg-peek-hint {
+  margin-left: auto;
+  font-family: var(--font-anno);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  color: var(--dim);
+}
+
+/* Arrives from a few pixels behind, which is what makes it read as attached to
+   the card rather than dropped on top of the graph. */
+@keyframes sg-peek-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* The 150ms the pointer has to rest is NOT touched here: it is how the peek tells
+   an intent from a pass-through, and a peek that fired instantly would be a panel
+   flashing at every card the pointer crossed. What goes is the entrance — the
+   card is simply there. */
+@media (prefers-reduced-motion: reduce) {
+  .sg-peek { animation: none; }
+}

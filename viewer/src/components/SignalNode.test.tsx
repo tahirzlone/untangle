@@ -93,14 +93,58 @@ it('hangs the pip outside the clipped card', () => {
   expect(screen.getByTestId('sg-node')).not.toContainElement(screen.getByTestId('sg-badge'));
 });
 
-it('carries no kind-shaped variant classes — every card is uniform', () => {
+/**
+ * The middle of the work is uniform — the ONE thing a card's kind changes is
+ * whether it is an end of the graph.
+ *
+ * The exact-match is what forbids the old kind-shaped variants coming back: a
+ * `sg-node--decision` would fail this outright, while start and end are named
+ * for what they are rather than for the kind that produces them.
+ */
+it('carries no kind-shaped variant classes but the two ends', () => {
+  const ENDS: Partial<Record<NodeKind, string>> = {
+    input: 'sg-node sg-node--start',
+    output: 'sg-node sg-node--end',
+  };
   for (const kind of KINDS) {
     const { unmount } = render(<SignalNodeBody node={node({ kind, painLevel: 1 })} />);
     const el = screen.getByTestId('sg-node');
-    // the exact-match above already forbids every legacy and kind-shaped class;
-    // this keeps the failure message pointed at the thing under test
-    expect(el.className).toBe('sg-node');
+    expect(el.className).toBe(ENDS[kind] ?? 'sg-node');
     expect(el.className).not.toContain(`--${kind}`);
     unmount();
   }
+});
+
+// Kind-driven and nothing else: a graph may open in two places and finish in two
+// others, and every one of them is an end of the work.
+it('states which end of the work each endpoint card is', () => {
+  const { rerender } = render(<SignalNodeBody node={node({ kind: 'input' })} />);
+  let chip = screen.getByTestId('sg-endpoint');
+  expect(chip).toHaveTextContent('START');
+  expect(chip).toHaveAttribute('data-endpoint', 'start');
+
+  rerender(<SignalNodeBody node={node({ kind: 'output' })} />);
+  chip = screen.getByTestId('sg-endpoint');
+  expect(chip).toHaveTextContent('END');
+  expect(chip).toHaveAttribute('data-endpoint', 'end');
+});
+
+it('wears no endpoint chip on a step in the middle of the work', () => {
+  for (const kind of KINDS.filter((k) => k !== 'input' && k !== 'output')) {
+    const { unmount } = render(<SignalNodeBody node={node({ kind })} />);
+    expect(screen.queryByTestId('sg-endpoint')).not.toBeInTheDocument();
+    unmount();
+  }
+});
+
+// Same bargain as the pip, on the other corner: the card clips its own overflow,
+// so a chip drawn inside it would lose the half that straddles the border — and
+// the two never collide on an output step the KB matched.
+it('hangs the endpoint chip outside the clipped card, beside the pip', () => {
+  render(
+    <SignalNodeBody node={node({ kind: 'output' })} suggestions={matched('verify-browser')} />,
+  );
+  const chip = screen.getByTestId('sg-endpoint');
+  expect(screen.getByTestId('sg-node')).not.toContainElement(chip);
+  expect(screen.getByTestId('sg-badge')).not.toContainElement(chip);
 });

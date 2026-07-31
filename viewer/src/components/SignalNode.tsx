@@ -17,6 +17,20 @@ const PAIN_CLASS: Partial<Record<WorkflowNode['painLevel'], string>> = {
   5: ' sg-node--hot',
 };
 
+/**
+ * The two ends of the work, and which end each kind is.
+ *
+ * Driven by KIND and nothing else: `input` is a way in and `output` is a way out,
+ * wherever they sit in the layout. A graph is free to have several of each — two
+ * places the work can start, two things it can produce — and every one of them
+ * says so, rather than the canvas picking a winner by position and quietly
+ * demoting the rest.
+ */
+const ENDPOINT: Partial<Record<NodeKind, 'start' | 'end'>> = {
+  input: 'start',
+  output: 'end',
+};
+
 const METER_SEGMENTS = 5;
 
 /**
@@ -43,7 +57,9 @@ export function PainMeter({ pain }: { pain: WorkflowNode['painLevel'] }) {
  *
  * The pip is a SIBLING of the card, not a child: it straddles the top-right
  * corner, and the card clips its own overflow to keep its rounded border. Both
- * are positioned against `.sg-node-shell`, which is exactly the card's box.
+ * are positioned against `.sg-node-shell`, which is exactly the card's box — and
+ * so is the START/END chip, for the same reason and on the other corner, so the
+ * two never stand on each other on an output step the KB matched.
  */
 export function SignalNodeBody({
   node,
@@ -57,8 +73,14 @@ export function SignalNodeBody({
   critical?: boolean;
   suggestions?: Suggestion[];
 }) {
+  const endpoint = ENDPOINT[node.kind];
   return (
     <>
+      {endpoint ? (
+        <span className="sg-endpoint" data-testid="sg-endpoint" data-endpoint={endpoint}>
+          {endpoint.toUpperCase()}
+        </span>
+      ) : null}
       {suggestions.length > 0 ? (
         <span
           className="sg-badge"
@@ -72,7 +94,7 @@ export function SignalNodeBody({
         </span>
       ) : null}
       <div
-        className={`sg-node${PAIN_CLASS[node.painLevel] ?? ''}${critical ? ' sg-node--critical' : ''}${selected ? ' sg-node--selected' : ''}`}
+        className={`sg-node${endpoint ? ` sg-node--${endpoint}` : ''}${PAIN_CLASS[node.painLevel] ?? ''}${critical ? ' sg-node--critical' : ''}${selected ? ' sg-node--selected' : ''}`}
         data-testid="sg-node"
         data-kind={node.kind}
         data-pain={node.painLevel}
