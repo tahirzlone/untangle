@@ -56,9 +56,9 @@ interface WorldBox {
  * rather than two unrelated photographs.
  *
  * The under layer takes no pointer and reaches no reader: the live graph is the
- * one you interact with, and the impact panel's live region is what a screen
- * reader is told. The handle is the mode's one control — draggable, and a
- * slider to the keyboard.
+ * one you interact with, and the delta strip at the seam is what states the
+ * figures while the rail stands down. The handle is the mode's one control —
+ * draggable, and a slider to the keyboard.
  */
 export function WipeCompare({
   original,

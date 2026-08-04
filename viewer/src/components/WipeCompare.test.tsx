@@ -508,6 +508,100 @@ it('is a single-purpose view: OPTIMIZE and the version strip step away, the draw
   expect(screen.getByTestId('critpath-btn')).toBeEnabled();
 });
 
+/**
+ * The drag that had nothing to grab. The live layer's clip stops it hit-testing
+ * left of the divider, so a pointer drag on the ORIGINAL side falls through to
+ * plain DOM — and with nothing said about selection, the browser answered with
+ * its own default and dragged a highlight across the title, the panels and every
+ * chip it could reach. The mode closes the surface to selection for as long as
+ * it holds it, and opens it again on the way out.
+ */
+it('closes the canvas to text selection while the wipe holds it, and opens it again on exit', async () => {
+  const { container } = render(<GraphCanvas workflow={enriched} />);
+  await onV1(container);
+  // the prompt is the surface that deliberately offers its text — the one the
+  // no-select must not outlive the mode to reach
+  fireEvent.click(screen.getByTestId('prompt-btn'));
+  const selectable = screen.getByTestId('prompt-text');
+  expect(selectable.className).toContain('sg-prompt-text');
+
+  const canvas = screen.getByTestId('canvas');
+  // the modifier is what the rule is written against — the base class says
+  // nothing about selection, so outside the mode the prompt's own word stands
+  expect(canvas.className).not.toContain('sg-canvas--wipe');
+
+  await openWipe();
+  expect(canvas.className).toContain('sg-canvas--wipe');
+
+  fireEvent.keyDown(window, { key: 'Escape' });
+  await waitFor(() => expect(screen.queryByTestId('wipe-under')).not.toBeInTheDocument());
+  // the surface is text again, and the prompt is back offering its own
+  expect(canvas.className).not.toContain('sg-canvas--wipe');
+  expect(screen.getByTestId('prompt-text').className).toContain('sg-prompt-text');
+});
+
+/**
+ * A highlight dragged before the toggle would have no gesture left to clear it,
+ * the canvas taking no selection for the mode's whole life. So the mode opens on
+ * a clean surface.
+ *
+ * Asked as "is the highlight still standing on what it was made over", not as
+ * "is the range count zero": jsdom's `focus()` writes a document selection over
+ * whatever it focuses, which no browser does, so the handle taking the keyboard
+ * on open leaves a range behind here that exists nowhere else. What the fix owes
+ * the reader is that THEIR selection is gone, and that is what this asks.
+ */
+it('drops a selection made before the wipe opened', async () => {
+  const { container } = render(<GraphCanvas workflow={enriched} />);
+  await onV1(container);
+
+  const title = container.querySelector('.sg-wf-title')!;
+  const range = document.createRange();
+  range.selectNodeContents(title);
+  const selection = window.getSelection()!;
+  selection.removeAllRanges();
+  selection.addRange(range);
+  expect(title.contains(selection.anchorNode)).toBe(true);
+
+  await openWipe();
+  expect(title.contains(window.getSelection()!.anchorNode)).toBe(false);
+});
+
+/**
+ * The rail stands at z5 and the divider at z4, so dragging the seam rightwards —
+ * the mode's whole gesture — used to walk the handle and its deltas in behind
+ * the impact panel: numbers unreadable, handle ungrabbable, in the exact band
+ * the demo travels through. The rail steps away with the version strip, and the
+ * panel state it was holding survives the round trip.
+ */
+it('stands the rail down inside the wipe, and brings it back holding what it held', async () => {
+  const { container } = render(<GraphCanvas workflow={enriched} />);
+  await onV1(container);
+
+  // open the prompt too, so the rail is carrying state worth losing
+  fireEvent.click(screen.getByTestId('prompt-btn'));
+  const rail = screen.getByTestId('canvas-rail');
+  expect(rail).toContainElement(screen.getByTestId('impact-panel'));
+  expect(rail).toContainElement(screen.getByTestId('prompt-panel'));
+
+  await openWipe();
+  expect(screen.queryByTestId('canvas-rail')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('impact-panel')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('prompt-panel')).not.toBeInTheDocument();
+  // nothing of the rail's is left to paint over the seam — the figures are told
+  // at the divide instead, and the handle is grabbable the whole way across
+  expect(screen.getByTestId('wipe-deltas')).toBeInTheDocument();
+  point('pointerDown', handle(), 1000);
+  await waitFor(() => expect(liveClip(container)).toBe('inset(0 0 0 1000px)'));
+  expect(screen.getByTestId('wipe-deltas').style.left).toBe('1000px');
+
+  fireEvent.keyDown(window, { key: 'Escape' });
+  await waitFor(() => expect(screen.getByTestId('canvas-rail')).toBeInTheDocument());
+  expect(screen.getByTestId('impact-panel')).toBeInTheDocument();
+  expect(screen.getByTestId('prompt-panel')).toBeInTheDocument();
+  expect(screen.getByTestId('prompt-btn')).toHaveAttribute('aria-pressed', 'true');
+});
+
 // The route would glow on only one side of the divider and read as a difference
 // between the versions — so it stands down with the rest, and comes back where
 // the toggle left it.

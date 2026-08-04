@@ -27,6 +27,23 @@
   animation: sg-compiling 1.6s ease-in-out infinite;
 }
 
+/* Inside the wipe, the canvas is not text to be selected. The live layer's clip
+   stops it hit-testing on the ORIGINAL side, so a drag there lands on plain DOM
+   and the browser answers with its default: a selection dragged across the
+   title, the panels and every chip it can reach. The mode's one gesture is the
+   divider, so while it is open nothing on the canvas offers itself to a
+   selection. Scoped to the modifier — outside the mode the prompt's own
+   `user-select: text` is the only word on the subject, and it still is inside,
+   being the more specific rule.
+
+   Not paired with a preventDefault on the viewport's pointerdown: that
+   suppresses the compatibility mousedown d3-zoom pans on, and pan and zoom stay
+   live inside the wipe by design. */
+.sg-canvas--wipe {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .sg-defs { position: absolute; width: 0; height: 0; }
 
 /* One band across the top, and a WRAPPING one: at a narrow window the chips run

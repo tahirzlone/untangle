@@ -1277,6 +1277,13 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
    * in, and the transform is taken at the press so the comparison lands in the
    * coordinate space the cards are drawn in right now — see `onViewportMove`
    * for what keeps it there.
+   *
+   * The surface is handed over clean, too. Inside the mode the canvas takes no
+   * text selection at all — see `.sg-canvas--wipe` — so a highlight dragged
+   * across the panels BEFORE the press would sit there for the mode's whole
+   * life with no gesture left that could clear it. Dropped at the press rather
+   * than in an effect: the mode's own entry point is where the rest of what it
+   * stands down is stated.
    */
   const toggleWipe = useCallback(() => {
     if (wipe) {
@@ -1284,6 +1291,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
       return;
     }
     closeDrawer();
+    window.getSelection?.()?.removeAllRanges();
     setWipeTransform(readViewportTransform());
     setWipe(true);
   }, [closeDrawer, wipe]);
@@ -1437,7 +1445,15 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
       {/* The morph durations ride on the root: every shell that FLIPs and every
           ghost that fades is inside this element, so one stamp reaches them all
           and the numbers CSS animates on are the ones TypeScript waits for. */}
-      <div className="sg-canvas" data-testid="canvas" inert={report !== null} style={MOTION_STYLE}>
+      {/* The wipe modifier closes the surface to text selection for as long as
+          the mode holds it — see the rule in canvas.css for why the clip makes
+          that necessary. */}
+      <div
+        className={`sg-canvas${wipe ? ' sg-canvas--wipe' : ''}`}
+        data-testid="canvas"
+        inert={report !== null}
+        style={MOTION_STYLE}
+      >
         {/* Inside React Flow's viewport, which is the element an export captures —
             see the effect that finds it. On screen the placement is immaterial:
             `url(#fp-arrow)` is looked up across the whole document either way. */}
@@ -1578,8 +1594,19 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
           />
         )}
         {/* The right-hand rail. A column, not a slot: the panels that stand here
-            stack under the toolbar, and the drawer draws over all of them. */}
-        {showImpact ? (
+            stack under the toolbar, and the drawer draws over all of them.
+
+            Away while the wipe is open, with the version strip and for the same
+            reason: the rail stands at z5 over the divider's z4, so dragging the
+            seam rightwards — the mode's whole gesture — walked the handle and
+            its deltas in behind the impact panel, where the numbers could not be
+            read and the handle could not be grabbed. Raising the divider over
+            the rail would only have decided which of two things reads the same
+            band; inside a single-purpose comparison the rail has nothing to add,
+            because the delta strip at the seam already states the headline
+            figures. It comes back, exactly as it was, the moment the wipe
+            closes. */}
+        {showImpact && !wipe ? (
           <div className="sg-rail" data-testid="canvas-rail">
             <ImpactPanel summary={summary} />
             {/* The prompt joins the column under the impact panel — stacked,
