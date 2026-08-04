@@ -4,7 +4,8 @@
     "title": "Ship a Feature End to End",
     "generatedAt": "2026-07-29T14:02:00Z",
     "model": "claude-fable-5",
-    "kbSource": "airtable"
+    "kbSource": "airtable",
+    "promptIntro": "Ship a small feature end to end, from brief to release. Start from the brief and its acceptance criteria, build the feature in verified slices, and finish by opening the PR and cutting the release with the evidence attached."
   },
   "nodes": [
     {
@@ -67,6 +68,7 @@
       "category": "MCP Server",
       "claim": "Reads the live docs for you and answers from the page, so the tab-hoarding round trip disappears.",
       "install": "claude mcp add firecrawl -- npx -y firecrawl-mcp",
+      "promptFragment": "Use firecrawl-mcp to pull the library docs instead of opening a dozen tabs and copying snippets around by hand. Ask it for the pages that matter as soon as the brief is settled, and work from what it returns. Add it first with `claude mcp add firecrawl -- npx -y firecrawl-mcp`.",
       "effect": {
         "removeNodes": ["research-docs"],
         "mergeNodes": [],
@@ -97,6 +99,7 @@
       "category": "MCP Server",
       "claim": "Drives the real browser and reads the console itself, so the click-through and the missed error both stop being yours.",
       "install": "claude mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest",
+      "promptFragment": "Once the feature builds, use chrome-devtools-mcp to verify it: let it drive the real browser through the flow and read the console itself instead of clicking through every state by hand. Treat its clean pass as the gate before the PR opens.",
       "effect": {
         "removeNodes": [],
         "mergeNodes": ["verify-browser"],

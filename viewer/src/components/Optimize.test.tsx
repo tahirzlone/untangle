@@ -512,19 +512,20 @@ it('keeps Tab inside the panel', async () => {
   const restore = reduceMotion();
   try {
     await scorecardAfterInstantTour();
-    const exportPng = screen.getByTestId('export-png');
+    const promptCopy = screen.getByTestId('scorecard-prompt-copy');
     const close = screen.getByTestId('scorecard-close');
     expect(document.activeElement).toBe(close);
 
-    // CLOSE is the last stop in the panel, so Tab comes round to the first
+    // CLOSE is the last stop in the panel, so Tab comes round to the first —
+    // the prompt section's COPY, which stands above the actions
     const forward = createEvent.keyDown(close, { key: 'Tab' });
     fireEvent(close, forward);
     expect(forward.defaultPrevented).toBe(true);
-    expect(document.activeElement).toBe(exportPng);
+    expect(document.activeElement).toBe(promptCopy);
 
-    // and EXPORT PNG is the first, so Shift+Tab comes round to the last
-    const back = createEvent.keyDown(exportPng, { key: 'Tab', shiftKey: true });
-    fireEvent(exportPng, back);
+    // and that COPY is the first, so Shift+Tab comes round to the last
+    const back = createEvent.keyDown(promptCopy, { key: 'Tab', shiftKey: true });
+    fireEvent(promptCopy, back);
     expect(back.defaultPrevented).toBe(true);
     expect(document.activeElement).toBe(close);
   } finally {

@@ -1,0 +1,95 @@
+/* Optimized prompt panel — the session's deliverable, in the right rail under
+   the impact panel. Same Signal surface grammar as the panel above it: --surface
+   on --line, attached to the canvas's right edge, so the two read as one column
+   of reports. Wider than the impact panel because this one holds prose. */
+.sg-prompt {
+  position: relative;
+  box-sizing: border-box;
+  width: 304px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  /* attached to the right edge of the canvas, so only the left corners are cut */
+  border-right: none;
+  border-radius: var(--radius-card) 0 0 var(--radius-card);
+  box-shadow: -14px 0 34px color-mix(in srgb, var(--bg-deep) 45%, transparent);
+}
+
+.sg-prompt-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sg-prompt-title {
+  font-family: var(--font-anno);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--dim);
+}
+
+/* Before the first apply: the opening is a valid prompt, and this says why it is
+   alone. Quiet, like the impact panel's own nothing-yet line. */
+.sg-prompt-none {
+  margin: 0;
+  padding: 10px 12px 0;
+  font-family: var(--font-anno);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--dim);
+}
+
+/* The prompt itself: mono, wrapped, scrollable, and above all SELECTABLE — this
+   is text to take away, not a picture of text. The height cap keeps the panel
+   inside the viewport when it shares the rail with an open impact panel. */
+.sg-prompt-text {
+  margin: 0;
+  padding: 12px;
+  max-height: 38vh;
+  overflow-y: auto;
+  font-family: var(--font-anno);
+  font-size: 10.5px;
+  line-height: 1.65;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+  cursor: text;
+}
+.sg-prompt-text:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* The copy control: EXPORT's ghost-button conventions at header scale. */
+.sg-copy-btn {
+  font-size: 9px;
+  padding: 3px 9px;
+}
+/* The moment after the press: the accent the theme spends on things the user
+   earned, and one soft flash that drains. The label swap is what a screen
+   reader hears; the flash is only for the eye. */
+.sg-copy-btn--copied {
+  color: var(--accent);
+  border-color: var(--accent);
+  animation: sg-copy-flash 420ms ease-out;
+}
+@keyframes sg-copy-flash {
+  from {
+    background: var(--accent-soft);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* the swap to COPIED lands instantly; only the flash stands down */
+  .sg-copy-btn--copied {
+    animation: none;
+  }
+}

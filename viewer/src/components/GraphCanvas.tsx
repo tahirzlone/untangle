@@ -35,11 +35,13 @@ import { criticalPath, NO_PATH } from '../graph/insight';
 import { planLabels, type LabelOffset, type LabelTag } from '../graph/labels';
 import { layoutWorkflow, NODE_HEIGHT, NODE_WIDTH, type LaidOutGraph } from '../graph/layout';
 import { impactSummary } from '../graph/metrics';
+import { assemblePrompt } from '../graph/prompt';
 import { planBackEdges, type BackEdgePlan } from '../graph/backEdge';
 import { CelebrationLayer, useCelebration } from './Celebration';
 import { DetailDrawer } from './DetailDrawer';
 import { EndpointMarks, type EndpointBox } from './EndpointMarks';
 import { ImpactPanel } from './ImpactPanel';
+import { PromptPanel } from './PromptPanel';
 import { PeekCard, peekAnchor, PEEK_DELAY_MS, type PeekAnchor } from './PeekCard';
 import { SignalNode } from './SignalNode';
 import { SignalEdge } from './SignalEdge';
@@ -110,6 +112,10 @@ function reportOn(session: GraphSession): ScorecardReport {
     // The same summary the panel is reading, taken as a value: it is a function of
     // the session rather than a view onto it, so freezing it here is enough.
     impact: impactSummary(session),
+    // And the deliverable, frozen the same way for the same reason: the prompt
+    // the report hands over is the one this session earned, whatever the session
+    // does next.
+    prompt: assemblePrompt(session),
   };
 }
 
@@ -363,6 +369,8 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const [wipeClip, setWipeClip] = useState<string | null>(null);
   /** Is CRITICAL PATH down? */
   const [showPath, setShowPath] = useState(false);
+  /** Is the PROMPT panel standing in the rail? */
+  const [showPrompt, setShowPrompt] = useState(false);
   /** Which edge tags had to move to be readable, and by how much. */
   const [tagOffsets, setTagOffsets] = useState<Map<string, LabelOffset>>(NO_OFFSETS);
   /**
@@ -1350,6 +1358,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   }, [nodes, original, wipe, workflow]);
 
   const togglePath = useCallback(() => setShowPath((on) => !on), []);
+  const togglePrompt = useCallback(() => setShowPrompt((on) => !on), []);
 
   /**
    * The graph as a file, from either of the two places that offer it.
@@ -1500,6 +1509,23 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
               EXPORT FAILED
             </span>
           ) : null}
+          {/* The deliverable's toggle. Offered exactly where the impact panel is
+              — same rail, same story: a graph with no optimization story has no
+              optimized prompt to assemble. Disabled inside the wipe with the
+              other read-the-graph controls, not hidden: the panel state
+              survives the mode. */}
+          {showImpact ? (
+            <button
+              type="button"
+              className="sg-ghost-btn"
+              data-testid="prompt-btn"
+              aria-pressed={showPrompt}
+              disabled={wipe}
+              onClick={togglePrompt}
+            >
+              PROMPT
+            </button>
+          ) : null}
           {/* Only once there is a difference to see: at V0 this would hold the
               graph up against itself. Absent while the tour runs, like EXPORT —
               opening a comparison under a moving camera would be two modes
@@ -1556,6 +1582,10 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
         {showImpact ? (
           <div className="sg-rail" data-testid="canvas-rail">
             <ImpactPanel summary={summary} />
+            {/* The prompt joins the column under the impact panel — stacked,
+                not tabbed, which is what the rail's own grammar says a second
+                panel does. Both stand at z5; the drawer (z6) draws over both. */}
+            {showPrompt && session ? <PromptPanel session={session} /> : null}
           </div>
         ) : null}
         {/* The pane is a listening post for keys aimed at the focusable cards inside

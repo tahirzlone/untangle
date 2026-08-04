@@ -104,6 +104,50 @@
   overflow-wrap: anywhere;
 }
 
+/* The deliverable: the prompt the run assembled, ready to paste. The same mono
+   block the rail's prompt panel draws, held on --surface-2 like the tiles the
+   impact panel keeps its figures in — a thing inside the report, not the report. */
+.sg-scorecard-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.sg-scorecard-prompt-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sg-scorecard-cap {
+  font-family: var(--font-anno);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--dim);
+}
+.sg-scorecard-prompt-text {
+  margin: 0;
+  padding: 10px 12px;
+  max-height: 180px;
+  overflow-y: auto;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: var(--font-anno);
+  font-size: 10.5px;
+  line-height: 1.65;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+  cursor: text;
+}
+.sg-scorecard-prompt-text:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
 .sg-scorecard-actions {
   display: flex;
   gap: 8px;

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, type KeyboardEvent } from 'react';
 import { impactLabel, impactParts, painLabel, type ImpactSummary } from '../graph/metrics';
 import type { Suggestion } from '../graph/types';
 import { CategoryChip } from './DetailDrawer';
+import { CopyButton } from './PromptPanel';
 import './scorecard.css';
 
 /**
@@ -19,6 +20,13 @@ export interface ScorecardReport {
   applied: Suggestion[];
   /** Every figure the impact panel is stating, as it stood when the run stopped. */
   impact: ImpactSummary;
+  /**
+   * The optimized prompt for the version the run finished on — assembled by the
+   * caller from the same session the figures above were, and frozen with them:
+   * the deliverable the report hands over must be the one the user watched
+   * being earned, not whatever the session moved on to.
+   */
+  prompt: string;
 }
 
 /** Everything the browser will stop on inside the panel, in tab order. */
@@ -149,6 +157,20 @@ export function Scorecard({
             </li>
           ))}
         </ul>
+
+        {/* The deliverable: what the run was FOR. The same text the rail's
+            prompt panel assembles, frozen with the rest of the report, with its
+            own copy — the reader this panel is written for takes the prompt and
+            leaves. */}
+        <div className="sg-scorecard-prompt" data-testid="scorecard-prompt">
+          <div className="sg-scorecard-prompt-head">
+            <span className="sg-scorecard-cap">YOUR OPTIMIZED PROMPT</span>
+            <CopyButton text={report.prompt} testId="scorecard-prompt-copy" />
+          </div>
+          <pre className="sg-scorecard-prompt-text" data-testid="scorecard-prompt-text" tabIndex={0}>
+            {report.prompt}
+          </pre>
+        </div>
 
         <div className="sg-scorecard-actions">
           {/* Takes the graph the run finished on, which is the one still drawn
