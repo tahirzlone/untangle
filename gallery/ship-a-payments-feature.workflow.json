@@ -2,9 +2,10 @@
   "meta": {
     "task": "Add a payments feature to my web app — build it, test it, verify it in the browser, review it, and ship",
     "title": "Ship a Payments Feature End-to-End",
-    "generatedAt": "2026-07-29T23:30:00Z",
+    "generatedAt": "2026-08-04T16:30:00Z",
     "model": "claude-fable-5",
-    "kbSource": "airtable"
+    "kbSource": "airtable",
+    "promptIntro": "Add a payments feature to this web app — build it, test it, verify it in the browser, review it, and ship it. Work it as one continuous pass: scope and acceptance criteria first, implementation that follows the codebase's existing conventions, then tests, verification of every checkout flow in a real browser, and a full review before the merge ships with the evidence attached."
   },
   "nodes": [
     { "id": "gather-scope", "label": "Gather scope + acceptance criteria", "kind": "input", "description": "Collect the feature spec, payment-provider keys, edge cases, and what done looks like.", "painLevel": 2 },
@@ -46,6 +47,7 @@
       "url": "https://github.com/safishamsi/graphify",
       "category": "Claude Skill",
       "claim": "Turns a codebase into a queryable knowledge graph so agents reason over structure instead of grepping.",
+      "promptFragment": "Use safishamsi/graphify to learn the codebase before you plan the change: query its knowledge graph for the routing patterns, error handling, naming conventions, and any payments-adjacent code, instead of grepping and reading file after file. Ask for the structure you need in one query and carry the answers straight into the plan.",
       "effect": {
         "removeNodes": [],
         "mergeNodes": ["read-conventions"],
@@ -65,6 +67,7 @@
       "category": "Claude Skill",
       "claim": "A full engineering methodology (brainstorm→plan→TDD→review) that turns one-shot vibe coding into disciplined shipping.",
       "install": "/plugin install superpowers",
+      "promptFragment": "Run the build under obra/superpowers once the plan is settled: let its TDD discipline drive the implementation — a failing test first, then the code that passes it — instead of writing the feature and backfilling tests around it, guessing at the cases that matter. Keep its review step as the gate before you call the work done. Add it first with `/plugin install superpowers`.",
       "effect": {
         "removeNodes": [],
         "mergeNodes": ["write-tests"],
@@ -84,6 +87,7 @@
       "category": "MCP Server",
       "claim": "Gives Claude live eyes on a real browser — debugging, performance traces, and page inspection in one MCP.",
       "install": "claude mcp add chrome-devtools -- npx chrome-devtools-mcp@latest",
+      "promptFragment": "When the suite is green, verify the checkout flows with ChromeDevTools/chrome-devtools-mcp instead of clicking through them by hand: let it drive the pages, read the console and network as each flow runs, and capture the evidence as it goes, so nothing has to be screenshotted and filed manually afterwards. Add it first with `claude mcp add chrome-devtools -- npx chrome-devtools-mcp@latest`.",
       "effect": {
         "removeNodes": ["capture-evidence"],
         "mergeNodes": ["browser-verify"],
