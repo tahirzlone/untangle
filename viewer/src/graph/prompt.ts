@@ -80,9 +80,9 @@ function closing(applied: Suggestion[], paragraphs: string[]): string | null {
 }
 
 /**
- * The whole prompt for the session as it stands: opening, one paragraph per
- * applied suggestion in flow order, closing installs line — blank lines
- * between, because the result is for pasting, not for parsing.
+ * What the session has applied, in flow order — the sequence every surface that
+ * speaks for the applied set reads off, so the prompt and the install kit can
+ * never disagree about what is in it or what order it comes in.
  *
  * "Flow order" is the order the WORK runs in, not the order the patches were
  * applied: a fragment says "before you rank anything" and has to appear before
@@ -93,15 +93,16 @@ function closing(applied: Suggestion[], paragraphs: string[]): string | null {
  * Two suggestions on one node keep the order they were applied in — the sort is
  * stable, and there is nothing lefter than the same node.
  *
- * At V0 the prompt is the opening alone. That is not an empty state: the task
- * as a prompt is a valid prompt, just one no upgrade has improved yet.
+ * Read off `appliedIds[0..cursor)`, so an undo drops the last patch out of the
+ * answer and a redo puts it back: the list is a function of where the cursor is
+ * standing, never of how it got there.
  */
-export function assemblePrompt(session: GraphSession): string {
+export function appliedInFlowOrder(session: GraphSession): Suggestion[] {
   const v0 = session.versions[0];
   const byId = new Map(v0.suggestions.map((s) => [s.airtableRecordId, s]));
   const flowAt = new Map(v0.nodes.map((n, i) => [n.id, i]));
 
-  const applied = session.appliedIds
+  return session.appliedIds
     .slice(0, session.cursor)
     .map((id) => byId.get(id))
     .filter((s): s is Suggestion => s !== undefined)
@@ -109,8 +110,19 @@ export function assemblePrompt(session: GraphSession): string {
       (a, b) =>
         (flowAt.get(a.nodeId) ?? v0.nodes.length) - (flowAt.get(b.nodeId) ?? v0.nodes.length),
     );
+}
 
+/**
+ * The whole prompt for the session as it stands: opening, one paragraph per
+ * applied suggestion in flow order, closing installs line — blank lines
+ * between, because the result is for pasting, not for parsing.
+ *
+ * At V0 the prompt is the opening alone. That is not an empty state: the task
+ * as a prompt is a valid prompt, just one no upgrade has improved yet.
+ */
+export function assemblePrompt(session: GraphSession): string {
+  const applied = appliedInFlowOrder(session);
   const paragraphs = applied.map(paragraphFor);
   const close = closing(applied, paragraphs);
-  return [opening(v0), ...paragraphs, ...(close ? [close] : [])].join('\n\n');
+  return [opening(session.versions[0]), ...paragraphs, ...(close ? [close] : [])].join('\n\n');
 }
