@@ -1,0 +1,55 @@
+name: KB snapshot
+
+# Mirrors the public knowledge-base feed into kb/kb.json once a day, so the
+# graph-my-task skill has a bundled fallback (its tier 2.5) when the feed is
+# unreachable. The fetch is of tahirlone.com's own public endpoint — the repo
+# contains no Airtable code and this workflow adds none.
+#
+# A run commits only when the records actually changed (the normalizer keeps
+# the serialization stable, so a diff is a real change). Any fetch failure
+# fails the job with one clear log line and commits nothing — no retries.
+#
+# Forks: GitHub suspends scheduled runs on inactive forks automatically;
+# workflow_dispatch still works there whenever a fork wants a fresh snapshot.
+on:
+  schedule:
+    - cron: '23 4 * * *' # daily at 04:23 UTC — a quiet hour, off the on-the-hour rush
+  workflow_dispatch:
+
+# The one workflow allowed to write to the repository, and all it writes is
+# kb/kb.json. CI and Pages stay at contents: read.
+permissions:
+  contents: write
+
+# One snapshot at a time, and never cancel one mid-commit.
+concurrency:
+  group: kb-snapshot
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  snapshot:
+    name: mirror the feed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      # Fetch + normalize + write, or fail loudly. Node builtins only — no
+      # install step, nothing to cache.
+      - run: node .github/kb-snapshot.mjs
+      - name: commit if changed
+        run: |
+          if git diff --quiet -- kb/kb.json; then
+            echo "kb/kb.json unchanged — nothing to commit."
+            exit 0
+          fi
+          COUNT="$(node -p "JSON.parse(require('fs').readFileSync('kb/kb.json','utf8')).recordCount")"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add kb/kb.json
+          git commit -m "chore(kb): snapshot $(date -u +%Y-%m-%d) — ${COUNT} records"
+          git push

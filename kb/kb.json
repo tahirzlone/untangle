@@ -1,0 +1,1140 @@
+{
+  "fetchedAt": "2026-08-05T20:27:21.467Z",
+  "updatedAt": "2026-08-05T20:11:20.672Z",
+  "recordCount": 59,
+  "records": [
+    {
+      "id": "rec1lQlBJLCMjsivF",
+      "capabilityTags": [
+        "api-integration",
+        "documentation"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-07-28",
+      "description": "Largest MCP spec revision yet: stateless protocol core (no initialize handshake/session IDs), extensions framework (MCP Apps, Tasks), OAuth/OIDC auth hardening, full JSON Schema 2020-12.",
+      "improvementClaim": "The MCP protocol itself — stateless core + extensions every integration now builds on.",
+      "install": "Spec — read at modelcontextprotocol.io",
+      "name": "MCP Specification 2026-07-28",
+      "stepArchetypes": [
+        "research",
+        "document"
+      ],
+      "url": "https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/"
+    },
+    {
+      "id": "rec2Er3aCZODcbNL6",
+      "capabilityTags": [
+        "documentation",
+        "research"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-28",
+      "description": "Harvard's open 'Machine Learning Systems' textbook.",
+      "improvementClaim": "The free Harvard ML-systems textbook — production ML engineering end to end.",
+      "install": "Read at mlsysbook.ai — no install",
+      "language": "Python",
+      "name": "harvard-edge/cs249r_book",
+      "stars": 26085,
+      "stepArchetypes": [
+        "research",
+        "document"
+      ],
+      "url": "https://github.com/harvard-edge/cs249r_book"
+    },
+    {
+      "id": "rec3Aj0ofOdFCQ2c7",
+      "capabilityTags": [
+        "research",
+        "orchestration",
+        "documentation"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-07-28",
+      "description": "Comprehensive Claude Code toolkit: 135 agents, 35 skills, 42 commands, 176+ plugins, 20 hooks, MCP configs, and companion apps in one Apache-2.0 repo.",
+      "improvementClaim": "One-stop kit: 135 agents, 35 skills, 176+ plugins, hooks, and MCP configs, Apache-2.0.",
+      "install": "git clone rohitg00/awesome-claude-code-toolkit — pick components",
+      "language": "Markdown/Python",
+      "name": "rohitg00/awesome-claude-code-toolkit",
+      "stars": 1800,
+      "stepArchetypes": [
+        "research",
+        "scaffold",
+        "orchestrate"
+      ],
+      "url": "https://github.com/rohitg00/awesome-claude-code-toolkit"
+    },
+    {
+      "id": "rec4s5VYabLmKjvnA",
+      "capabilityTags": [
+        "documentation"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-30",
+      "description": "CLI from the LangChain team that auto-generates and maintains documentation for codebases and personal knowledge bases, outputting a structured wiki in Google's Open Knowledge Format plus AGENTS.md/CLAUDE.md files that guide coding agents.",
+      "improvementClaim": "Self-maintaining wiki + AGENTS.md/CLAUDE.md for any repo or knowledge base.",
+      "install": "npm install -g openwiki",
+      "language": "TypeScript",
+      "name": "langchain-ai/openwiki",
+      "stars": 12200,
+      "stepArchetypes": [
+        "document"
+      ],
+      "url": "https://github.com/langchain-ai/openwiki"
+    },
+    {
+      "id": "rec59b6FOxR77sCKV",
+      "capabilityTags": [
+        "security",
+        "review"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-30",
+      "description": "New open-source CLI and TypeScript SDK from OpenAI for finding, validating, and reviewing security issues in code you own or are permitted to assess, with AI-generated patches.",
+      "improvementClaim": "AI repo security scans with validated findings and auto-generated patches.",
+      "install": "npm i @openai/codex-security && npx codex-security scan .",
+      "language": "TypeScript",
+      "name": "openai/codex-security",
+      "stepArchetypes": [
+        "review",
+        "test"
+      ],
+      "url": "https://github.com/openai/codex-security"
+    },
+    {
+      "id": "rec6ENkJdbb6RmDdj",
+      "capabilityTags": [
+        "code-search",
+        "memory"
+      ],
+      "category": "MCP Server",
+      "dateFirstSeen": "2026-07-30",
+      "description": "High-performance MCP server that builds a persistent knowledge graph of a codebase so AI coding agents answer architectural questions in under 1ms instead of re-reading files — cutting token usage for structural queries by up to 99%.",
+      "improvementClaim": "Sub-millisecond architectural queries over a whole codebase — up to 99% fewer tokens.",
+      "install": "curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash",
+      "language": "C",
+      "name": "DeusData/codebase-memory-mcp",
+      "stars": 32700,
+      "stepArchetypes": [
+        "research",
+        "code",
+        "review"
+      ],
+      "url": "https://github.com/DeusData/codebase-memory-mcp"
+    },
+    {
+      "id": "rec7UTBxToaujN1sg",
+      "capabilityTags": [
+        "code-generation",
+        "deployment"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-30",
+      "description": "TypeScript-to-native compiler from Vercel Labs that turns ordinary TypeScript into small self-contained executables with no Node.js, V8, or any JS engine inside. A Fibonacci program compiles to a ~178KB binary with ~2ms startup.",
+      "improvementClaim": "TypeScript ships as ~178KB native binaries with ~2ms startup — no Node or V8.",
+      "install": "npm install -g scriptc",
+      "language": "TypeScript",
+      "name": "vercel-labs/scriptc",
+      "stepArchetypes": [
+        "code",
+        "deploy"
+      ],
+      "url": "https://github.com/vercel-labs/scriptc"
+    },
+    {
+      "id": "rec7lFKpXMbJgyUB0",
+      "capabilityTags": [
+        "code-search",
+        "data-etl"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-28",
+      "description": "Free and open source, distributed, RESTful search engine.",
+      "improvementClaim": "Industry-standard distributed search and analytics engine.",
+      "install": "docker run docker.elastic.co/elasticsearch/elasticsearch",
+      "language": "Java",
+      "name": "elastic/elasticsearch",
+      "stars": 77305,
+      "stepArchetypes": [
+        "data-etl"
+      ],
+      "url": "https://github.com/elastic/elasticsearch"
+    },
+    {
+      "id": "rec8IRupxSpAxupRy",
+      "capabilityTags": [
+        "browser-automation",
+        "testing"
+      ],
+      "category": "MCP Server",
+      "dateFirstSeen": "2026-07-28",
+      "description": "Google's official MCP server exposing Chrome DevTools (debugging, performance, live pages) to coding agents.",
+      "improvementClaim": "Gives Claude live eyes on a real browser — debugging, performance traces, and page inspection in one MCP.",
+      "install": "claude mcp add chrome-devtools -- npx chrome-devtools-mcp@latest",
+      "language": "TypeScript",
+      "name": "ChromeDevTools/chrome-devtools-mcp",
+      "stars": 45441,
+      "stepArchetypes": [
+        "browser-verify",
+        "test"
+      ],
+      "url": "https://github.com/ChromeDevTools/chrome-devtools-mcp"
+    },
+    {
+      "id": "rec9WCKMascIoC9Dx",
+      "capabilityTags": [
+        "code-search",
+        "memory"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-07-28",
+      "description": "AI coding assistant skill that transforms code folders into queryable knowledge graphs.",
+      "improvementClaim": "Turns a codebase into a queryable knowledge graph so agents reason over structure instead of grepping.",
+      "install": "Install as Claude Code skill (clone into ~/.claude/skills)",
+      "language": "Python",
+      "name": "safishamsi/graphify",
+      "stars": 76935,
+      "stepArchetypes": [
+        "research",
+        "code",
+        "review"
+      ],
+      "url": "https://github.com/safishamsi/graphify"
+    },
+    {
+      "id": "rec9cRu9Qdk3LlhI9",
+      "capabilityTags": [
+        "api-integration",
+        "orchestration"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-30",
+      "description": "Free open-source AI gateway that unifies 290+ AI providers (90+ with free tiers) behind one OpenAI-compatible endpoint, with automatic routing, quota fallbacks, and token compression cutting API costs by up to 95%.",
+      "improvementClaim": "One endpoint for 290+ AI providers with fallbacks and up to 95% token-cost cuts.",
+      "install": "npm install -g omniroute",
+      "language": "TypeScript",
+      "name": "diegosouzapw/OmniRoute",
+      "stars": 34200,
+      "stepArchetypes": [
+        "orchestrate",
+        "deploy"
+      ],
+      "url": "https://github.com/diegosouzapw/OmniRoute"
+    },
+    {
+      "id": "rec9vM2HgUuPp2l9S",
+      "capabilityTags": [
+        "orchestration"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-07-30",
+      "description": "'The open-source alternative to Claude Cowork': a desktop app for running agentic work sessions locally, powered by the opencode agent runtime, with its own skills system and live-streaming session UI.",
+      "improvementClaim": "Cowork-style local agent sessions on an open stack you control.",
+      "install": "Download from openworklabs.com or GitHub releases",
+      "language": "TypeScript",
+      "name": "different-ai/openwork",
+      "stars": 14600,
+      "stepArchetypes": [
+        "orchestrate"
+      ],
+      "url": "https://github.com/different-ai/openwork"
+    },
+    {
+      "id": "recDIOmiHYqY0YuEW",
+      "capabilityTags": [
+        "research",
+        "documentation"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-07-28",
+      "description": "Hand-picked curated list of Claude Code resources: skills, hooks, slash-commands, agent orchestrators, applications, and plugins.",
+      "improvementClaim": "The canonical curated index of Claude Code commands, files, and workflows.",
+      "install": "Browse the list — no install",
+      "language": "Python",
+      "name": "hesreallyhim/awesome-claude-code",
+      "stars": 45200,
+      "stepArchetypes": [
+        "research"
+      ],
+      "url": "https://github.com/hesreallyhim/awesome-claude-code"
+    },
+    {
+      "id": "recDeY7DDa9E9Q6c1",
+      "capabilityTags": [
+        "api-integration",
+        "documentation"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-07-30",
+      "description": "The fifth major MCP specification release is now final (the RC was logged 7/28; this is the finalized spec plus Anthropic's rollout announcement). Headline change: MCP moves from a stateful bidirectional protocol to a stateless request/response core.",
+      "improvementClaim": "Stateless MCP core — serverless-ready connectors with standard OAuth 2.0/OIDC.",
+      "install": "Spec only — see modelcontextprotocol.io; SDK updates rolling out",
+      "name": "MCP spec 2026-07-28 (final) — stateless core, coming to Claude",
+      "stepArchetypes": [
+        "research",
+        "document"
+      ],
+      "url": "https://claude.com/blog/bringing-mcp-2026-07-28-to-claude"
+    },
+    {
+      "id": "recDfet3ZseWb0Vpi",
+      "capabilityTags": [
+        "documentation",
+        "research"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-07-30",
+      "description": "Converts technical books, PDFs, and document folders into structured agent skills for Claude Code, GitHub Copilot CLI, and Amp. Instead of dumping a book into context, it distills frameworks, decision rules, and per-chapter files that load on demand — 24-51x fewer tokens.",
+      "improvementClaim": "Turns any technical book into an on-demand agent skill at 24-51x fewer tokens.",
+      "install": "pip install \"book-to-skill[pdf,epub,docx]\"",
+      "language": "Python",
+      "name": "virgiliojr94/book-to-skill",
+      "stars": 12400,
+      "stepArchetypes": [
+        "research",
+        "document"
+      ],
+      "url": "https://github.com/virgiliojr94/book-to-skill"
+    },
+    {
+      "id": "recE4D5Oh65lAK88T",
+      "capabilityTags": [
+        "research",
+        "documentation"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-07-28",
+      "description": "Automated tracker of Claude Code plugin adoption metrics across ~17,000 GitHub repositories, collected via n8n workflows; ranks plugins by stars and subscribers.",
+      "improvementClaim": "Tracker of the Claude plugin ecosystem — find plugins before building your own.",
+      "install": "Browse the list — no install",
+      "language": "n8n / Markdown",
+      "name": "quemsah/awesome-claude-plugins",
+      "stepArchetypes": [
+        "research"
+      ],
+      "url": "https://github.com/quemsah/awesome-claude-plugins"
+    },
+    {
+      "id": "recFftxXAG4p89zjh",
+      "capabilityTags": [
+        "orchestration"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-07-31",
+      "description": "A Linux profile switcher for Claude Code: keep multiple isolated Claude accounts (work/personal/client) and hop between them instantly without logging in again.",
+      "improvementClaim": "Turns minutes of re-login friction per account switch into one instant command.",
+      "install": "Download release tarball → ./claude-account install",
+      "language": "Rust",
+      "name": "hamzarehmandeveloper/claude-account",
+      "stars": 34,
+      "stepArchetypes": [
+        "code"
+      ],
+      "url": "https://github.com/hamzarehmandeveloper/claude-account"
+    },
+    {
+      "id": "recHcziXDVk1VCjB8",
+      "capabilityTags": [
+        "data-etl"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-28",
+      "description": "A beautiful, powerful, self-hosted ROM manager and player.",
+      "improvementClaim": "Beautiful self-hosted library + player for your retro game collection.",
+      "install": "docker compose up (rommapp/romm image)",
+      "language": "Python",
+      "name": "rommapp/romm",
+      "stars": 9740,
+      "stepArchetypes": [
+        "data-etl"
+      ],
+      "url": "https://github.com/rommapp/romm"
+    },
+    {
+      "id": "recImj3ZK9O4OUn7j",
+      "capabilityTags": [
+        "research"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-30",
+      "description": "Pure-C inference engine that runs GLM-5.2 — a 744-billion-parameter mixture-of-experts model — on a consumer machine with ~25GB RAM by streaming experts from disk. Zero dependencies.",
+      "improvementClaim": "A 744B-parameter MoE running on a 25GB-RAM consumer box — pure C, zero deps.",
+      "install": "Download release; COLI_MODEL=/path/to/model ./coli chat",
+      "language": "C",
+      "name": "JustVugg/colibri",
+      "stars": 20500,
+      "stepArchetypes": [
+        "research"
+      ],
+      "url": "https://github.com/JustVugg/colibri"
+    },
+    {
+      "id": "recIvOwyljFMN5UTu",
+      "capabilityTags": [
+        "documentation",
+        "ui-design"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-30",
+      "description": "An explorable 3D SimCity-style city that shows how PostgreSQL actually works: buffer management, write-ahead logging, checkpoints, and replication rendered as living districts with visible traffic. By well-known Postgres expert Nikolay Samokhvalov.",
+      "improvementClaim": "Postgres internals you can walk through — WAL, buffers, replication as a 3D city.",
+      "install": "Open nikolays.github.io/PGSimCity — no install",
+      "language": "TypeScript",
+      "name": "NikolayS/PGSimCity",
+      "stars": 127,
+      "stepArchetypes": [
+        "research",
+        "document"
+      ],
+      "url": "https://github.com/NikolayS/PGSimCity"
+    },
+    {
+      "id": "recJXCoj38cYCvEdv",
+      "capabilityTags": [
+        "review",
+        "documentation"
+      ],
+      "category": "Claude Plugin",
+      "dateFirstSeen": "2026-07-30",
+      "description": "A Claude Code / Codex plugin that turns AI-assisted coding into deliberate skill development: after architectural work (new files, schema changes, refactors), it offers optional 10-15 minute learning exercises grounded in evidence-based learning science. By psychological scientist Dr. Cat Hicks.",
+      "improvementClaim": "Turns AI-assisted coding into deliberate practice with evidence-based exercises.",
+      "install": "/plugin install learning-opportunities@learning-opportunities",
+      "language": "Shell",
+      "name": "DrCatHicks/learning-opportunities",
+      "stars": 1900,
+      "stepArchetypes": [
+        "review",
+        "document"
+      ],
+      "url": "https://github.com/DrCatHicks/learning-opportunities"
+    },
+    {
+      "id": "recL7wcKy5eajUO37",
+      "capabilityTags": [
+        "deployment"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-28",
+      "description": "Apache Maven core — Java build and dependency management.",
+      "improvementClaim": "The JVM world's standard build and dependency manager.",
+      "install": "brew install maven / apt install maven",
+      "language": "Java",
+      "name": "apache/maven",
+      "stars": 5217,
+      "stepArchetypes": [
+        "deploy",
+        "scaffold"
+      ],
+      "url": "https://github.com/apache/maven"
+    },
+    {
+      "id": "recLGGPUHJQI63F3D",
+      "capabilityTags": [
+        "code-generation",
+        "research"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-07-31",
+      "description": "Anthropic's Opus 5 launch (Jul 24): a thoughtful, proactive frontier-class model positioned near Claude Fable 5 intelligence at half the price. The biggest Claude-ecosystem story of the month.",
+      "improvementClaim": "Near-frontier intelligence at half the price — and 80% less prompt scaffolding needed in Claude Code.",
+      "install": "No install — select Opus 5 in Claude apps or API",
+      "name": "Anthropic — Claude Opus 5",
+      "stepArchetypes": [
+        "code",
+        "research"
+      ],
+      "url": "https://www.anthropic.com/news/claude-opus-5"
+    },
+    {
+      "id": "recLxJTLOVLM8t6lS",
+      "capabilityTags": [
+        "deployment"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-28",
+      "description": "IT automation platform for deployment and infrastructure management.",
+      "improvementClaim": "Agentless automation for provisioning and configuring server fleets.",
+      "install": "pip install ansible",
+      "language": "Python",
+      "name": "ansible/ansible",
+      "stars": 69168,
+      "stepArchetypes": [
+        "deploy"
+      ],
+      "url": "https://github.com/ansible/ansible"
+    },
+    {
+      "id": "recM4HQukpqF1UOua",
+      "capabilityTags": [
+        "research",
+        "documentation"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-07-28",
+      "description": "Curated collection of 1,000+ agent skills from official dev teams.",
+      "improvementClaim": "1,000+ ready-made skills — check here before building any capability from scratch.",
+      "install": "Browse the list — no install",
+      "language": "Markdown",
+      "name": "VoltAgent/awesome-agent-skills",
+      "stars": 28200,
+      "stepArchetypes": [
+        "research"
+      ],
+      "url": "https://github.com/VoltAgent/awesome-agent-skills"
+    },
+    {
+      "id": "recM6uiC0noljZxbm",
+      "capabilityTags": [
+        "api-integration",
+        "orchestration"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-31",
+      "description": "Build local voice agents entirely with open-source models. You speak, it transcribes, thinks, and talks back — a full conversational voice pipeline that runs on your own hardware with every component swappable.",
+      "improvementClaim": "Makes standing up a private, fully local voice assistant a pip-install instead of a months-long integration project.",
+      "install": "pip install speech-to-speech",
+      "language": "Python",
+      "name": "huggingface/speech-to-speech",
+      "stars": 6300,
+      "stepArchetypes": [
+        "code",
+        "orchestrate"
+      ],
+      "url": "https://github.com/huggingface/speech-to-speech"
+    },
+    {
+      "id": "recMTI2QaHeLIYfjE",
+      "capabilityTags": [
+        "ui-design"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-30",
+      "description": "A physically accurate black hole you can 'put in your room': a browser-based simulator that overlays a gravitationally-lensed black hole on your live camera feed, with AR/VR support.",
+      "improvementClaim": "Physically accurate black hole (finite light speed) rendered live over your camera.",
+      "install": "Open blackhole.plav.in in a browser",
+      "language": "TypeScript",
+      "name": "aplavin/blackhole.plav.in",
+      "stepArchetypes": [
+        "research"
+      ],
+      "url": "https://github.com/aplavin/blackhole.plav.in"
+    },
+    {
+      "id": "recN1Uu37cj1z2HKg",
+      "capabilityTags": [
+        "research",
+        "browser-automation"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-30",
+      "description": "Userscript that brings Hacker News discussion to any article you're reading: it detects when the current page was posted to HN and shows the comment thread in a sidebar, so you never juggle tabs to find the discussion.",
+      "improvementClaim": "HN discussion appears in a sidebar on any article — no tab juggling.",
+      "install": "Tampermonkey → add HNewhere.user.js from the repo",
+      "language": "JavaScript",
+      "name": "twalichiewicz/HNewhere",
+      "stars": 23,
+      "stepArchetypes": [
+        "research"
+      ],
+      "url": "https://github.com/twalichiewicz/HNewhere"
+    },
+    {
+      "id": "recO72FwsZUTTTkOr",
+      "capabilityTags": [
+        "orchestration"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-07-28",
+      "description": "Claude Code skill that makes Claude 'talk like caveman' internally, cutting ~65% of tokens.",
+      "improvementClaim": "Cuts ~65% of Claude's internal tokens — same work, far cheaper sessions.",
+      "install": "Clone into ~/.claude/skills/caveman",
+      "language": "JavaScript",
+      "name": "JuliusBrussee/caveman",
+      "stars": 82764,
+      "stepArchetypes": [
+        "orchestrate"
+      ],
+      "url": "https://github.com/JuliusBrussee/caveman"
+    },
+    {
+      "id": "recP6gujzm3TXGV2W",
+      "capabilityTags": [
+        "ui-design",
+        "review"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-07-30",
+      "description": "A design skill for Claude Code, Cursor, and Codex that fights 'AI slop' UI: generates interfaces from 22 curated themes across four genres, audits existing code against anti-patterns, and extracts design DNA from screenshots or URLs.",
+      "improvementClaim": "A 65-gate slop test that stops AI tools from shipping generic-looking UI.",
+      "install": "npx skills add nutlope/hallmark",
+      "language": "CSS",
+      "name": "Nutlope/hallmark",
+      "stars": 37,
+      "stepArchetypes": [
+        "code",
+        "review"
+      ],
+      "url": "https://github.com/Nutlope/hallmark"
+    },
+    {
+      "id": "recQxvcJ5VqgJgyoy",
+      "capabilityTags": [
+        "orchestration",
+        "testing",
+        "review",
+        "documentation"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-07-28",
+      "description": "Agentic skills framework and software development methodology (brainstorm → plan → TDD → review) for Claude Code.",
+      "improvementClaim": "A full engineering methodology (brainstorm→plan→TDD→review) that turns one-shot vibe coding into disciplined shipping.",
+      "install": "/plugin install superpowers",
+      "language": "Shell",
+      "name": "obra/superpowers",
+      "stars": 245423,
+      "stepArchetypes": [
+        "scaffold",
+        "code",
+        "test",
+        "review",
+        "orchestrate"
+      ],
+      "url": "https://github.com/obra/superpowers"
+    },
+    {
+      "id": "recVutiAhKgL5stU1",
+      "capabilityTags": [
+        "documentation",
+        "research"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-07-28",
+      "description": "'From vibe coding to agentic engineering' — Claude Code best-practices collection.",
+      "improvementClaim": "The agentic-engineering playbook — patterns that separate vibe coding from shipping.",
+      "install": "Browse the repo — no install",
+      "language": "HTML",
+      "name": "shanraisshan/claude-code-best-practice",
+      "stars": 62900,
+      "stepArchetypes": [
+        "research",
+        "document"
+      ],
+      "url": "https://github.com/shanraisshan/claude-code-best-practice"
+    },
+    {
+      "id": "recWXb1UXMORGvGOZ",
+      "capabilityTags": [
+        "research"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-28",
+      "description": "Tensors and dynamic neural networks in Python with strong GPU acceleration.",
+      "improvementClaim": "The dominant deep-learning framework for research and production.",
+      "install": "pip install torch",
+      "language": "Python",
+      "name": "pytorch/pytorch",
+      "stars": 101401,
+      "stepArchetypes": [
+        "research",
+        "code"
+      ],
+      "url": "https://github.com/pytorch/pytorch"
+    },
+    {
+      "id": "recWzilJLFrG0MKR4",
+      "capabilityTags": [
+        "deployment"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-28",
+      "description": "GitHub Action for checking out a repository.",
+      "improvementClaim": "The CI staple — checks out your repo in every GitHub Actions workflow.",
+      "install": "uses: actions/checkout@v5 in workflow YAML",
+      "language": "TypeScript",
+      "name": "actions/checkout",
+      "stars": 8250,
+      "stepArchetypes": [
+        "deploy"
+      ],
+      "url": "https://github.com/actions/checkout"
+    },
+    {
+      "id": "recXkFXeYmcTgHbC6",
+      "capabilityTags": [
+        "api-integration"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-07-31",
+      "description": "An SRE bought an abandoned 8-lane bowling center in rural Minnesota and replaced its $120k proprietary scoring system with ~$1,600 of ESP32s. Handles pin detection, ball speed/trajectory, foul detection, pinsetter control, and score display animations.",
+      "improvementClaim": "Replaces a $120k proprietary bowling-center system with $1,600 of commodity hardware — a 75x cost reduction.",
+      "install": "No install yet — repo release promised; follow the HN thread",
+      "name": "OpenLaneLink ($1,600 ESP32 bowling center system)",
+      "stepArchetypes": [
+        "code",
+        "deploy"
+      ],
+      "url": "https://news.ycombinator.com/item?id=48968606"
+    },
+    {
+      "id": "recbu2btPkusxYo6w",
+      "capabilityTags": [
+        "security",
+        "ui-design"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-31",
+      "description": "An offline, zero-permission Android file viewer: PDFs, Word, Excel, PowerPoint, photos, video, audio, Markdown, and code all render in one app that never touches the network and asks for no permissions at all.",
+      "improvementClaim": "Replaces a drawer of ad-laden, permission-hungry viewer apps with one offline app that can't leak anything.",
+      "install": "Sideload APK from github.com/mokshablr/gander/releases",
+      "language": "Kotlin",
+      "name": "mokshablr/gander",
+      "stars": 45,
+      "stepArchetypes": [
+        "document",
+        "review"
+      ],
+      "url": "https://github.com/mokshablr/gander"
+    },
+    {
+      "id": "reccXADeaS8MWgJDW",
+      "capabilityTags": [
+        "documentation",
+        "api-integration"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-30",
+      "description": "An Office suite built for AI agents: read, edit, and automate Word, Excel, and PowerPoint files from the command line with no Microsoft Office installation, including rendering output to HTML/PNG so agents can see what they produced.",
+      "improvementClaim": "AI agents read/edit/render Word, Excel, PowerPoint with no Office installed.",
+      "install": "curl -fsSL https://raw.githubusercontent.com/iOfficeAI/OfficeCLI/main/install.sh | bash",
+      "language": "C#",
+      "name": "iOfficeAI/OfficeCLI",
+      "stars": 7300,
+      "stepArchetypes": [
+        "document"
+      ],
+      "url": "https://github.com/iOfficeAI/OfficeCLI"
+    },
+    {
+      "id": "recdCdNotyRYoYNHm",
+      "capabilityTags": [
+        "documentation",
+        "api-integration"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-07-28",
+      "description": "Vendor-neutral specification and documentation for Agent Skills.",
+      "improvementClaim": "The vendor-neutral skills spec — write once, run on Claude Code, Codex, and Gemini CLI.",
+      "install": "Spec — read the repo docs; no install",
+      "language": "Python",
+      "name": "agentskills/agentskills",
+      "stars": 21938,
+      "stepArchetypes": [
+        "document"
+      ],
+      "url": "https://github.com/agentskills/agentskills"
+    },
+    {
+      "id": "recgyXRI8suR1CnVm",
+      "capabilityTags": [
+        "ui-design",
+        "documentation"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-31",
+      "description": "A complete PowerPoint alternative where the presentation, its editor, and the player all live inside one ~560 KB HTML file. Open in any browser, edit the deck, save the same file back — no install, no account, no cloud.",
+      "improvementClaim": "Turns a whole office-suite install plus cloud account into one portable HTML file you fully own.",
+      "install": "Download Bento_Slides.bento.html and open in a browser — no install",
+      "language": "TypeScript",
+      "name": "nyblnet/bento",
+      "stars": 1400,
+      "stepArchetypes": [
+        "document"
+      ],
+      "url": "https://github.com/nyblnet/bento"
+    },
+    {
+      "id": "rech1SMDDUwTUqvIf",
+      "capabilityTags": [
+        "security",
+        "research"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-07-31",
+      "description": "F-Droid's 'Threat masquerading as protection' post against Google's Android Developer Verification became the rallying point of a month-long fight: 37 organizations are now formally opposing the policy, which critics say will end practical sideloading and independent app stores.",
+      "improvementClaim": "One post that reframed a 'security feature' into a platform-control fight now backed by 37 organizations.",
+      "install": "Browse the post — no install",
+      "name": "Android Developer Verification backlash (F-Droid)",
+      "stepArchetypes": [
+        "research"
+      ],
+      "url": "https://f-droid.org/2026/07/01/adv-malware.html"
+    },
+    {
+      "id": "reciqTJt4oVGwVPHy",
+      "capabilityTags": [
+        "code-search",
+        "orchestration"
+      ],
+      "category": "MCP Server",
+      "dateFirstSeen": "2026-07-28",
+      "description": "MCP server for searching and retrieving Claude Agent Skills using vector search.",
+      "improvementClaim": "Vector-search over skill libraries so the right skill loads itself at the right moment.",
+      "install": "claude mcp add claude-skills-mcp (see repo README)",
+      "language": "Python",
+      "name": "K-Dense-AI/claude-skills-mcp",
+      "stepArchetypes": [
+        "research",
+        "orchestrate"
+      ],
+      "url": "https://github.com/K-Dense-AI/claude-skills-mcp"
+    },
+    {
+      "id": "recjGQzcyhAe6tiQT",
+      "capabilityTags": [
+        "research",
+        "orchestration"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-07-28",
+      "description": "ARIS — autonomous overnight ML-research skills for Claude Code with cross-model review loops.",
+      "improvementClaim": "Overnight autonomous research loops with cross-model review — wake up to finished experiments.",
+      "install": "git clone + follow README setup",
+      "language": "Python",
+      "name": "wanshuiyin/Auto-claude-code-research-in-sleep",
+      "stars": 13500,
+      "stepArchetypes": [
+        "research",
+        "orchestrate"
+      ],
+      "url": "https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep"
+    },
+    {
+      "id": "reckyeEM72ykBCPQ4",
+      "capabilityTags": [
+        "orchestration",
+        "data-etl",
+        "api-integration"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-30",
+      "description": "'Your Personal Trading Agent' from HKU's data science lab: turns natural-language prompts into quantitative research, backtests, and (mandate-gated) live trades across stocks and crypto, with 18+ market-data sources and 10+ broker connectors.",
+      "improvementClaim": "Natural-language prompts become backtests and mandate-gated live trades.",
+      "install": "pip install vibe-trading-ai",
+      "language": "Python",
+      "name": "HKUDS/Vibe-Trading",
+      "stars": 28300,
+      "stepArchetypes": [
+        "orchestrate",
+        "data-etl"
+      ],
+      "url": "https://github.com/HKUDS/Vibe-Trading"
+    },
+    {
+      "id": "reclNQa2qRarMjCbw",
+      "capabilityTags": [
+        "research"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-30",
+      "description": "Runs Google's Gemma 4 26B-A4B mixture-of-experts model in roughly 2 GB of RAM on any Apple Silicon Mac — including 8GB MacBook Airs — making a 26B-parameter model usable on entry-level laptops.",
+      "improvementClaim": "Runs Gemma 4 26B MoE in ~2GB RAM on any M-series Mac, even 8GB Airs.",
+      "install": "git clone drumih/turbo-fieldfare && swift build -c release",
+      "language": "Swift",
+      "name": "drumih/turbo-fieldfare",
+      "stars": 85,
+      "stepArchetypes": [
+        "research"
+      ],
+      "url": "https://github.com/drumih/turbo-fieldfare"
+    },
+    {
+      "id": "reclnFXDmmViI106r",
+      "capabilityTags": [
+        "ui-design"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-28",
+      "description": "Open-source design system from Meta that is fully customizable and 'agent ready' — built to be driven by coding agents.",
+      "improvementClaim": "Meta's agent-ready design system — UI components built to be driven by coding agents.",
+      "install": "npm install (per repo README)",
+      "language": "TypeScript",
+      "name": "facebook/astryx",
+      "stars": 4448,
+      "stepArchetypes": [
+        "scaffold",
+        "code"
+      ],
+      "url": "https://github.com/facebook/astryx"
+    },
+    {
+      "id": "recmN4mxhvTNvmRY6",
+      "capabilityTags": [
+        "security",
+        "testing"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-28",
+      "description": "Open-source AI penetration-testing agents that find and validate vulnerabilities in your apps.",
+      "improvementClaim": "Autonomous pentest agents that find and validate real vulnerabilities in your apps.",
+      "install": "Python CLI — pipx install per README",
+      "language": "Python",
+      "name": "usestrix/strix",
+      "stars": 34325,
+      "stepArchetypes": [
+        "test",
+        "review"
+      ],
+      "url": "https://github.com/usestrix/strix"
+    },
+    {
+      "id": "recmU1nayw3BsJEGw",
+      "capabilityTags": [
+        "research",
+        "documentation",
+        "orchestration"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-07-30",
+      "description": "AI-powered job application framework that automates the full hiring workflow: scores postings for fit against your profile, generates tailored LaTeX CVs and cover letters, runs mock interviews, and tracks applications from search to offer.",
+      "improvementClaim": "The whole job hunt automated: fit-scoring, tailored LaTeX CVs, mock interviews, tracking.",
+      "install": "Fork + clone; bun install; run `claude` then /setup",
+      "language": "Python",
+      "name": "MadsLorentzen/ai-job-search",
+      "stars": 28600,
+      "stepArchetypes": [
+        "research",
+        "document",
+        "orchestrate"
+      ],
+      "url": "https://github.com/MadsLorentzen/ai-job-search"
+    },
+    {
+      "id": "recmgzvdwcJgERiXV",
+      "capabilityTags": [
+        "api-integration",
+        "research"
+      ],
+      "category": "MCP Server",
+      "dateFirstSeen": "2026-07-28",
+      "description": "Official reference implementations of Model Context Protocol servers in multiple languages — the canonical starting point for building MCP servers.",
+      "improvementClaim": "Official gallery of reference MCP servers — copy-paste connector starting points.",
+      "install": "npx -y @modelcontextprotocol/server-<name>",
+      "language": "TypeScript",
+      "name": "modelcontextprotocol/servers",
+      "stars": 86700,
+      "stepArchetypes": [
+        "research",
+        "scaffold"
+      ],
+      "url": "https://github.com/modelcontextprotocol/servers"
+    },
+    {
+      "id": "recoleHCOUVf1h1X3",
+      "capabilityTags": [
+        "review",
+        "orchestration"
+      ],
+      "category": "Claude Plugin",
+      "dateFirstSeen": "2026-07-28",
+      "description": "OpenAI's official plugin to use Codex from inside Claude Code for code review or task delegation.",
+      "improvementClaim": "Second-model code review and task delegation — GPT checks Claude's work from inside Claude Code.",
+      "install": "/plugin install codex-plugin-cc (see repo README)",
+      "language": "JavaScript",
+      "name": "openai/codex-plugin-cc",
+      "stars": 23106,
+      "stepArchetypes": [
+        "review",
+        "orchestrate"
+      ],
+      "url": "https://github.com/openai/codex-plugin-cc"
+    },
+    {
+      "id": "recppAWCHmCP8XmyT",
+      "capabilityTags": [
+        "research",
+        "documentation"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-07-28",
+      "description": "345 Claude Code skills spanning engineering, marketing, compliance, and productivity, portable to 8+ coding agents.",
+      "improvementClaim": "345 multi-domain skills portable across 8+ coding agents.",
+      "install": "Clone skills into ~/.claude/skills (per README)",
+      "language": "Python",
+      "name": "alirezarezvani/claude-skills",
+      "stars": 22600,
+      "stepArchetypes": [
+        "research",
+        "document"
+      ],
+      "url": "https://github.com/alirezarezvani/claude-skills"
+    },
+    {
+      "id": "recrNgFnmEK4hsJwC",
+      "capabilityTags": [
+        "orchestration"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-28",
+      "description": "Agent multiplexer that lives in your terminal — run and juggle multiple coding agents at once.",
+      "improvementClaim": "Terminal multiplexer for running several coding agents side by side.",
+      "install": "cargo install herdr (or GitHub releases)",
+      "language": "Rust",
+      "name": "ogulcancelik/herdr",
+      "stars": 10651,
+      "stepArchetypes": [
+        "orchestrate"
+      ],
+      "url": "https://github.com/ogulcancelik/herdr"
+    },
+    {
+      "id": "recssajLEV4aWIWWJ",
+      "capabilityTags": [
+        "research",
+        "documentation"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-07-28",
+      "description": "Library of 1,900+ agentic skills for Claude Code and similar tools.",
+      "improvementClaim": "1,900+ agentic skills library — the widest single catalog to pull from.",
+      "install": "Browse the list — no install",
+      "language": "Python",
+      "name": "sickn33/agentic-awesome-skills",
+      "stars": 43400,
+      "stepArchetypes": [
+        "research"
+      ],
+      "url": "https://github.com/sickn33/agentic-awesome-skills"
+    },
+    {
+      "id": "rectTRCyNlbxCVQSJ",
+      "capabilityTags": [
+        "api-integration",
+        "orchestration"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-30",
+      "description": "A 26M-parameter, 14MB foundation model specialized in function/tool calling, distilled from Gemini. Runs at 1,000-6,000 tokens/sec on tiny devices — phones, wearables, smart home hardware, robots — enabling on-device AI agents without cloud calls.",
+      "improvementClaim": "Gemini-grade tool calling from a 14MB model that runs on phones and wearables.",
+      "install": "git clone cactus-compute/needle && source ./setup && needle playground",
+      "language": "Python",
+      "name": "cactus-compute/needle",
+      "stepArchetypes": [
+        "code",
+        "orchestrate"
+      ],
+      "url": "https://github.com/cactus-compute/needle"
+    },
+    {
+      "id": "recv3hUXaTkx06f7t",
+      "capabilityTags": [
+        "review"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-07-30",
+      "description": "GitHub shipped native stacked pull requests in public preview: split a large change into a chain of dependent PRs that are reviewed independently and merged in order — the workflow big-tech teams previously needed third-party tools (Graphite, ghstack) to get.",
+      "improvementClaim": "Native stacked-PR review on GitHub — the Graphite workflow, built in.",
+      "install": "Enable in public preview on github.com — no install",
+      "name": "GitHub Stacked Pull Requests (public preview)",
+      "stepArchetypes": [
+        "review",
+        "code"
+      ],
+      "url": "https://github.blog/changelog/2026-07-30-stacked-pull-requests-are-now-in-public-preview/"
+    },
+    {
+      "id": "recxjoSkuhuyYKL2J",
+      "capabilityTags": [
+        "code-generation",
+        "orchestration"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-30",
+      "description": "xAI's open-sourced terminal coding agent — the CLI/TUI harness behind Grok's coding stack. Full-screen terminal interface for understanding codebases, editing files, running commands, web search, and task management in interactive or headless mode.",
+      "improvementClaim": "A production-grade coding-agent harness you can actually read the source of.",
+      "install": "curl -fsSL https://x.ai/cli/install.sh | bash",
+      "language": "Rust",
+      "name": "xai-org/grok-build",
+      "stars": 19600,
+      "stepArchetypes": [
+        "code",
+        "orchestrate"
+      ],
+      "url": "https://github.com/xai-org/grok-build"
+    },
+    {
+      "id": "recy25BnnjQBYtfNL",
+      "capabilityTags": [
+        "code-generation",
+        "orchestration"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-28",
+      "description": "Anthropic's agentic coding tool for terminal-based code execution, codebase comprehension, and git workflows.",
+      "improvementClaim": "Terminal agentic coding — Claude reads, edits, tests, and ships in your repo.",
+      "install": "npm install -g @anthropic-ai/claude-code",
+      "language": "Python",
+      "name": "anthropics/claude-code",
+      "stars": 135769,
+      "stepArchetypes": [
+        "code",
+        "orchestrate"
+      ],
+      "url": "https://github.com/anthropics/claude-code"
+    },
+    {
+      "id": "recyDQDR6Cj9tdoTZ",
+      "capabilityTags": [
+        "ui-design"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-30",
+      "description": "'Xs of Y' — a terminal roguelike that procedurally generates its own name every run, so each playthrough is a different game title. The whole thing is about 4,000 lines of code.",
+      "improvementClaim": "A complete self-naming roguelike in ~4k lines of code.",
+      "install": "git clone nooga/xsofy — terminal game, see README",
+      "name": "nooga/xsofy",
+      "stepArchetypes": [
+        "research"
+      ],
+      "url": "https://github.com/nooga/xsofy"
+    },
+    {
+      "id": "recyP4LoZKXDJvrVx",
+      "capabilityTags": [
+        "security",
+        "orchestration"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-07-30",
+      "description": "A skill router that guides AI coding assistants through cybersecurity work — reverse engineering, pentesting, and CTF challenges — by dispatching to the right methodology and tools instead of letting the model guess.",
+      "improvementClaim": "Routes coding agents to the right RE/pentest methodology and tools instead of guessing.",
+      "install": "Download package; run refresh-tool-index.ps1; agent reads RULES.md",
+      "language": "PowerShell",
+      "name": "zhaoxuya520/reverse-skill",
+      "stars": 573,
+      "stepArchetypes": [
+        "orchestrate",
+        "review"
+      ],
+      "url": "https://github.com/zhaoxuya520/reverse-skill"
+    },
+    {
+      "id": "reczVlRQbKErbOT8d",
+      "capabilityTags": [
+        "research",
+        "code-generation"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-07-28",
+      "description": "Open-weight 2.8T-parameter multimodal agentic model from Moonshot AI — the first open '3T-class' model, with a 1M-token context window, native vision, and MXFP4 quantization for broad hardware compatibility.",
+      "improvementClaim": "Open frontier-class model weights — top-tier capability, self-hostable.",
+      "install": "Download weights: huggingface.co/MoonshotAI/Kimi-K3",
+      "language": "Python",
+      "name": "MoonshotAI/Kimi-K3",
+      "stars": 3900,
+      "stepArchetypes": [
+        "research",
+        "code"
+      ],
+      "url": "https://github.com/MoonshotAI/Kimi-K3"
+    }
+  ]
+}
