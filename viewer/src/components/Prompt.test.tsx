@@ -21,6 +21,8 @@ const enriched = fixture(enrichedDoc, 'enriched');
 
 const RESEARCH = 'Research the libraries & read the docs';
 const RESEARCH_MCP = 'Pull the docs in-session';
+const VERIFY = 'Verify it by hand in the browser';
+const VERIFY_DEVTOOLS = 'Verify in a driven browser';
 
 const FIRECRAWL = 'recA7kQ2mZ9pLxT4b';
 const DEVTOOLS = 'recB3nR8vY6wJdK2q';
@@ -29,6 +31,8 @@ const DEVTOOLS = 'recB3nR8vY6wJdK2q';
 const INTRO = enriched.meta.promptIntro!;
 
 const promptText = () => screen.getByTestId('prompt-text').textContent;
+const kitNames = () =>
+  screen.getAllByTestId('kit-row').map((el) => el.querySelector('label')?.textContent);
 
 it('offers PROMPT exactly where the impact panel stands, and toggles it in the rail', async () => {
   render(<GraphCanvas workflow={enriched} />);
@@ -86,6 +90,42 @@ it('regenerates when the version changes — apply and undo both move it', async
     await waitFor(() => expect(cardLabels()).toContain(RESEARCH), LAYOUT_WAIT);
     expect(promptText()).toBe(INTRO);
     expect(screen.getByTestId('prompt-none')).toBeInTheDocument();
+  } finally {
+    restore();
+  }
+});
+
+/**
+ * The kit through the whole canvas: the PROMPT toggle is the only route to it,
+ * and what it lists is read off the SESSION rather than off the order APPLY was
+ * pressed in — the patches land verify-first here, and the kit still reads in the
+ * order the prompt above it introduces them.
+ */
+it('reveals the install kit with the panel, holding the run\'s rows in flow order', async () => {
+  const restore = reduceMotion();
+  try {
+    render(<GraphCanvas workflow={enriched} />);
+    await cardsOf(enriched);
+    fireEvent.click(screen.getByTestId('prompt-btn'));
+
+    // at V0 there is nothing applied, so there is nothing to install
+    expect(screen.queryByTestId('install-kit')).not.toBeInTheDocument();
+
+    await applyOn(VERIFY);
+    await waitFor(() => expect(cardLabels()).toContain(VERIFY_DEVTOOLS), LAYOUT_WAIT);
+    await applyOn(RESEARCH);
+    await waitFor(() => expect(cardLabels()).toContain(RESEARCH_MCP), LAYOUT_WAIT);
+
+    // a section of the panel, not a surface of its own
+    expect(screen.getByTestId('prompt-panel')).toContainElement(screen.getByTestId('install-kit'));
+    expect(kitNames()).toEqual(['firecrawl-mcp', 'chrome-devtools-mcp']);
+    expect(screen.getAllByTestId('kit-check').every((box) => (box as HTMLInputElement).checked)).toBe(
+      true,
+    );
+
+    // and it leaves with the panel it is a section of
+    fireEvent.click(screen.getByTestId('prompt-btn'));
+    expect(screen.queryByTestId('install-kit')).not.toBeInTheDocument();
   } finally {
     restore();
   }
@@ -156,6 +196,39 @@ it('adds the whole run\'s install kit to the scorecard, with its own copy', asyn
 
     fireEvent.click(screen.getByTestId('scorecard-kit-copy'));
     await waitFor(() => expect(clip.writeText).toHaveBeenCalledExactlyOnceWith(block));
+  } finally {
+    clip.restore();
+    restore();
+  }
+});
+
+/**
+ * The report's kit and the panel's are one block on the run the demo makes: the
+ * same applied rows through the same builder, one frozen and one live. Read off
+ * both surfaces rather than off a literal — the claim is that the reader who
+ * takes the report and the reader who takes the panel install the same things,
+ * and a literal in the middle would let the two drift past each other.
+ */
+it('hands the report the same block the panel has ticked by default', async () => {
+  const restore = reduceMotion();
+  const clip = mockClipboard(() => Promise.resolve());
+  try {
+    render(<GraphCanvas workflow={enriched} />);
+    await cardsOf(enriched);
+
+    fireEvent.click(screen.getByTestId('optimize-btn'));
+    await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
+    const frozen = screen.getByTestId('scorecard-kit-text').textContent!;
+    expect(frozen).toContain('# Flowprint install kit');
+
+    // the report leaves the canvas standing on the version the run ended on, so
+    // the panel is being asked about exactly the same applied set
+    fireEvent.click(screen.getByTestId('scorecard-close'));
+    await waitFor(() => expect(screen.queryByTestId('scorecard')).not.toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('prompt-btn'));
+
+    fireEvent.click(screen.getByTestId('kit-copy'));
+    await waitFor(() => expect(clip.writeText).toHaveBeenCalledExactlyOnceWith(frozen));
   } finally {
     clip.restore();
     restore();

@@ -578,16 +578,22 @@ it('stands the rail down inside the wipe, and brings it back holding what it hel
   const { container } = render(<GraphCanvas workflow={enriched} />);
   await onV1(container);
 
-  // open the prompt too, so the rail is carrying state worth losing
+  // open the prompt too, so the rail is carrying state worth losing — and on V1
+  // the prompt is carrying the install kit, which goes wherever the rail goes
   fireEvent.click(screen.getByTestId('prompt-btn'));
   const rail = screen.getByTestId('canvas-rail');
   expect(rail).toContainElement(screen.getByTestId('impact-panel'));
   expect(rail).toContainElement(screen.getByTestId('prompt-panel'));
+  expect(rail).toContainElement(screen.getByTestId('install-kit'));
 
   await openWipe();
   expect(screen.queryByTestId('canvas-rail')).not.toBeInTheDocument();
   expect(screen.queryByTestId('impact-panel')).not.toBeInTheDocument();
   expect(screen.queryByTestId('prompt-panel')).not.toBeInTheDocument();
+  // the kit's rows are commands with ticks against them: nothing of that survives
+  // into a mode that has stood the panel holding them down
+  expect(screen.queryByTestId('install-kit')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('kit-check')).not.toBeInTheDocument();
   // nothing of the rail's is left to paint over the seam — the figures are told
   // at the divide instead, and the handle is grabbable the whole way across
   expect(screen.getByTestId('wipe-deltas')).toBeInTheDocument();
@@ -599,6 +605,7 @@ it('stands the rail down inside the wipe, and brings it back holding what it hel
   await waitFor(() => expect(screen.getByTestId('canvas-rail')).toBeInTheDocument());
   expect(screen.getByTestId('impact-panel')).toBeInTheDocument();
   expect(screen.getByTestId('prompt-panel')).toBeInTheDocument();
+  expect(screen.getByTestId('install-kit')).toBeInTheDocument();
   expect(screen.getByTestId('prompt-btn')).toHaveAttribute('aria-pressed', 'true');
 });
 
