@@ -2,17 +2,17 @@
 
 Map your Claude workflows. Describe a task → see the flowchart of how Claude would break it down with zero helpers → watch skills, plugins, connectors, and MCP servers from a curated knowledge base collapse it into something radically simpler → leave with the task rewritten as a prompt you can paste into Claude.
 
-**What works today.** The `/graph-my-task` Claude Code skill generates validated `*.workflow.json` graphs, matching each step against a live Airtable knowledge base of real skills, plugins, and MCP servers; the viewer renders them as Signal graphs — dark canvas, left→right flow, pain glowing ember — and you apply the suggestions one at a time or hand the whole graph to OPTIMIZE, walk it back with UNDO, hold it against the original in a before/after wipe, and leave with the task rewritten as a prompt plus the install kit that makes the prompt runnable. Next: out in public.
+![The Flowprint viewer: the payments graph after its three upgrades landed — the flow left→right on a dark canvas, the version strip at V3, and the impact panel reading −26% pain, −1 step, −115 min, −8000 tokens.](docs/assets/hero.png)
 
-## Try it
+**What works today.** The `/graph-my-task` Claude Code skill generates validated `*.workflow.json` graphs, matching each step against a live Airtable knowledge base of real skills, plugins, and MCP servers; the viewer renders them as Signal graphs — dark canvas, left→right flow, pain glowing ember — and you apply the suggestions one at a time or hand the whole graph to OPTIMIZE, walk it back with UNDO, hold it against the original in a before/after wipe, and leave with the task rewritten as a prompt plus the install kit that makes the prompt runnable. The picture above is one session, ended.
 
-**Generate a graph:** open this repo in Claude Code and run `/graph-my-task "your task here"` — the validated graph lands in `out/`.
+## Try the demo
 
-**Suggestions need no setup:** every run matches your steps against the curated knowledge base through a public feed — no account, no token, nothing to configure. Setting your own `AIRTABLE_API_KEY` overrides the feed and suggests from your base instead.
+**[tahirzlone.github.io/flowprint](https://tahirzlone.github.io/flowprint/)** — the gallery, hosted. No account, no key, nothing to install: open **Ship a Payments Feature End-to-End**, press **OPTIMIZE** and watch the flow collapse step by step, then **VS ORIGINAL** to drag the seam between where it started and where it ended, and **PROMPT** for the thing you leave with.
 
-**Set the helpers up:** when the suggestions carry install commands, the skill offers to add them for real — it probes what is already on the machine, puts every exact command in a table and waits for `all` / `pick` / `none`, then runs the shell ones once each and prints the ones you type inside Claude Code yourself. Point it at any existing `*.workflow.json` and ask to install its resources to do the same later.
+## Run it yourself
 
-**View graphs:** `npm --prefix viewer install` (first time), then `npm run dev:viewer`, then open the printed URL. The graph index lists every graph in `gallery/`; drop any `*.workflow.json` (including files from `out/`) onto the page to open it on the canvas. Then, on the canvas:
+Node 20+ (CI runs 22). `npm --prefix viewer install` (first time), then `npm run dev:viewer`, then open the printed URL. The graph index lists every graph in `gallery/`; drop any `*.workflow.json` (including files from `out/`) onto the page to open it on the canvas. Then, on the canvas:
 
 - **Both ends are marked.** The first step wears START and takes a chevron into its left port; the last wears END and runs out of its right port to a terminal dot — so which way the work flows reads at a glance, at any zoom, and comes with the graph into an export.
 - **Rest on a badged card** and its best match rises beside it — the name, what it claims, what it saves — without opening anything. Move off and it goes. Once the detail panel is open the peek stays down; the panel is already saying more than it could.
@@ -27,4 +27,45 @@ Map your Claude workflows. Describe a task → see the flowchart of how Claude w
 - **CRITICAL PATH** glows the longest run of pain through the flow. It recomputes per version, so the chain visibly shortens as you apply.
 - **EXPORT** (toolbar) or **EXPORT PNG** (scorecard) writes the graph as it stands to a shareable image, named for the graph and the version you are on.
 - **Drag nodes** to reshape the flow; edges and return lanes follow live. **RESET LAYOUT** hands the graph back to the auto-layout engine.
-- **Suggestions of your own:** the toolbar reads `AIRTABLE` when a graph was generated against a knowledge base and `KB NOT LINKED` when it wasn't. Set `AIRTABLE_API_KEY` before generating to suggest from your own base instead of the public feed — [`kb/airtable-template.md`](kb/airtable-template.md) has the table schema, the env vars, and how to make the token.
+- **The toolbar reads `AIRTABLE`** when a graph was generated against a knowledge base and `KB NOT LINKED` when it wasn't.
+
+## The skill: `/graph-my-task`
+
+Open this repo in Claude Code and run `/graph-my-task "your task here"`: the skill decomposes the task into 6–16 honest steps — the manual gathering, the format wrangling, the retry loops, the human review gates — and writes them as a validated graph in `out/`. Before it validates, it reads a curated knowledge base of real Claude skills, plugins, and MCP servers and attaches the ones that would collapse a step, each with what it claims, what it saves, and the command that installs it. It runs on your own Claude subscription, in your own checkout, and it never invents a helper: a resource that is not in the rows it fetched does not exist for that graph.
+
+**Suggestions need no setup.** The knowledge base resolves in four tiers, tried strictly in order, stopping at the first that hands over rows — it never climbs back up:
+
+| Tier | When | Rows come from | What you set up |
+| --- | --- | --- | --- |
+| 1 | `AIRTABLE_API_KEY` is set | your own Airtable base, read live | a token, and the schema in [`kb/airtable-template.md`](kb/airtable-template.md) |
+| 2 | no key set, or the key path failed | the public feed — `https://tahirlone.com/api/flowprint/kb` | nothing |
+| 2.5 | the feed is unreachable, non-200, or empty | [`kb/kb.json`](kb/kb.json), this repo's daily mirror of that feed | nothing — it is already on disk |
+| 3 | no source returned rows | nothing: the vanilla graph, `suggestions: []` | — |
+
+Tiers 1, 2, and 2.5 are the same table read three ways — live, mirrored, and mirrored to disk — so all three report `kbSource: "airtable"`, and every run says in one line which one answered. Tier 3 is not a failure: the honest flowchart is the deliverable either way.
+
+**Set the helpers up.** When the suggestions carry install commands, the skill offers to add them for real — it probes what is already on the machine, puts every exact command in a table and waits for `all` / `pick` / `none`, then runs the shell ones once each and prints the ones you type inside Claude Code yourself. Consent is per-string and the strings are never edited, not even to rescue a failure; point the skill at any existing `*.workflow.json` and ask to install its resources to run the same stage later.
+
+## Fork it
+
+Fork the repo, then **Settings → Pages → Build and deployment → Source: GitHub Actions** — one click, once. The next push to your `main` publishes your own copy of the demo at `https://<you>.github.io/<repo>/`. Nothing here reads a secret, so CI is as green in your fork as it is in this repo, and `vite`'s relative base means the bundle loads the same at whatever path your fork's name gives it.
+
+- **The skill runs on your own Claude subscription**, in your own Claude Code, against your own tasks.
+- **`AIRTABLE_API_KEY` is optional.** Leave it unset and the suggestions come from the public feed, and from the `kb/kb.json` snapshot in the fork you just made if that feed is down. Set it and your base takes over.
+- **The snapshot workflow sleeps in a quiet fork.** GitHub suspends scheduled runs on inactive forks, so `kb-snapshot.yml` stops mirroring on its own; Actions → KB snapshot → **Run workflow** revives it whenever you want a fresh one.
+- **The demo redeploys on real pushes only.** A snapshot commit is pushed by the Actions bot, and a `GITHUB_TOKEN` push does not trigger workflows — which is the right outcome here: the hosted demo is the precomputed gallery, not a live read of the knowledge base.
+
+## First publish (maintainer, once)
+
+`configure-pages` cannot see a private repository, so a `main` push before the flip fails the deploy. The order:
+
+1. Flip the repo public.
+2. Settings → Pages → Source: **GitHub Actions**.
+3. Merge `feat/launch` to `main` (or push `main`).
+4. Watch the `pages.yml` run.
+
+If the order slips, Actions → Deploy Pages → **Run workflow** re-runs it once the first two are done.
+
+## Credits
+
+Built by Tahir Zamaan — [tahirlone.com](https://tahirlone.com). The knowledge base is his own curated Airtable of Claude skills, plugins, and MCP servers, served to every run through the public feed. MIT licensed; see [`LICENSE`](LICENSE).
