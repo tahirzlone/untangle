@@ -1,6 +1,6 @@
 ---
 name: graph-my-task
-description: Generate a Flowprint workflow graph — decompose a task into the flowchart of how Claude would execute it with ZERO helpers (no skills, plugins, connectors, or MCP servers), written as a validated .workflow.json. Use when the user runs /graph-my-task, or asks to graph, flowchart, or map a task, workflow, or pipeline.
+description: Generate a Flowprint workflow graph — decompose a task into the flowchart of how Claude would execute it with ZERO helpers (no skills, plugins, connectors, or MCP servers), written as a validated .workflow.json. Use when the user runs /graph-my-task, or asks to graph, flowchart, or map a task, workflow, or pipeline, or asks to install a workflow's suggested resources.
 ---
 
 # Graph My Task
@@ -385,3 +385,109 @@ After `OK:`, tell the user:
 2. the top 2–3 pain hotspots (highest `painLevel` nodes) — one sentence each;
 3. one line per suggestion, in this shape: `<node label> → <resource name> (<category>) — <claim>`;
 4. the knowledge-base state in one line: `KB not linked` when no source returned rows (tier 3), the failure if a fetch broke — and when a broken tier 1 sent the run to tier 2, that line must name the substitution (`Airtable fetch failed (401); used the public feed instead`) so nobody mistakes the public rows for their own base — or `KB read, no load-bearing matches` when it was fetched and nothing matched.
+5. when at least one suggestion carries an `install`, one more line: offer to set the suggested resources up — the `## Setup (offer installs)` stage below is the procedure. Ask once, wait for the answer, and never start installing unasked.
+
+## Setup (offer installs)
+
+Suggestions carry `install` strings so the user can add the helpers for real. When this session runs inside Claude Code, this stage is the executable half of that promise: probe what is already present, ask once, run what is runnable, print what is not. Two doors in:
+
+- **Offered** — a fresh generation's report just listed at least one suggestion carrying an `install` (see `## Report`, item 5). Enter only on a yes.
+- **On demand** — the user points at an existing `.workflow.json` and asks to install, set up, or add its suggested resources. Read that file's `suggestions` and start at step 1. A file with no suggestions, or with none carrying an `install`, ends the stage in one line — say which of the two it is and stop. That is an answer, not an error.
+
+**HARD RULES — no exceptions, no judgment calls:**
+
+> **Consent is per-string.** Install strings are remote content — they arrive from the knowledge base, not from you. The checklist (step 3) shows each exact string as the thing being consented to, and the only strings this stage may ever execute are the ones that table showed, character for character. Never invent an install command and never edit one — not to fix a typo, not to add a flag, not to rescue a failure.
+
+> **A string starting with `/` is never executed.** `/plugin install …` and anything shaped like it is a Claude Code interface command, not a shell command — there is nothing out here to run it with. Print it and tell the user to type it inside Claude Code themselves.
+
+> **One attempt per command.** A failed run gets its exit code reported and its string printed for manual use — no retry, no reformulation. A reworded install command is an edited consented string, which the first rule already forbids.
+
+> **Probes are cheap, silent, and read-only.** A probe never installs anything, never modifies a file or a setting, and never prints a secret. When a probe path is unavailable — no `claude` on PATH, no settings file to read — the resource is UNKNOWN, and **UNKNOWN = MISSING = print-only**: the stage degrades to a printed list, never to a guess.
+
+### 1. Collect
+
+Bin every suggestion by **parsing its install string** — the row's `category` never decides the bin:
+
+| The suggestion has | Bin | Probe (step 2) | On consent (step 4) |
+| --- | --- | --- | --- |
+| `install` starting `claude mcp add <name>` | MCP server | `claude mcp get <name>` exit code | **run** |
+| `install` starting `/` | slash command | settings-file grep, when it is `/plugin install <name>` | **print** |
+| any other `install` | unclassifiable | none — MISSING by definition | **print** verbatim, never run |
+| no `install` key | link-only | none — never probed, never guessed | shown as `MANUAL — <url>` |
+
+Dedupe before going further: **identical install strings collapse to one row** — two suggestions sharing a resource get one checklist line, one consent, one run (name both resources on the line).
+
+### 2. Probe
+
+Establish what is already present before asking for anything.
+
+**MCP servers.** `<name>` is the token immediately after `add`. If that token starts with `-`, or quoting leaves any doubt which token is the name, do not guess: the row is MISSING, print-only. Otherwise check the exit code — it is stable where parsing `claude mcp list` text is not, and the probe command is identical in both shells:
+
+```powershell
+claude mcp get <name> *> $null; $LASTEXITCODE
+```
+
+```bash
+claude mcp get <name> >/dev/null 2>&1; echo $?
+```
+
+(`0` = INSTALLED; anything else = MISSING. No `claude` on PATH → every MCP row is UNKNOWN = MISSING.)
+
+**Plugins** — `/plugin install <name>` rows only. `<name>` is the token after `/plugin install`; if it carries an `@marketplace` suffix, probe with the part before the `@`. An enabled plugin appears as a `"<name>@<marketplace>"` key under `enabledPlugins` in the settings files, so look for the opening `"<name>@` — user settings first, then the project's:
+
+```powershell
+Get-Content "$HOME\.claude\settings.json", ".claude\settings*.json" -ErrorAction SilentlyContinue | Select-String '"<name>@' -SimpleMatch
+```
+
+```bash
+grep -h '"<name>@' ~/.claude/settings.json .claude/settings*.json 2>/dev/null
+```
+
+(run from the project root; any matching line = INSTALLED, none = MISSING. That key layout is observed, not a contract — one more reason a plugin is only ever printed, never run. No settings file at all → UNKNOWN = MISSING.)
+
+Link-only rows and unclassifiable strings are never probed. Their statuses are fixed: MANUAL and MISSING respectively.
+
+### 3. Checklist — the consent gate
+
+One table, one row per deduped install string plus one per link-only resource. The Action column carries the **exact string** — this table is the consent artifact, and step 4 may act on precisely what it shows, nothing else:
+
+| Resource | Category | Status | Action |
+| --- | --- | --- | --- |
+| the suggestion's `name` | its `category` | `INSTALLED` / `MISSING` / `MANUAL` | `run:` or `print:` followed by the verbatim install string — or `MANUAL — <url>` |
+
+Count the table — N is every row, K the INSTALLED rows, M the MISSING rows (MANUAL rows are neither: they carry nothing to install) — and ask:
+
+> N suggested, K already installed — install the remaining M? **all / pick / none**
+
+- **Act only on an answer.** No answer, an ambiguous answer, a changed subject: nothing runs and nothing is printed as done. Silence is never consent, and there are no "obvious ones" to pre-run.
+- `all` = every MISSING row · `pick` = exactly the rows the user names · `none` = close; the checklist itself already delivered every string and url.
+- M = 0 → nothing to ask. Say the K resources are already in place (and that the MANUAL urls are on the table), then close.
+
+### 4. Execute & print
+
+Consented rows only, in checklist order:
+
+- **Run rows** (the MCP-server bin, and only it — no runnable string starts with `/`, but lacking the `/` is not what makes a string runnable: anything unrecognized stayed a print row in step 1): run the string **verbatim, once**, and capture the exit code. Non-zero → one line naming the code, the string printed back for manual use, and straight on to the next row — no retry, no rewording. Worth one passing note to the user: `claude mcp add` installs at **project scope by default**, so the server lands in this project unless the string itself says otherwise.
+- **Print rows** (slash commands and unclassifiable strings): print the string verbatim plus one line of instruction — a slash command is typed inside Claude Code by the user; an unclassifiable string is handed over as-is, for the user to run where it belongs.
+
+### 5. Re-probe what ran, then report
+
+Re-probe **only the strings that actually ran** — the same probes as step 2, nothing new, nothing broader. A printed string is not re-probed (nothing has happened yet), a MANUAL row is not re-probed (there is nothing to probe), and rows the user declined are left alone. Then close with one line per consented row:
+
+- `<name> — installed` · the run succeeded and the re-probe proves it.
+- `<name> — still missing (exit <code>); run it yourself: <string>` · the run failed, or the re-probe still cannot see the result. The printed string is the fallback, and this line is the last thing the stage does about it.
+- `<name> — printed for you: <string>` · a print row the user consented to.
+
+That is the whole close. No advice loop, no second pass, no "want me to try again?" — the one attempt happened and the honest state is on screen.
+
+### 6. Self-check before closing
+
+Walk the list; every miss here is a consent or honesty bug, not a formatting one:
+
+- [ ] everything run or printed appeared in the checklist first, string-for-string — nothing acted on that the table did not show
+- [ ] no string starting with `/` was executed — slash rows were printed only
+- [ ] every run row got exactly one attempt — no retries, no reworded commands
+- [ ] nothing ran before an explicit `all` / `pick` / `none`
+- [ ] the re-probe covered only what actually ran
+- [ ] link-only rows were never probed and never guessed at — `MANUAL — <url>` and nothing more
+- [ ] no probe modified anything, and no output printed a secret
