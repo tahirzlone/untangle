@@ -1,0 +1,56 @@
+name: Deploy Pages
+
+# The hosted demo is the precomputed gallery only — no API keys, no server, no
+# secrets, so this workflow runs unchanged on a fork after one click:
+# Settings → Pages → Build and deployment → Source: GitHub Actions.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time, and never cancel one already in flight.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  build:
+    name: build viewer
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: viewer
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: viewer/package-lock.json
+      - uses: actions/configure-pages@v6
+      - run: npm ci
+      # Vite's base is './', so the bundle is subpath-agnostic: it loads the
+      # same at /flowprint/ and at whatever path a differently-named fork gets.
+      - run: npm run build
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: viewer/dist
+
+  deploy:
+    name: deploy to Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

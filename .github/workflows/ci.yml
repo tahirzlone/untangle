@@ -1,0 +1,54 @@
+name: CI
+
+# Every push and every pull request. Nothing here reads a secret, so a fork's
+# runs are as green as this repository's, with no setup.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+# A newer push to the same ref supersedes the one still running.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  contract:
+    name: contract (schema + validator)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  viewer:
+    name: viewer (suite, types, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: viewer
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: viewer/package-lock.json
+      - run: npm ci
+      # The suite runs in one worker: ELK's layout engine is module-level state
+      # that parallel files trample.
+      - run: npm test -- --fileParallelism=false
+      - run: npx tsc -b
+      # Same command and same output directory the Pages workflow publishes
+      # (viewer/dist), so a green build here is a publishable artifact there.
+      - run: npm run build
