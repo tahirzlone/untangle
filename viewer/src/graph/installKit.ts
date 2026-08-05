@@ -21,14 +21,39 @@ import type { Suggestion } from './types';
  * kit. Install strings are reproduced verbatim — never edited, never invented —
  * because the string is the thing the user is consenting to run, and a command
  * this module improved would be a command nobody approved.
+ *
+ * THE LINE-BREAK RULE: an install string carrying a line break — measured on the
+ * trimmed string, so the whitespace around a one-line command does not count — is
+ * never handed over as a command, whichever half it would otherwise fall in.
+ * Every one of its physical lines is commented, under a header saying the kit is
+ * not offering it. Class makes no difference to that: line 2 of a "shell" install
+ * is as unvetted as line 2 of a slash one, the row above showed one command, and
+ * a paste would run two. These strings come out of a remote knowledge base, so
+ * the question is not whether a generation would write such a thing but what this
+ * module does when one arrives — and what it does is stop short of the shell.
  */
 
 /** The block's own first line, so a kit found in a terminal says what it is. */
 const HEADER = '# Flowprint install kit';
 
-/** The line every Claude Code command stands under, and the indent under it. */
+/** The line every Claude Code command stands under. */
 const SLASH_HEADER = '# inside Claude Code, type:';
-const SLASH_PREFIX = '#   ';
+
+/** The line a string demoted by the line-break rule stands under. */
+const MULTILINE_HEADER = '# more than one line — read it, then run it yourself:';
+
+/** The indent a commented command takes, under either header. */
+const COMMENT_PREFIX = '#   ';
+
+/** Every way a string can carry a second physical line into a pasted block. */
+const LINE_BREAK = /\r\n|[\r\n]/;
+
+/**
+ * A string as the lines it would occupy in the block, each one commented — so
+ * nothing in it is left for a shell to read as a command of its own.
+ */
+const commented = (install: string): string[] =>
+  install.split(LINE_BREAK).map((line) => `${COMMENT_PREFIX}${line}`);
 
 /** Which half of the block an install string belongs in. */
 export type InstallKind = 'shell' | 'slash';
@@ -62,9 +87,15 @@ export function hasInstall(s: Suggestion): s is Installable {
  * `/plugin install`, MCP servers as a shell command, and the KB is free to pair
  * them the other way round. A leading slash is the one mark that means "inside
  * Claude Code"; everything else is something a shell can execute.
+ *
+ * Read off the TRIMMED string, because leading space is not a class: a KB row
+ * holding `'  /plugin install x'` names the same interface command as one without
+ * the space, and reading it raw would send it out bare into a shell that has no
+ * such command — while the skill's own setup stage, which never runs a string it
+ * cannot classify, would print it. One string, two answers, is one too many.
  */
 export function installKind(install: string): InstallKind {
-  return install.startsWith('/') ? 'slash' : 'shell';
+  return install.trim().startsWith('/') ? 'slash' : 'shell';
 }
 
 /**
@@ -83,6 +114,10 @@ export function installKind(install: string): InstallKind {
  * duplicate string appears once — the exact-string rule prompt.ts dedupes
  * installs by — because the same MCP suggested at two steps is one `mcp add`.
  *
+ * A string the line-break rule demotes goes last, in a section of its own: the
+ * two sections above it are things to do, and this one is a thing to read, so it
+ * stands after them rather than between a paste and what it was going to run.
+ *
  * Empty selection, or one naming no command at all: `''`, not a lone header.
  * The trailing newline is there so the last command arrives as a whole line
  * rather than as something the shell is still waiting on.
@@ -91,6 +126,7 @@ export function buildInstallBlock(selected: Suggestion[]): string {
   const seen = new Set<string>();
   const shell: string[] = [];
   const slash: string[] = [];
+  const demoted: string[] = [];
 
   for (const s of selected) {
     // Nothing to run is not something to list: an install with no command in it
@@ -100,12 +136,18 @@ export function buildInstallBlock(selected: Suggestion[]): string {
     const install = s.install;
     if (seen.has(install)) continue;
     seen.add(install);
-    (installKind(install) === 'slash' ? slash : shell).push(install);
+    // The line-break rule first, and it answers for both classes: a break inside
+    // the command is a second line the paste would carry, and neither section
+    // above can represent the pair as the one command the row consented to.
+    if (LINE_BREAK.test(install.trim())) demoted.push(install);
+    else if (installKind(install) === 'slash') slash.push(install);
+    else shell.push(install);
   }
 
-  if (shell.length === 0 && slash.length === 0) return '';
+  if (shell.length === 0 && slash.length === 0 && demoted.length === 0) return '';
 
   const lines = [HEADER, ...shell];
-  if (slash.length > 0) lines.push(SLASH_HEADER, ...slash.map((s) => `${SLASH_PREFIX}${s}`));
+  if (slash.length > 0) lines.push(SLASH_HEADER, ...slash.flatMap(commented));
+  if (demoted.length > 0) lines.push(MULTILINE_HEADER, ...demoted.flatMap(commented));
   return `${lines.join('\n')}\n`;
 }

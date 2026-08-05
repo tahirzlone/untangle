@@ -36,6 +36,23 @@ it('reads a leading slash as typed inside Claude Code, and everything else as a 
   expect(installKind(sug(FIRECRAWL).install!)).toBe('shell');
 });
 
+// Leading space is not a class. A KB row holding an indented slash command names
+// the same interface command as one without the space — and read raw it would go
+// out bare, into a shell that has no `/plugin`.
+it('reads the kind off the trimmed string, so an indented slash command is still one', () => {
+  expect(installKind('  /plugin install codebase-conventions')).toBe('slash');
+  expect(installKind('\t/plugin install codebase-conventions ')).toBe('slash');
+  expect(installKind('  claude mcp add firecrawl -- npx -y firecrawl-mcp')).toBe('shell');
+
+  // and the block acts on that answer: commented under its line, never bare
+  const indented: Suggestion = { ...sug(CONVENTIONS), install: '  /plugin install indented' };
+  expect(buildInstallBlock([indented])).toBe(
+    '# Flowprint install kit\n' +
+      '# inside Claude Code, type:\n' +
+      '#     /plugin install indented\n',
+  );
+});
+
 // ---------------------------------------------------------------------------
 // The block
 // ---------------------------------------------------------------------------
@@ -119,6 +136,70 @@ it('treats an install field with nothing in it as no command at all', () => {
     '# Flowprint install kit\n' +
       '# inside Claude Code, type:\n' +
       '#   /plugin install codebase-conventions\n',
+  );
+});
+
+// ---------------------------------------------------------------------------
+// The line-break rule
+// ---------------------------------------------------------------------------
+
+// The block's comment discipline is per LINE, not per string: prefixing only the
+// first one would leave `rm -rf x` standing bare under a header that says nothing
+// below it runs — the second line of an install nobody read as two.
+it('comments every physical line of a Claude Code command that carries a line break', () => {
+  const smuggled: Suggestion = { ...sug(CONVENTIONS), install: '/plugin install a\nrm -rf x' };
+
+  expect(buildInstallBlock([smuggled])).toBe(
+    '# Flowprint install kit\n' +
+      '# more than one line — read it, then run it yourself:\n' +
+      '#   /plugin install a\n' +
+      '#   rm -rf x\n',
+  );
+});
+
+// Line 2 of a "shell" install is as unvetted as line 2 of a slash one, and the
+// bare section is the one place a paste ACTS — so the rule holds regardless of
+// class, and the string goes over as something to read.
+it('demotes a shell string with a line break in it rather than pasting it bare', () => {
+  const smuggled: Suggestion = { ...sug(FIRECRAWL), install: 'claude mcp add a\nrm -rf x' };
+
+  expect(buildInstallBlock([smuggled])).toBe(
+    '# Flowprint install kit\n' +
+      '# more than one line — read it, then run it yourself:\n' +
+      '#   claude mcp add a\n' +
+      '#   rm -rf x\n',
+  );
+  // whichever way the line ends, and the header is never the runnable half's
+  const crlf: Suggestion = { ...sug(FIRECRAWL), install: 'claude mcp add a\r\nrm -rf x' };
+  for (const line of buildInstallBlock([crlf]).trimEnd().split('\n').slice(1)) {
+    expect(line.startsWith('#')).toBe(true);
+  }
+});
+
+// The demoted section is a thing to READ: it stands after both sections of things
+// to do, so nothing to run is ever separated from the header that vouches for it.
+it('keeps the demoted lines last, behind everything the paste can act on', () => {
+  const smuggled: Suggestion = { ...sug(FIRECRAWL), install: 'claude mcp add a\nrm -rf x' };
+
+  expect(buildInstallBlock([smuggled, sug(DEVTOOLS), sug(CONVENTIONS)])).toBe(
+    '# Flowprint install kit\n' +
+      'claude mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest\n' +
+      '# inside Claude Code, type:\n' +
+      '#   /plugin install codebase-conventions\n' +
+      '# more than one line — read it, then run it yourself:\n' +
+      '#   claude mcp add a\n' +
+      '#   rm -rf x\n',
+  );
+});
+
+// The rule is measured on the trimmed string: a newline in the whitespace around
+// a one-line command is not a second command, and demoting it would take a
+// perfectly good `mcp add` out of the runnable half over a stray keystroke.
+it('leaves a one-line command runnable when the only break is the whitespace around it', () => {
+  const padded: Suggestion = { ...sug(FIRECRAWL), install: '\nclaude mcp add firecrawl\n' };
+
+  expect(buildInstallBlock([padded])).toBe(
+    '# Flowprint install kit\n\nclaude mcp add firecrawl\n\n',
   );
 });
 

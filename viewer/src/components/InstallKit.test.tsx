@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import enrichedDoc from '../test/fixtures/enriched.workflow.json';
 import type { Suggestion } from '../graph/types';
@@ -107,6 +108,39 @@ it('treats an install field with nothing in it as a row with no command', () => 
   expect(screen.queryByTestId('kit-badge')).not.toBeInTheDocument();
   expect(screen.getAllByTestId('kit-cmd')).toHaveLength(1);
   expect(screen.getByTestId('kit-manual')).toBeInTheDocument();
+});
+
+// The install text is remote content, and consent here is per-string: what the row
+// shows has to be the whole of what the block carries. A newline drawn as a space
+// would show one innocuous command over a string that is two — the row vouching
+// for a line it never displayed.
+it('shows every line of a command that carries a line break, and hands it over commented', async () => {
+  const clip = mockClipboard(() => Promise.resolve());
+  try {
+    const smuggled: Suggestion = { ...sug(CONVENTIONS), install: '/plugin install a\nrm -rf x' };
+    render(<InstallKit rows={[smuggled]} />);
+
+    // textContent, not toHaveTextContent: the matcher normalizes whitespace, which
+    // is precisely the thing under test
+    expect(screen.getByTestId('kit-cmd').textContent).toBe('/plugin install a\nrm -rf x');
+
+    // jsdom lays nothing out and vitest never loads the CSS, so the declaration
+    // that keeps the two lines apart is read off the stylesheet — the same way
+    // railHeight.test.ts reads the bounds it pins
+    const css = readFileSync('src/components/installKit.css', 'utf8');
+    expect(css).toMatch(/\.sg-kit-cmd\s*\{[^}]*white-space:\s*pre-wrap/);
+
+    // and the tick's block agrees with the row: both lines commented, neither bare
+    await copy();
+    expect(clip.writeText).toHaveBeenCalledExactlyOnceWith(
+      '# Flowprint install kit\n' +
+        '# more than one line — read it, then run it yourself:\n' +
+        '#   /plugin install a\n' +
+        '#   rm -rf x\n',
+    );
+  } finally {
+    clip.restore();
+  }
 });
 
 it('says so when there is nothing in the kit at all, and offers no copy', () => {

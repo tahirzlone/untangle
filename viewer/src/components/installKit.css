@@ -128,6 +128,11 @@
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 3px 7px;
+  /* A line break in the string is shown as a line break: collapsed to a space it
+     would draw one innocuous command over a string the block carries as two, and
+     the tick would be consenting to a line the row never showed. Wrapping is
+     still on, so a long single line behaves as it did. */
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
   user-select: all;
 }
