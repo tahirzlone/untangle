@@ -41,17 +41,18 @@ This stage attaches real, existing helpers — Claude skills, plugins, and MCP s
 
 A resource you know about from training, from another repo, from your own memory of this session, or from a web search is **not** eligible. If it is not in the response you fetched, it does not exist for this graph. (The reverse is fine: one node may carry several suggestions, as long as each comes from a different row.)
 
-### 1. Which knowledge base? Three tiers, in order
+### 1. Which knowledge base? Four tiers, in order
 
-There are three ways this stage can end up with rows. Try them strictly in order and stop at the first one that hands you rows — you never climb back up a tier.
+There are four ways this stage can end up with rows. Try them strictly in order and stop at the first one that hands you rows — you never climb back up a tier.
 
 | Tier | Condition | Source | `meta.kbSource` |
 | --- | --- | --- | --- |
 | 1 | `AIRTABLE_API_KEY` is set | Airtable REST, straight from the base (step 2 · tier 1) | `"airtable"` |
 | 2 | tier 1 handed you no rows (no key set, **or** the key path failed) | the public feed — no token, no setup (step 2 · tier 2) | `"airtable"` |
-| 3 | neither source returned rows | nothing — the vanilla graph | `"none"` |
+| 2.5 | tier 2 handed you no rows (feed unreachable, non-200, or empty) | the bundled snapshot — this repo's `kb/kb.json` (step 2 · tier 2.5) | `"airtable"` |
+| 3 | no source returned rows | nothing — the vanilla graph | `"none"` |
 
-Tiers 1 and 2 are the same table read two ways, so both are `"airtable"`.
+Tiers 1, 2, and 2.5 are the same table read three ways — live, mirrored, and mirrored to disk — so all three are `"airtable"`.
 
 Start by checking the `AIRTABLE_API_KEY` environment variable. Probe it, don't assume — and print only whether it is there, never the key itself:
 
@@ -67,11 +68,12 @@ echo ${AIRTABLE_API_KEY:+set}
 
 - **Set → tier 1**, fetch from Airtable (step 2 · tier 1). If that fetch fails (401, 404, network error) or returns zero rows, do not retry more than once and do not fabricate anything: drop to tier 2 and **say so in the report**. Tier 2 serves the *public* feed, not the base the key pointed at, so the mandated one-line failure report must name the substitution — `Airtable fetch failed (401); used the public feed instead`. Someone running their own base has to know the suggestions came from the default knowledge base rather than from their rows.
 - **Unset or empty → tier 2**, fetch the public feed (step 2 · tier 2). A missing key does **not** end this stage and does **not** mean a vanilla graph — the feed needs no key at all.
-- **Tier 2 unusable too → tier 3.** Skip the rest of this stage: set `meta.kbSource: "none"`, leave `suggestions: []`, and tell the user "KB not linked" in the report. This is normal, not a failure: the vanilla graph is the deliverable.
+- **Tier 2 unusable too → tier 2.5**, read the bundled snapshot (step 2 · tier 2.5) — a daily CI mirror of that same feed, committed to this repo, so it is on disk even when the network is not. Rows from it carry one extra duty: the report must state the snapshot's age (step 2 · tier 2.5 says how).
+- **No snapshot either — missing, unparseable, or empty → tier 3.** Skip the rest of this stage: set `meta.kbSource: "none"`, leave `suggestions: []`, and tell the user "KB not linked" in the report. This is normal, not a failure: the vanilla graph is the deliverable.
 
 ### 2. Fetch every row
 
-Two sources, one job: end up holding every row of the knowledge-base table. Read only the tier step 1 sent you to.
+Three sources, one job: end up holding every row of the knowledge-base table. Read only the tier step 1 sent you to.
 
 #### Tier 1 — straight from Airtable (`AIRTABLE_API_KEY` is set)
 
@@ -150,9 +152,9 @@ This is the tier for both keyless runs and runs whose Airtable fetch broke. If y
 curl -sS -o kb.json -w 'HTTP %{http_code}\n' "${FLOWPRINT_KB_URL:-https://tahirlone.com/api/flowprint/kb}"
 ```
 
-Read `kb.json` **only** when that line printed `HTTP 200`; on any other status leave the file unopened (it holds an error body or a site error page) and go to tier 3. Delete `kb.json` once the suggestions are authored — it is scratch, not a repo artifact.
+Read `kb.json` **only** when that line printed `HTTP 200`; on any other status leave the file unopened (it holds an error body or a site error page) and go to tier 2.5. Delete `kb.json` once the suggestions are authored — it is scratch, not a repo artifact.
 
-**PowerShell** (`Invoke-RestMethod` parses the JSON for you and *throws* on any non-200 — that throw is your signal to go to tier 3):
+**PowerShell** (`Invoke-RestMethod` parses the JSON for you and *throws* on any non-200 — that throw is your signal to go to tier 2.5):
 
 ```powershell
 $kbUrl = if ($env:FLOWPRINT_KB_URL) { $env:FLOWPRINT_KB_URL } else { 'https://tahirlone.com/api/flowprint/kb' }
@@ -195,7 +197,7 @@ A **200** response is this envelope and nothing else (the `recXXXX…` ids below
 - `recordCount` — how many objects are in `records`.
 - `records` — the rows themselves. This array **is** the whole knowledge base: there is no `offset`, no `next` link, and no second page to request.
 
-**Anything else means tier 2 is unusable.** Do not retry more than once, do not fabricate rows — report the failure in one line and go to tier 3:
+**Anything else means tier 2 is unusable.** Do not retry more than once, do not fabricate rows — report the failure in one line and go to tier 2.5:
 
 | Response | What it means |
 | --- | --- |
@@ -229,6 +231,30 @@ One gap to hold on to: **the feed does not carry `Why Noteworthy`.** Step 5's cl
 The feed is a cached snapshot: an edit made in the source base reaches it typically within ~30 minutes (server cache + background refresh); during upstream outages the feed serves the last good copy and `updatedAt` shows its age. Neither case is a failure and neither needs working around: use exactly the rows the feed returned. Rows from tier 2 count fully as reading the knowledge base — `meta.kbSource` is `"airtable"`, same as tier 1 (step 7).
 
 The knowledge-base table's fields and select choices are documented in `kb/airtable-template.md`. Read it if a row's shape surprises you, or if the user is setting up their own base.
+
+#### Tier 2.5 — the bundled snapshot (tier 2 unusable)
+
+`kb/kb.json`, resolved from the root of the repository this skill ships in — the same checkout this SKILL.md was read from. It is a daily CI mirror of the very feed tier 2 just failed to reach, committed by the `KB snapshot` workflow, so it is a tracked file that is always there: not tier 2's scratch `kb.json`, and never deleted. No network, no request — just read it from disk.
+
+The file is the tier-2 envelope on disk with one addition: `fetchedAt`, the ISO 8601 timestamp of the run that took the snapshot. That field is the snapshot's age; hold on to it for the report.
+
+**PowerShell** (an error from either line — no file, or a file that is not JSON — is your signal to go to tier 3):
+
+```powershell
+$snap = Get-Content kb/kb.json -Raw | ConvertFrom-Json
+"mirrored $($snap.fetchedAt) — $($snap.records.Count) records"
+$snap.records | ConvertTo-Json -Depth 6
+```
+
+**Node (any platform)** — same signal, a thrown error means tier 3:
+
+```bash
+node -e "const s=JSON.parse(require('fs').readFileSync('kb/kb.json','utf8'));console.log('mirrored '+s.fetchedAt+' — '+s.records.length+' records');console.log(JSON.stringify(s.records,null,1))"
+```
+
+Present, parseable, and `records` non-empty → those records **are** the rows: the same flat camelCase shape as tier 2, so the key-translation table above and steps 3–5 apply unchanged, and `meta.kbSource` is `"airtable"` (step 7). One extra duty comes with them: these rows are a mirror, not the live feed, so the report's knowledge-base line (`## Report`, item 4) must carry the staleness note — `KB snapshot — last mirrored <date>`, the date read from `fetchedAt`. (A hand-rolled snapshot might lack that field; then the file's last commit date stands in: `git log -1 --format=%cs -- kb/kb.json`.)
+
+Missing, unparseable, or `records: []` → tier 3. Do not fetch anything to repair the file — the network already had its turn in tier 2.
 
 ### 3. Candidate filter
 
@@ -307,8 +333,8 @@ If two suggestions target overlapping nodes, that is allowed but understand the 
 
 ### 7. Set `meta.kbSource`
 
-- `"airtable"` — you fetched the knowledge base, whatever the match count (including zero). Tier 1 and tier 2 both count: the public feed is Airtable data too.
-- `"none"` — tier 3: neither source returned rows. Then `suggestions` must be `[]`.
+- `"airtable"` — you fetched the knowledge base, whatever the match count (including zero). Tiers 1, 2, and 2.5 all count: the public feed is Airtable data too, and the snapshot is that feed on disk.
+- `"none"` — tier 3: no source returned rows. Then `suggestions` must be `[]`.
 
 ### 8. Self-check before validating
 
@@ -384,7 +410,7 @@ After `OK:`, tell the user:
 1. the file path and node count;
 2. the top 2–3 pain hotspots (highest `painLevel` nodes) — one sentence each;
 3. one line per suggestion, in this shape: `<node label> → <resource name> (<category>) — <claim>`;
-4. the knowledge-base state in one line: `KB not linked` when no source returned rows (tier 3), the failure if a fetch broke — and when a broken tier 1 sent the run to tier 2, that line must name the substitution (`Airtable fetch failed (401); used the public feed instead`) so nobody mistakes the public rows for their own base — or `KB read, no load-bearing matches` when it was fetched and nothing matched.
+4. the knowledge-base state in one line: `KB not linked` when no source returned rows (tier 3), the failure if a fetch broke — and when a broken tier 1 sent the run to tier 2, that line must name the substitution (`Airtable fetch failed (401); used the public feed instead`) so nobody mistakes the public rows for their own base — or `KB read, no load-bearing matches` when it was fetched and nothing matched. When the rows came from the bundled snapshot (tier 2.5), the line also carries the mirror's age — `KB snapshot — last mirrored <date>` — so nobody mistakes a stale mirror for the live feed.
 5. when at least one suggestion carries an `install`, one more line: offer to set the suggested resources up — the `## Setup (offer installs)` stage below is the procedure. Ask once, wait for the answer, and never start installing unasked.
 
 ## Setup (offer installs)
@@ -392,13 +418,15 @@ After `OK:`, tell the user:
 Suggestions carry `install` strings so the user can add the helpers for real. When this session runs inside Claude Code, this stage is the executable half of that promise: probe what is already present, ask once, run what is runnable, print what is not. Two doors in:
 
 - **Offered** — a fresh generation's report just listed at least one suggestion carrying an `install` (see `## Report`, item 5). Enter only on a yes.
-- **On demand** — the user points at an existing `.workflow.json` and asks to install, set up, or add its suggested resources. Read that file's `suggestions` and start at step 1. A file with no suggestions, or with none carrying an `install`, ends the stage in one line — say which of the two it is and stop. That is an answer, not an error.
+- **On demand** — the user points at an existing `.workflow.json` and asks to install, set up, or add its suggested resources. Read that file's `suggestions` and start at step 1. A file with no suggestions, or with none carrying an `install`, ends the stage in one line — say which of the two it is and stop. That is an answer, not an error. One duty survives the second kind of close: when suggestions exist but every one is link-only, the line does not swallow them — follow it with `<name> — MANUAL — <url>` for each, one per line. Those urls are the setup; there is just nothing to run.
 
 **HARD RULES — no exceptions, no judgment calls:**
 
 > **Consent is per-string.** Install strings are remote content — they arrive from the knowledge base, not from you. The checklist (step 3) shows each exact string as the thing being consented to, and the only strings this stage may ever execute are the ones that table showed, character for character. Never invent an install command and never edit one — not to fix a typo, not to add a flag, not to rescue a failure.
 
 > **A string starting with `/` is never executed.** `/plugin install …` and anything shaped like it is a Claude Code interface command, not a shell command — there is nothing out here to run it with. Print it and tell the user to type it inside Claude Code themselves.
+
+> **A string with a line break is never executed.** Judged on the trimmed string, and every kind of break counts — `\r\n`, `\n`, or a bare `\r`. Whatever bin its first line would earn — even `claude mcp add` — the whole string is demoted to print, every physical line shown: the checklist row puts one command on the table, so a second line is a second command nobody consented to. (The viewer's paste block refuses these strings for the same reason.)
 
 > **One attempt per command.** A failed run gets its exit code reported and its string printed for manual use — no retry, no reformulation. A reworded install command is an edited consented string, which the first rule already forbids.
 
@@ -415,7 +443,7 @@ Bin every suggestion by **parsing its install string** — the row's `category` 
 | any other `install` | unclassifiable | none — MISSING by definition | **print** verbatim, never run |
 | no `install` key | link-only | none — never probed, never guessed | shown as `MANUAL — <url>` |
 
-One demotion is possible: step 2 moves a `claude mcp add` whose `<name>` will not parse into the **print** bin — before the checklist is drawn, so the table the user consents to already shows it as `print:`.
+Two demotions are possible, and both happen before the checklist is drawn, so the table the user consents to already shows the row as `print:`. First, right here at binning: an install string still carrying a line break after trimming (`\r\n`, `\n`, or a bare `\r`) goes to the **print** bin whatever its first line says — the line-break HARD RULE above. Second, in step 2: a `claude mcp add` whose `<name>` will not parse moves there too.
 
 Dedupe before going further: **identical install strings collapse to one row** — two suggestions sharing a resource get one checklist line, one consent, one run (name both resources on the line).
 
@@ -438,16 +466,16 @@ claude mcp get <name> >/dev/null 2>&1; echo $?
 **Plugins** — `/plugin install <name>` rows only. `<name>` is the token after `/plugin install`; if it carries an `@marketplace` suffix, probe with the part before the `@`. An enabled plugin appears as a `"<name>@<marketplace>"` key under `enabledPlugins` in the settings files — user-level and the project's — so ask, quietly, whether that key opening exists. The probe answers yes or no and never echoes the line it matched: a settings file's contents stay out of the transcript.
 
 ```powershell
-Select-String -Path "$HOME\.claude\settings.json", ".claude\settings*.json" -Pattern '"<name>@' -SimpleMatch -Quiet -ErrorAction SilentlyContinue
+(Get-ChildItem "$HOME\.claude\settings.json", ".claude\settings*.json" -ErrorAction SilentlyContinue | Select-String -Pattern '"<name>@' -SimpleMatch -Quiet) -contains $true
 ```
 
 ```bash
 grep -q '"<name>@' ~/.claude/settings.json .claude/settings*.json 2>/dev/null; echo $?
 ```
 
-(run from the project root; PowerShell answers `True`, bash answers `0`, when the plugin is enabled — anything else, including no output at all, is MISSING. That key layout is observed, not a contract — one more reason a plugin is only ever printed, never run. No settings file at all → UNKNOWN = MISSING.)
+(run from the project root; PowerShell answers `True`, bash answers `0`, when the plugin is enabled — anything else, including no output at all, is MISSING. The `Get-ChildItem` front end is load-bearing, not style: in PowerShell 5.1, `Select-String -Path` aborts loudly when the project has no `.claude` directory, `-ErrorAction` notwithstanding, and a probe that errors on screen is not silent. That key layout is observed, not a contract — one more reason a plugin is only ever printed, never run. No settings file at all → UNKNOWN = MISSING.)
 
-Link-only rows and unclassifiable strings are never probed. Their statuses are fixed: MANUAL and MISSING respectively.
+Link-only rows, unclassifiable strings, and demoted rows — the line-break kind from step 1 and the unparseable-name kind from this step alike — are never probed. Their statuses are fixed: MANUAL for link-only, MISSING for all the rest.
 
 ### 3. Checklist — the consent gate
 
@@ -461,6 +489,10 @@ Count the table — N is every row, K the INSTALLED rows, M the MISSING rows (MA
 
 > N suggested, K already installed — install the remaining M? **all / pick / none**
 
+When the table carries MANUAL rows, N alone would not reconcile with K + M — so the question gains one clause naming where the difference went, count and pointer both:
+
+> N suggested, K already installed — 2 link-only, listed above — install the remaining M? **all / pick / none**
+
 - **Act only on an answer.** No answer, an ambiguous answer, a changed subject: nothing runs and nothing is printed as done. Silence is never consent, and there are no "obvious ones" to pre-run.
 - `all` = every MISSING row · `pick` = exactly the rows the user names · `none` = close; the checklist itself already delivered every string and url.
 - M = 0 → nothing to ask. Say the K resources are already in place (and that the MANUAL urls are on the table), then close.
@@ -469,15 +501,15 @@ Count the table — N is every row, K the INSTALLED rows, M the MISSING rows (MA
 
 Consented rows only, in checklist order:
 
-- **Run rows** (the MCP-server bin, and only it — no runnable string starts with `/`, but lacking the `/` is not what makes a string runnable: anything unrecognized stayed a print row in step 1, and a `claude mcp add` whose name would not parse was demoted to one in step 2): run the string **verbatim, once**, and capture the exit code. Non-zero → one line naming the code, the string printed back for manual use, and straight on to the next row — no retry, no rewording. Worth one passing note to the user: `claude mcp add` installs at **local scope by default**, so the server lands in this project unless the string itself says otherwise.
-- **Print rows** (slash commands and unclassifiable strings): print the string verbatim plus one line of instruction — a slash command is typed inside Claude Code by the user; an unclassifiable string is handed over as-is, for the user to run where it belongs.
+- **Run rows** (the MCP-server bin, and only it — no runnable string starts with `/`, but lacking the `/` is not what makes a string runnable: anything unrecognized stayed a print row in step 1, any string still carrying a line break after trimming was demoted to one there too, and a `claude mcp add` whose name would not parse followed in step 2): run the string **verbatim, once**, and capture the exit code. Non-zero → one line naming the code, the string printed back for manual use, and straight on to the next row — no retry, no rewording. Worth one passing note to the user: `claude mcp add` installs at **local scope by default**, so the server lands in this project unless the string itself says otherwise.
+- **Print rows** (slash commands, unclassifiable strings, and both classes of demoted row — line-break and unparseable-name): print the string verbatim — every physical line of it, when it has more than one — plus one line of instruction. A slash command is typed inside Claude Code by the user; an unclassifiable string is handed over as-is, for the user to run where it belongs; a line-break demotion says why nothing ran: a second line is a second command nobody consented to.
 
 ### 5. Re-probe what ran, then report
 
 Re-probe **only the strings that actually ran** — the same probes as step 2, nothing new, nothing broader. A printed string is not re-probed (nothing has happened yet), a MANUAL row is not re-probed (there is nothing to probe), and rows the user declined are left alone. Then close with one line per consented row:
 
 - `<name> — installed` · the run succeeded and the re-probe proves it.
-- `<name> — still missing (exit <code>); run it yourself: <string>` · the run failed, or the re-probe still cannot see the result. The printed string is the fallback, and this line is the last thing the stage does about it.
+- `<name> — still missing (exit <code>); run it yourself: <string>` · the run failed, or the re-probe still cannot see the result. On either path `<code>` is the exit code the run itself returned — on the second that is its `0`, reported as exactly that: the command exited 0 and the re-probe still cannot see it. The printed string is the fallback, and this line is the last thing the stage does about it.
 - `<name> — printed for you: <string>` · a print row the user consented to.
 
 That is the whole close. No advice loop, no second pass, no "want me to try again?" — the one attempt happened and the honest state is on screen.
@@ -488,6 +520,7 @@ Walk the list; every miss here is a consent or honesty bug, not a formatting one
 
 - [ ] everything run or printed appeared in the checklist first, string-for-string — nothing acted on that the table did not show
 - [ ] no string starting with `/` was executed — slash rows were printed only
+- [ ] no string with a line break (post-trim) was executed — demoted rows were printed whole, every line of them
 - [ ] every run row got exactly one attempt — no retries, no reworded commands
 - [ ] nothing ran before an explicit `all` / `pick` / `none`
 - [ ] the re-probe covered only what actually ran
