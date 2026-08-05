@@ -2,6 +2,23 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { GalleryIndex } from './GalleryIndex';
 import { galleryEntries } from '../gallery/galleryData';
 
+// The same glob galleryData loads from, asked only for its KEYS: the count of
+// committed graphs, before any of them has been through the validator.
+const committedFiles = import.meta.glob('../../../gallery/*.workflow.json');
+
+// A graph that fails the loader is filtered out of the grid SILENTLY — the one
+// failure mode of a curated gallery that nothing else would notice, because the
+// page still renders, just one card short.
+it('loads every committed gallery graph — none dropped by the loader', () => {
+  expect(galleryEntries.length).toBe(Object.keys(committedFiles).length);
+});
+
+it('opens with the flagship, then reads alphabetically by title', () => {
+  expect(galleryEntries[0].slug).toBe('ship-a-payments-feature');
+  const rest = galleryEntries.slice(1).map((e) => e.workflow.meta.title);
+  expect(rest).toEqual([...rest].sort((a, b) => a.localeCompare(b)));
+});
+
 it('lists every committed gallery graph with node count and max pain', () => {
   const onOpen = vi.fn();
   render(<GalleryIndex entries={galleryEntries} onOpen={onOpen} onDropFile={vi.fn()} />);

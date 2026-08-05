@@ -1,0 +1,122 @@
+{
+  "meta": {
+    "task": "Standardize how our team uses Claude Code on this repo — agent instructions, the skills and MCP servers worth adopting, and a review step — so everyone works the same way",
+    "title": "Standardize a Team's Claude Code Setup",
+    "generatedAt": "2026-08-05T14:40:00Z",
+    "model": "claude-fable-5",
+    "kbSource": "airtable",
+    "promptIntro": "Standardize how our team uses Claude Code on this repo: agent instructions, the skills and MCP servers worth adopting, and a review step, so everyone works the same way. Prove the setup on a real task before the team commits to it, and leave it documented for whoever joins next."
+  },
+  "nodes": [
+    { "id": "gather-team-needs", "label": "Gather the team's needs and what exists", "kind": "input", "description": "Ask what people already do by hand, what is already installed on whose machine, what may not leave the network, and what 'standardized' has to mean by when.", "painLevel": 2 },
+    { "id": "audit-repo", "label": "Audit the repo and how it is built", "kind": "process", "description": "Read the build, the test commands, the conventions, and the parts newcomers get wrong — otherwise the instructions end up saying nothing specific.", "painLevel": 3 },
+    { "id": "hunt-skills", "label": "Trawl for skills and plugins worth adopting", "kind": "process", "description": "Search GitHub, read READMEs and blog posts, and try to work out which of a thousand look-alike repos is current, maintained, and actually relevant to this stack.", "painLevel": 4 },
+    { "id": "evaluate-candidates", "label": "Try each candidate on a real task", "kind": "loop", "description": "Install one, run it against real work, judge whether it helped, uninstall it, and repeat — the only honest way to tell, and it costs a day.", "painLevel": 4 },
+    { "id": "write-missing-skill", "label": "Write the missing capability yourself", "kind": "process", "description": "Author a skill from scratch for the thing you could not find: the instructions, the examples, the edge cases, and the rewrites after it misfires on real work.", "painLevel": 5 },
+    { "id": "wire-mcp", "label": "Wire up the MCP servers and configs", "kind": "process", "description": "Add the servers, decide project versus user scope, sort out transports and credentials, and get the same setup onto everyone's machine.", "painLevel": 3 },
+    { "id": "write-agent-docs", "label": "Write CLAUDE.md / AGENTS.md by hand", "kind": "process", "description": "Write the conventions, the commands and the do-nots into agent instructions — then keep rewriting them every time the repo moves, because a stale instruction file is worse than none.", "painLevel": 4 },
+    { "id": "pilot-on-task", "label": "Pilot the setup on a real task", "kind": "process", "description": "Take a genuine ticket through the new setup start to finish and watch where it fights the way the team works.", "painLevel": 3 },
+    { "id": "review-pilot-output", "label": "Review what the agent produced, by hand", "kind": "process", "description": "Read every diff from the pilot line by line looking for what the agent got subtly wrong — which is the whole reason nobody trusts the setup yet.", "painLevel": 4 },
+    { "id": "friction-found", "label": "Friction found?", "kind": "decision", "description": "Did the pilot expose instructions that were wrong, missing, or quietly ignored?", "painLevel": 2 },
+    { "id": "team-review", "label": "Team agrees to adopt it", "kind": "review", "description": "Walk the team through the setup and get agreement — including from whoever was never going to like it.", "painLevel": 3 },
+    { "id": "document-rollout", "label": "Document the setup and roll it out", "kind": "process", "description": "Write the onboarding page, the per-machine setup steps, and who owns this when it breaks.", "painLevel": 3 },
+    { "id": "setup-adopted", "label": "Standard setup adopted", "kind": "output", "description": "Everyone on the team runs the same instructions, the same skills, and the same review step on this repo.", "painLevel": 1 }
+  ],
+  "edges": [
+    { "from": "gather-team-needs", "to": "audit-repo", "kind": "sequence" },
+    { "from": "audit-repo", "to": "hunt-skills", "kind": "sequence" },
+    { "from": "hunt-skills", "to": "evaluate-candidates", "kind": "sequence" },
+    { "from": "evaluate-candidates", "to": "write-missing-skill", "kind": "sequence" },
+    { "from": "write-missing-skill", "to": "wire-mcp", "kind": "sequence" },
+    { "from": "wire-mcp", "to": "write-agent-docs", "kind": "sequence" },
+    { "from": "write-agent-docs", "to": "pilot-on-task", "kind": "sequence" },
+    { "from": "pilot-on-task", "to": "review-pilot-output", "kind": "sequence" },
+    { "from": "review-pilot-output", "to": "friction-found", "kind": "sequence" },
+    { "from": "friction-found", "to": "write-agent-docs", "kind": "retry", "label": "instructions wrong or ignored — rewrite" },
+    { "from": "friction-found", "to": "team-review", "kind": "branch", "label": "setup holds" },
+    { "from": "team-review", "to": "wire-mcp", "kind": "retry", "label": "changes requested" },
+    { "from": "team-review", "to": "document-rollout", "kind": "sequence" },
+    { "from": "document-rollout", "to": "setup-adopted", "kind": "sequence" }
+  ],
+  "suggestions": [
+    {
+      "nodeId": "hunt-skills",
+      "airtableRecordId": "reciqTJt4oVGwVPHy",
+      "name": "K-Dense-AI/claude-skills-mcp",
+      "url": "https://github.com/K-Dense-AI/claude-skills-mcp",
+      "category": "MCP Server",
+      "claim": "Vector-search over skill libraries so the right skill loads itself at the right moment.",
+      "install": "claude mcp add claude-skills-mcp (see repo README)",
+      "promptFragment": "Find the candidates with K-Dense-AI/claude-skills-mcp rather than trawling GitHub and guessing which look-alike repo is the real one: search the skill libraries by what the team actually needs, and let the matching skill load itself when that work comes up. Do this before anything is tried on a real task, so the shortlist arrives already narrowed. Add it first with `claude mcp add claude-skills-mcp (see repo README)`.",
+      "effect": {
+        "removeNodes": [],
+        "mergeNodes": ["hunt-skills"],
+        "replaceWith": { "id": "search-skill-index", "label": "Search the skill libraries", "kind": "process", "description": "Vector search over the skill libraries returns the candidates worth trying, instead of a GitHub trawl through look-alike repos.", "painLevel": 1 },
+        "newEdges": [
+          { "from": "audit-repo", "to": "search-skill-index", "kind": "sequence" },
+          { "from": "search-skill-index", "to": "evaluate-candidates", "kind": "sequence" }
+        ],
+        "metrics": { "stepsSaved": 0, "estTimeSavedMin": 90, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
+      }
+    },
+    {
+      "nodeId": "write-missing-skill",
+      "airtableRecordId": "recM4HQukpqF1UOua",
+      "name": "VoltAgent/awesome-agent-skills",
+      "url": "https://github.com/VoltAgent/awesome-agent-skills",
+      "category": "Claude Skill",
+      "claim": "1,000+ ready-made skills — check here before building any capability from scratch.",
+      "install": "Browse the list — no install",
+      "promptFragment": "Before authoring any capability yourself, check VoltAgent/awesome-agent-skills for one that already exists — over a thousand ready-made skills, so the gap the shortlist left is usually already filled by someone's dev team. Adopt what you find there and go straight on to wiring the servers up. It is a catalog to read rather than a tool to add: `Browse the list — no install`.",
+      "effect": {
+        "removeNodes": ["write-missing-skill"],
+        "mergeNodes": [],
+        "newEdges": [
+          { "from": "evaluate-candidates", "to": "wire-mcp", "kind": "sequence" }
+        ],
+        "metrics": { "stepsSaved": 1, "estTimeSavedMin": 90, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
+      }
+    },
+    {
+      "nodeId": "write-agent-docs",
+      "airtableRecordId": "rec4s5VYabLmKjvnA",
+      "name": "langchain-ai/openwiki",
+      "url": "https://github.com/langchain-ai/openwiki",
+      "category": "Other",
+      "claim": "Self-maintaining wiki + AGENTS.md/CLAUDE.md for any repo or knowledge base.",
+      "install": "npm install -g openwiki",
+      "promptFragment": "Generate the agent instructions with langchain-ai/openwiki instead of writing CLAUDE.md and AGENTS.md by hand and rewriting them every time the repo moves. Point it at the repo once the servers are wired, and re-run it whenever a pilot shows the instructions have drifted from the code. Add it first with `npm install -g openwiki`.",
+      "effect": {
+        "removeNodes": [],
+        "mergeNodes": ["write-agent-docs"],
+        "replaceWith": { "id": "generate-agent-docs", "label": "Generate the agent instructions", "kind": "process", "description": "openwiki writes and maintains CLAUDE.md / AGENTS.md from the repo itself, so the files stop going stale between rewrites.", "painLevel": 1 },
+        "newEdges": [
+          { "from": "wire-mcp", "to": "generate-agent-docs", "kind": "sequence" },
+          { "from": "generate-agent-docs", "to": "pilot-on-task", "kind": "sequence" },
+          { "from": "friction-found", "to": "generate-agent-docs", "kind": "retry", "label": "instructions drifted — regenerate" }
+        ],
+        "metrics": { "stepsSaved": 0, "estTimeSavedMin": 75, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
+      }
+    },
+    {
+      "nodeId": "review-pilot-output",
+      "airtableRecordId": "recoleHCOUVf1h1X3",
+      "name": "openai/codex-plugin-cc",
+      "url": "https://github.com/openai/codex-plugin-cc",
+      "category": "Claude Plugin",
+      "claim": "Second-model code review and task delegation — GPT checks Claude's work from inside Claude Code.",
+      "install": "/plugin install codex-plugin-cc (see repo README)",
+      "promptFragment": "Make openai/codex-plugin-cc the review step this setup is missing: after the pilot task, have it check what the agent produced from inside Claude Code, instead of reading every diff line by line yourself. Keep it in the loop afterwards so every agent change on this repo gets the same second read. Add it first with `/plugin install codex-plugin-cc (see repo README)`.",
+      "effect": {
+        "removeNodes": [],
+        "mergeNodes": ["review-pilot-output"],
+        "replaceWith": { "id": "second-model-check", "label": "Second model reviews the agent's output", "kind": "process", "description": "Codex checks the pilot's diffs from inside Claude Code — the standing review step, not a manual read of every line.", "painLevel": 1 },
+        "newEdges": [
+          { "from": "pilot-on-task", "to": "second-model-check", "kind": "sequence" },
+          { "from": "second-model-check", "to": "friction-found", "kind": "sequence" }
+        ],
+        "metrics": { "stepsSaved": 0, "estTimeSavedMin": 35, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
+      }
+    }
+  ]
+}

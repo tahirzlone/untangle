@@ -1,0 +1,91 @@
+{
+  "meta": {
+    "task": "An API endpoint started throwing 500s after last night's deploy — take the bug report, find the cause, fix it, and get the fix out safely",
+    "title": "Triage and Fix a Production Incident",
+    "generatedAt": "2026-08-05T13:20:00Z",
+    "model": "claude-fable-5",
+    "kbSource": "airtable",
+    "promptIntro": "An API endpoint started throwing 500s after last night's deploy — take the bug report, find the cause, fix it, and get the fix out safely. Work it as one pass from the symptoms to a reproduction, to the code that owns the fault, to a fix that ships through review and is not done until the errors are gone and the postmortem is written."
+  },
+  "nodes": [
+    { "id": "take-report", "label": "Take the report and the symptoms", "kind": "input", "description": "Collect the ticket, the error text, when it started, which customers hit it, the deploy that preceded it, and where the logs and dashboards live.", "painLevel": 2 },
+    { "id": "pull-logs", "label": "Pull logs and traces by hand", "kind": "process", "description": "Tail the error stream, page through a dashboard, ssh to a box, grep the request id across services, and paste stack traces into a scratch file with timestamps in three different zones.", "painLevel": 4 },
+    { "id": "reproduce", "label": "Reproduce the failure locally", "kind": "process", "description": "Rebuild the environment, seed data that looks like the customer's, and replay the request over and over, guessing at the payload shape that trips it. Hours, across the terminal, the database, and a browser.", "painLevel": 5 },
+    { "id": "reproduced", "label": "Reproduced it?", "kind": "decision", "description": "Does the failure happen on demand now, or is the local run stubbornly healthy?", "painLevel": 2 },
+    { "id": "locate-code", "label": "Trace the fault through the codebase", "kind": "process", "description": "Follow the stack frames into unfamiliar services, grep for the handler, and read file after file to work out which of last night's changes owns the fault.", "painLevel": 4 },
+    { "id": "write-fix", "label": "Write the fix", "kind": "process", "description": "Patch the code path, keeping the change small enough to defend at 2am.", "painLevel": 3 },
+    { "id": "regression-test", "label": "Write a regression test for the exact case", "kind": "process", "description": "Pin the failing input in a test so this bug cannot come back quietly.", "painLevel": 3 },
+    { "id": "run-suite", "label": "Run the suite", "kind": "process", "description": "Run everything and read the failures.", "painLevel": 2 },
+    { "id": "suite-green", "label": "Suite green?", "kind": "decision", "description": "New test passing, and nothing else broken by the patch?", "painLevel": 1 },
+    { "id": "self-review-diff", "label": "Re-read the hotfix diff yourself", "kind": "process", "description": "Read the whole diff line by line hunting for the thing you just got wrong under pressure — the second mistake is the one that extends the incident.", "painLevel": 3 },
+    { "id": "review-hotfix", "label": "Get the hotfix reviewed", "kind": "review", "description": "Wake someone up, walk them through the change, and wait for the approval the deploy is gated on.", "painLevel": 3 },
+    { "id": "deploy-fix", "label": "Deploy the fix and watch the graphs", "kind": "process", "description": "Ship it, then sit on the error-rate and latency dashboards waiting to see whether the line comes down.", "painLevel": 3 },
+    { "id": "errors-cleared", "label": "Errors actually cleared?", "kind": "decision", "description": "Has the error rate returned to baseline, or is something else still failing underneath the fix?", "painLevel": 3 },
+    { "id": "write-postmortem", "label": "Write the postmortem", "kind": "process", "description": "Reconstruct the timeline out of scrollback, chat, and deploy history, then write up cause, impact, and the follow-ups.", "painLevel": 3 },
+    { "id": "incident-closed", "label": "Incident closed", "kind": "output", "description": "The fix is in production, the error rate is back to baseline, and the postmortem is filed with its follow-up actions.", "painLevel": 1 }
+  ],
+  "edges": [
+    { "from": "take-report", "to": "pull-logs", "kind": "sequence" },
+    { "from": "pull-logs", "to": "reproduce", "kind": "sequence" },
+    { "from": "reproduce", "to": "reproduced", "kind": "sequence" },
+    { "from": "reproduced", "to": "pull-logs", "kind": "retry", "label": "no repro — go back for more signal" },
+    { "from": "reproduced", "to": "locate-code", "kind": "branch", "label": "reproduced" },
+    { "from": "locate-code", "to": "write-fix", "kind": "sequence" },
+    { "from": "write-fix", "to": "regression-test", "kind": "sequence" },
+    { "from": "regression-test", "to": "run-suite", "kind": "sequence" },
+    { "from": "run-suite", "to": "suite-green", "kind": "sequence" },
+    { "from": "suite-green", "to": "write-fix", "kind": "retry", "label": "failures — patch and rerun" },
+    { "from": "suite-green", "to": "self-review-diff", "kind": "branch", "label": "green" },
+    { "from": "self-review-diff", "to": "write-fix", "kind": "retry", "label": "found something worse — rework" },
+    { "from": "self-review-diff", "to": "review-hotfix", "kind": "sequence" },
+    { "from": "review-hotfix", "to": "write-fix", "kind": "retry", "label": "changes requested" },
+    { "from": "review-hotfix", "to": "deploy-fix", "kind": "sequence" },
+    { "from": "deploy-fix", "to": "errors-cleared", "kind": "sequence" },
+    { "from": "errors-cleared", "to": "pull-logs", "kind": "retry", "label": "still failing — back to the logs" },
+    { "from": "errors-cleared", "to": "write-postmortem", "kind": "branch", "label": "errors cleared" },
+    { "from": "write-postmortem", "to": "incident-closed", "kind": "sequence" }
+  ],
+  "suggestions": [
+    {
+      "nodeId": "locate-code",
+      "airtableRecordId": "rec6ENkJdbb6RmDdj",
+      "name": "DeusData/codebase-memory-mcp",
+      "url": "https://github.com/DeusData/codebase-memory-mcp",
+      "category": "MCP Server",
+      "claim": "Sub-millisecond architectural queries over a whole codebase — up to 99% fewer tokens.",
+      "install": "curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash",
+      "promptFragment": "Once the failure reproduces, ask DeusData/codebase-memory-mcp which code owns the failing path instead of following stack frames through unfamiliar services file by file. Query it for the handler and its callers, and take that structure straight into the fix. Add it first with `curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash`.",
+      "effect": {
+        "removeNodes": [],
+        "mergeNodes": ["locate-code"],
+        "replaceWith": { "id": "ask-codebase-memory", "label": "Ask the codebase graph where it breaks", "kind": "process", "description": "One structural query returns the failing handler and its callers — no file-by-file hunt through services you have never read.", "painLevel": 1 },
+        "newEdges": [
+          { "from": "reproduced", "to": "ask-codebase-memory", "kind": "branch", "label": "reproduced" },
+          { "from": "ask-codebase-memory", "to": "write-fix", "kind": "sequence" }
+        ],
+        "metrics": { "stepsSaved": 0, "estTimeSavedMin": 30, "estTokensSaved": 6000, "manualInterventionsRemoved": 0 }
+      }
+    },
+    {
+      "nodeId": "self-review-diff",
+      "airtableRecordId": "recoleHCOUVf1h1X3",
+      "name": "openai/codex-plugin-cc",
+      "url": "https://github.com/openai/codex-plugin-cc",
+      "category": "Claude Plugin",
+      "claim": "Second-model code review and task delegation — GPT checks Claude's work from inside Claude Code.",
+      "install": "/plugin install codex-plugin-cc (see repo README)",
+      "promptFragment": "With the suite green, hand the hotfix diff to openai/codex-plugin-cc for a second-model review rather than re-reading it yourself looking for the mistake you just made under pressure. Give it the diff and the failing case it is meant to fix, and carry anything it flags into the change before the on-call reviewer sees it. Add it first with `/plugin install codex-plugin-cc (see repo README)`.",
+      "effect": {
+        "removeNodes": [],
+        "mergeNodes": ["self-review-diff"],
+        "replaceWith": { "id": "second-model-review", "label": "Second model reads the diff", "kind": "process", "description": "Codex reviews the hotfix from inside Claude Code and flags what the patch got wrong, before a human is woken up for it.", "painLevel": 1 },
+        "newEdges": [
+          { "from": "suite-green", "to": "second-model-review", "kind": "branch", "label": "green" },
+          { "from": "second-model-review", "to": "write-fix", "kind": "retry", "label": "problems found — rework" },
+          { "from": "second-model-review", "to": "review-hotfix", "kind": "sequence" }
+        ],
+        "metrics": { "stepsSaved": 0, "estTimeSavedMin": 20, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
+      }
+    }
+  ]
+}

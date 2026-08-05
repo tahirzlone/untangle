@@ -1,0 +1,82 @@
+{
+  "meta": {
+    "task": "Pull the pricing pages of our six closest competitors and build a comparison we can take into the pricing meeting",
+    "title": "Scrape Competitor Pricing into a Comparison",
+    "generatedAt": "2026-08-05T14:20:00Z",
+    "model": "claude-fable-5",
+    "kbSource": "airtable",
+    "promptIntro": "Pull the pricing pages of our six closest competitors and build the comparison we are taking into the pricing meeting. Take every figure off the live page, put the plans on one comparable basis, and keep each number traceable back to the page it came from."
+  },
+  "nodes": [
+    { "id": "list-competitors", "label": "List the competitors and what to compare", "kind": "input", "description": "Agree the six companies, which plans count, which currency and billing period, and the dimensions the meeting actually cares about.", "painLevel": 2 },
+    { "id": "find-pricing-pages", "label": "Find each pricing page", "kind": "process", "description": "Hunt down the real pricing URL per company through marketing sites, regional redirects, and /plans pages that moved last quarter.", "painLevel": 3 },
+    { "id": "open-each-page", "label": "Read the prices off each page by hand", "kind": "loop", "description": "Open every page, dismiss the cookie wall, flip the monthly/annual toggle and the currency switcher, wait for the table to render, and copy each cell into a scratch file — six sites, several plans each.", "painLevel": 5 },
+    { "id": "page-usable", "label": "Page actually rendered?", "kind": "decision", "description": "Did the prices load, or is this a bot wall, an empty JavaScript shell, or a 'contact us' tier with no number on it at all?", "painLevel": 3 },
+    { "id": "normalize-prices", "label": "Normalize the plans into comparable rows", "kind": "process", "description": "Reconcile per-seat against usage pricing, strip annual discounts back to a common basis, and decide which differently-named features are the same feature.", "painLevel": 4 },
+    { "id": "verify-figures", "label": "Check every figure against the page again", "kind": "process", "description": "Re-open each page and confirm each number in the sheet, because one wrong price is the only thing anyone will remember from the meeting.", "painLevel": 4 },
+    { "id": "figures-match", "label": "Every figure matches?", "kind": "decision", "description": "Does the sheet still agree with the live pages, or has something moved since the first pass?", "painLevel": 2 },
+    { "id": "build-table", "label": "Build the comparison spreadsheet", "kind": "process", "description": "Lay out the grid, footnote the assumptions, link every cell back to its source, and format it so it survives a screen share.", "painLevel": 3 },
+    { "id": "sanity-review", "label": "Sales sanity-checks the comparison", "kind": "review", "description": "Someone who talks to these competitors weekly reads it and says what is wrong with it.", "painLevel": 2 },
+    { "id": "note-watch-list", "label": "Note what to re-check next quarter", "kind": "process", "description": "Write down which pages move often and what to watch, so the next pass does not start from nothing.", "painLevel": 2 },
+    { "id": "comparison-delivered", "label": "Comparison ready for the meeting", "kind": "output", "description": "A sourced, sanity-checked comparison of all six competitors, with every assumption written down beside the number it changes.", "painLevel": 1 }
+  ],
+  "edges": [
+    { "from": "list-competitors", "to": "find-pricing-pages", "kind": "sequence" },
+    { "from": "find-pricing-pages", "to": "open-each-page", "kind": "sequence" },
+    { "from": "open-each-page", "to": "page-usable", "kind": "sequence" },
+    { "from": "page-usable", "to": "open-each-page", "kind": "retry", "label": "bot wall or nothing rendered" },
+    { "from": "page-usable", "to": "normalize-prices", "kind": "branch", "label": "page usable" },
+    { "from": "normalize-prices", "to": "verify-figures", "kind": "sequence" },
+    { "from": "verify-figures", "to": "figures-match", "kind": "sequence" },
+    { "from": "figures-match", "to": "open-each-page", "kind": "retry", "label": "figure moved — re-read the page" },
+    { "from": "figures-match", "to": "build-table", "kind": "branch", "label": "figures match" },
+    { "from": "build-table", "to": "sanity-review", "kind": "sequence" },
+    { "from": "sanity-review", "to": "normalize-prices", "kind": "retry", "label": "wrong basis — re-normalize" },
+    { "from": "sanity-review", "to": "note-watch-list", "kind": "sequence" },
+    { "from": "note-watch-list", "to": "comparison-delivered", "kind": "sequence" }
+  ],
+  "suggestions": [
+    {
+      "nodeId": "open-each-page",
+      "airtableRecordId": "rec8IRupxSpAxupRy",
+      "name": "ChromeDevTools/chrome-devtools-mcp",
+      "url": "https://github.com/ChromeDevTools/chrome-devtools-mcp",
+      "category": "MCP Server",
+      "claim": "Gives Claude live eyes on a real browser — debugging, performance traces, and page inspection in one MCP.",
+      "install": "claude mcp add chrome-devtools -- npx chrome-devtools-mcp@latest",
+      "promptFragment": "Read the pricing pages with ChromeDevTools/chrome-devtools-mcp instead of opening each one and copying cells by hand: let it drive a real browser past the cookie wall and the monthly/annual toggle, then inspect the pricing table once the page has settled. Do that for every competitor before you normalize anything, so each figure comes off a page that actually rendered. Add it first with `claude mcp add chrome-devtools -- npx chrome-devtools-mcp@latest`.",
+      "effect": {
+        "removeNodes": [],
+        "mergeNodes": ["open-each-page"],
+        "replaceWith": { "id": "drive-pricing-pages", "label": "Drive the pricing pages in a real browser", "kind": "process", "description": "chrome-devtools-mcp loads each page, works the toggles, and reads the rendered pricing table — no cell copied by hand.", "painLevel": 2 },
+        "newEdges": [
+          { "from": "find-pricing-pages", "to": "drive-pricing-pages", "kind": "sequence" },
+          { "from": "drive-pricing-pages", "to": "page-usable", "kind": "sequence" },
+          { "from": "page-usable", "to": "drive-pricing-pages", "kind": "retry", "label": "bot wall or nothing rendered" },
+          { "from": "figures-match", "to": "drive-pricing-pages", "kind": "retry", "label": "figure moved — re-read the page" }
+        ],
+        "metrics": { "stepsSaved": 0, "estTimeSavedMin": 70, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
+      }
+    },
+    {
+      "nodeId": "build-table",
+      "airtableRecordId": "reccXADeaS8MWgJDW",
+      "name": "iOfficeAI/OfficeCLI",
+      "url": "https://github.com/iOfficeAI/OfficeCLI",
+      "category": "Other",
+      "claim": "AI agents read/edit/render Word, Excel, PowerPoint with no Office installed.",
+      "install": "curl -fsSL https://raw.githubusercontent.com/iOfficeAI/OfficeCLI/main/install.sh | bash",
+      "promptFragment": "Once the figures check out, build the sheet with iOfficeAI/OfficeCLI rather than laying the grid out by hand: have it write the spreadsheet from the normalized rows and render it so you can see the comparison before anyone else does. Keep each row's source link and assumption in the sheet as it is written.",
+      "effect": {
+        "removeNodes": [],
+        "mergeNodes": ["build-table"],
+        "replaceWith": { "id": "render-comparison-sheet", "label": "Write and render the comparison sheet", "kind": "process", "description": "OfficeCLI writes the spreadsheet from the normalized rows and renders it for a look before review.", "painLevel": 1 },
+        "newEdges": [
+          { "from": "figures-match", "to": "render-comparison-sheet", "kind": "branch", "label": "figures match" },
+          { "from": "render-comparison-sheet", "to": "sanity-review", "kind": "sequence" }
+        ],
+        "metrics": { "stepsSaved": 0, "estTimeSavedMin": 30, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
+      }
+    }
+  ]
+}

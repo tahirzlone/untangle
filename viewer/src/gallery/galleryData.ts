@@ -15,6 +15,18 @@ export interface GalleryEntry {
   workflow: Workflow;
 }
 
+/**
+ * The graph the grid opens with — the exemplar the gallery is judged by, and the
+ * one every other entry is a variation on. Pinned by SLUG rather than by title,
+ * because the title is prose its author may reword and the filename is the
+ * identity the repo actually keys on. Everything else is alphabetical by title:
+ * a stable reading order that no one has to maintain as graphs are added.
+ *
+ * A slug that names no file is not an error worth throwing over — the flagship
+ * simply is not there and the rest of the grid sorts normally.
+ */
+const FLAGSHIP_SLUG = 'ship-a-payments-feature';
+
 export const galleryEntries: GalleryEntry[] = Object.entries(modules)
   .map(([path, raw]) => {
     const res = loadWorkflow(raw);
@@ -23,4 +35,8 @@ export const galleryEntries: GalleryEntry[] = Object.entries(modules)
     return { slug, workflow: res.workflow };
   })
   .filter((e): e is GalleryEntry => e !== null)
-  .sort((a, b) => a.workflow.meta.title.localeCompare(b.workflow.meta.title));
+  .sort(
+    (a, b) =>
+      Number(b.slug === FLAGSHIP_SLUG) - Number(a.slug === FLAGSHIP_SLUG) ||
+      a.workflow.meta.title.localeCompare(b.workflow.meta.title),
+  );

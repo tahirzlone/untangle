@@ -1,0 +1,67 @@
+{
+  "meta": {
+    "task": "Split the orders table into orders and order_items and move production onto the new schema without downtime or data loss",
+    "title": "Migrate a Production Schema Safely",
+    "generatedAt": "2026-08-05T13:50:00Z",
+    "model": "claude-fable-5",
+    "kbSource": "airtable",
+    "promptIntro": "Split the orders table into orders and order_items and move production onto the new schema without downtime or data loss. Plan it outward from the callers: a rehearsed migration, a verified backfill, a cutover the team signs off on, and a rollback path that stays open until the old shape is finally dropped."
+  },
+  "nodes": [
+    { "id": "gather-migration-scope", "label": "Gather the schema, the traffic, and the rules", "kind": "input", "description": "Collect the current schema and row counts, the peak-traffic windows, how much downtime is acceptable, and what rollback has to look like if the cutover goes wrong.", "painLevel": 2 },
+    { "id": "map-callers", "label": "Find every reader and writer of the table", "kind": "process", "description": "Grep the monolith and every service for the table name, then chase ORM models, raw SQL in background jobs, analytics queries, and one-off scripts nobody owns. The caller you miss is the outage.", "painLevel": 5 },
+    { "id": "design-target-schema", "label": "Design the target schema", "kind": "process", "description": "Decide the new tables, keys, indexes and constraints, and exactly how every row of the old shape maps onto them.", "painLevel": 3 },
+    { "id": "write-migration", "label": "Write forward and rollback migrations", "kind": "process", "description": "Write the DDL both ways, in steps small enough that neither direction holds a lock for long.", "painLevel": 3 },
+    { "id": "dry-run-copy", "label": "Dry-run on a production-sized copy", "kind": "process", "description": "Restore a recent dump, run the migration against it, time every statement, and watch what takes locks and for how long.", "painLevel": 4 },
+    { "id": "timing-acceptable", "label": "Lock window acceptable?", "kind": "decision", "description": "Does the slowest statement fit inside the window the team agreed to, on production-sized data?", "painLevel": 2 },
+    { "id": "backfill-script", "label": "Write and babysit the backfill", "kind": "process", "description": "Move millions of rows in resumable chunks, throttled so replication does not fall behind, checked on for hours and restarted wherever it stalls.", "painLevel": 4 },
+    { "id": "dual-write", "label": "Ship dual-write and compare the shapes", "kind": "process", "description": "Write to both schemas at once, then compare counts and checksums to find the rows where the two disagree.", "painLevel": 4 },
+    { "id": "parity-clean", "label": "Parity clean?", "kind": "decision", "description": "Do old and new agree on every row, or is there drift to chase back into the backfill?", "painLevel": 3 },
+    { "id": "cutover-review", "label": "Cutover go/no-go with the team", "kind": "review", "description": "Walk the plan, the rollback and the window with whoever has to be awake for it, and get the go.", "painLevel": 2 },
+    { "id": "run-cutover", "label": "Run the cutover in the window", "kind": "process", "description": "Work the checklist at midnight: pause writes, run the switch, point the app at the new shape, with everyone watching a dashboard.", "painLevel": 4 },
+    { "id": "reads-correct", "label": "Reads correct in production?", "kind": "decision", "description": "Are queries returning the right rows at the right latency, or is something quietly wrong on the new shape?", "painLevel": 3 },
+    { "id": "drop-old-columns", "label": "Drop the old shape once it is quiet", "kind": "process", "description": "After a safe interval with nothing reading the old columns, drop them and reclaim the space.", "painLevel": 2 },
+    { "id": "migration-done", "label": "Schema migrated", "kind": "output", "description": "Production runs on the new schema, the backfill is verified, and the rollback path is documented for as long as it was needed.", "painLevel": 1 }
+  ],
+  "edges": [
+    { "from": "gather-migration-scope", "to": "map-callers", "kind": "sequence" },
+    { "from": "map-callers", "to": "design-target-schema", "kind": "sequence" },
+    { "from": "design-target-schema", "to": "write-migration", "kind": "sequence" },
+    { "from": "write-migration", "to": "dry-run-copy", "kind": "sequence" },
+    { "from": "dry-run-copy", "to": "timing-acceptable", "kind": "sequence" },
+    { "from": "timing-acceptable", "to": "write-migration", "kind": "retry", "label": "too slow — chunk it and re-time" },
+    { "from": "timing-acceptable", "to": "backfill-script", "kind": "branch", "label": "fits the window" },
+    { "from": "backfill-script", "to": "dual-write", "kind": "sequence" },
+    { "from": "dual-write", "to": "parity-clean", "kind": "sequence" },
+    { "from": "parity-clean", "to": "backfill-script", "kind": "retry", "label": "drift — re-backfill the gap" },
+    { "from": "parity-clean", "to": "cutover-review", "kind": "branch", "label": "parity clean" },
+    { "from": "cutover-review", "to": "write-migration", "kind": "retry", "label": "no-go — revise the plan" },
+    { "from": "cutover-review", "to": "run-cutover", "kind": "sequence" },
+    { "from": "run-cutover", "to": "reads-correct", "kind": "sequence" },
+    { "from": "reads-correct", "to": "run-cutover", "kind": "retry", "label": "wrong results — roll back and retry" },
+    { "from": "reads-correct", "to": "drop-old-columns", "kind": "branch", "label": "reads clean" },
+    { "from": "drop-old-columns", "to": "migration-done", "kind": "sequence" }
+  ],
+  "suggestions": [
+    {
+      "nodeId": "map-callers",
+      "airtableRecordId": "rec6ENkJdbb6RmDdj",
+      "name": "DeusData/codebase-memory-mcp",
+      "url": "https://github.com/DeusData/codebase-memory-mcp",
+      "category": "MCP Server",
+      "claim": "Sub-millisecond architectural queries over a whole codebase — up to 99% fewer tokens.",
+      "install": "curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash",
+      "promptFragment": "Before you design anything, ask DeusData/codebase-memory-mcp who reads and writes the orders table, instead of grepping the monolith and every service for its name. Query it for the models, queries and jobs that touch those columns and treat that answer as the migration's blast radius. Add it first with `curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash`.",
+      "effect": {
+        "removeNodes": [],
+        "mergeNodes": ["map-callers"],
+        "replaceWith": { "id": "query-table-callers", "label": "Query the graph for every caller", "kind": "process", "description": "One structural query returns the readers and writers of the table, including the jobs and scripts a grep for the table name would miss.", "painLevel": 1 },
+        "newEdges": [
+          { "from": "gather-migration-scope", "to": "query-table-callers", "kind": "sequence" },
+          { "from": "query-table-callers", "to": "design-target-schema", "kind": "sequence" }
+        ],
+        "metrics": { "stepsSaved": 0, "estTimeSavedMin": 60, "estTokensSaved": 8000, "manualInterventionsRemoved": 0 }
+      }
+    }
+  ]
+}
