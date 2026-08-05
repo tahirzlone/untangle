@@ -33,6 +33,28 @@ const SLASH_PREFIX = '#   ';
 /** Which half of the block an install string belongs in. */
 export type InstallKind = 'shell' | 'slash';
 
+/** A row the kit can hand over as a COMMAND: its install field holds one. */
+export type Installable = Suggestion & { install: string };
+
+/**
+ * Whether a row is something to run at all, or a page to go and read.
+ *
+ * The schema puts no floor under `install`, so a generation can hand over a field
+ * with nothing but spaces in it. Exported rather than restated at every caller
+ * because the block and the surface that lists it have to agree about that row
+ * down to the character: a component asking `!!s.install` would draw a ticked,
+ * runnable-looking row whose command never reaches the block — the copy quietly
+ * breaking a promise the checkbox made. One predicate, so the two cannot part.
+ *
+ * A type predicate, so asking the question hands back a row whose install is a
+ * string — and `installKind` is only meaningful on one of those. An empty string
+ * starts with no slash and would classify as `'shell'`, which is a real answer to
+ * the wrong question: the gate comes first, the kind after it.
+ */
+export function hasInstall(s: Suggestion): s is Installable {
+  return !!s.install?.trim();
+}
+
 /**
  * Where an install string is typed, read off the string and not off the row's
  * category. The category says what the resource IS — a Claude Skill, an MCP
@@ -71,10 +93,12 @@ export function buildInstallBlock(selected: Suggestion[]): string {
   const slash: string[] = [];
 
   for (const s of selected) {
-    const install = s.install;
     // Nothing to run is not something to list: an install with no command in it
-    // would paste as a blank line the user is invited to trust.
-    if (!install?.trim() || seen.has(install)) continue;
+    // would paste as a blank line the user is invited to trust. The same gate the
+    // rows on screen are drawn through, so a row that looks runnable is one.
+    if (!hasInstall(s)) continue;
+    const install = s.install;
+    if (seen.has(install)) continue;
     seen.add(install);
     (installKind(install) === 'slash' ? slash : shell).push(install);
   }

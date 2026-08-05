@@ -1,34 +1,17 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import enrichedDoc from '../test/fixtures/enriched.workflow.json';
-import { applySuggestion, createSession } from '../graph/apply';
+import { applySuggestion, createSession, undo } from '../graph/apply';
 import { assemblePrompt } from '../graph/prompt';
-import { fixture } from '../test/harness';
-import { COPIED_MS, PromptPanel } from './PromptPanel';
+import { fixture, mockClipboard } from '../test/harness';
+import { COPIED_MS } from './CopyButton';
+import { PromptPanel } from './PromptPanel';
 
 const enriched = fixture(enrichedDoc, 'enriched');
 const FIRECRAWL = 'recA7kQ2mZ9pLxT4b';
+const DEVTOOLS = 'recB3nR8vY6wJdK2q';
 
 const fresh = () => createSession(enriched);
 const oneApplied = () => applySuggestion(fresh(), FIRECRAWL);
-
-/**
- * Puts a clipboard where jsdom has none, and takes it away again. Configurable,
- * so the no-clipboard test can also DELETE it and model the http:// session
- * where the API simply does not exist.
- */
-function mockClipboard(writeText: (text: string) => Promise<void>) {
-  const spy = vi.fn(writeText);
-  Object.defineProperty(navigator, 'clipboard', {
-    value: { writeText: spy },
-    configurable: true,
-  });
-  return {
-    writeText: spy,
-    restore: () => {
-      delete (navigator as { clipboard?: unknown }).clipboard;
-    },
-  };
-}
 
 it('shows the assembled prompt for the session it is handed', () => {
   const session = oneApplied();
@@ -49,6 +32,40 @@ it('labels the opening-alone state instead of hiding it', () => {
 
   rerender(<PromptPanel session={oneApplied()} />);
   expect(screen.queryByTestId('prompt-none')).not.toBeInTheDocument();
+});
+
+// The kit is a section of THIS panel, so it inherits the panel's rules for free:
+// off with the PROMPT toggle, gone with the rail while the wipe is open.
+it('holds the install kit under the prompt, once something has been applied', () => {
+  const { rerender } = render(<PromptPanel session={fresh()} />);
+  // nothing applied is nothing to install, and NO UPGRADES APPLIED YET already
+  // says why the prompt is short — a second empty state would say it twice
+  expect(screen.queryByTestId('install-kit')).not.toBeInTheDocument();
+
+  rerender(<PromptPanel session={oneApplied()} />);
+  expect(screen.getByTestId('prompt-panel')).toContainElement(screen.getByTestId('install-kit'));
+  expect(screen.getByTestId('kit-cmd')).toHaveTextContent(
+    'claude mcp add firecrawl -- npx -y firecrawl-mcp',
+  );
+});
+
+// A tick is consent to install one command as part of one version's kit. The row
+// set moved, so the consent given about the old one does not come along.
+it('starts the ticks again when the version cursor moves', () => {
+  const two = applySuggestion(oneApplied(), DEVTOOLS);
+  const { rerender } = render(<PromptPanel session={two} />);
+  const boxes = () => screen.getAllByTestId('kit-check');
+
+  expect(boxes()).toHaveLength(2);
+  for (const box of boxes()) fireEvent.click(box);
+  for (const box of boxes()) expect(box).not.toBeChecked();
+  expect(screen.getByTestId('kit-copy')).toBeDisabled();
+
+  // undo is a different version standing on a different row set
+  rerender(<PromptPanel session={undo(two)} />);
+  expect(boxes()).toHaveLength(1);
+  expect(boxes()[0]).toBeChecked();
+  expect(screen.getByTestId('kit-copy')).toBeEnabled();
 });
 
 it('copies the prompt, flashes COPIED, and goes back to offering', async () => {

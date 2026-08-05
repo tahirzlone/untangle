@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type KeyboardEvent } from 'react';
+import { buildInstallBlock } from '../graph/installKit';
 import { impactLabel, impactParts, painLabel, type ImpactSummary } from '../graph/metrics';
 import type { Suggestion } from '../graph/types';
+import { CopyButton } from './CopyButton';
 import { CategoryChip } from './DetailDrawer';
-import { CopyButton } from './PromptPanel';
 import './scorecard.css';
 
 /**
@@ -100,6 +101,17 @@ export function Scorecard({
   const parts = impactParts(impact.totals);
   const n = report.applied.length;
 
+  /**
+   * The kit for the whole run, computed off the rows the report is already
+   * holding — nothing new is frozen, because the rows WERE the freeze.
+   *
+   * Every applied install, and no checkboxes: this panel is an account of
+   * something that finished, and a control surface inside a snapshot would invite
+   * a choice the report cannot then answer for. The rail's kit is where the
+   * picking happens, and it is still there behind this.
+   */
+  const kit = useMemo(() => buildInstallBlock(report.applied), [report.applied]);
+
   return (
     <div
       className="sg-scorecard-back"
@@ -171,6 +183,22 @@ export function Scorecard({
             {report.prompt}
           </pre>
         </div>
+
+        {/* And what the prompt above needs on the machine before it is pasted.
+            Left out entirely when the run applied nothing runnable: a heading over
+            an empty block would be the template showing through, and the reader
+            would be told to install a kit that has nothing in it. */}
+        {kit ? (
+          <div className="sg-scorecard-prompt sg-scorecard-kit" data-testid="scorecard-kit">
+            <div className="sg-scorecard-prompt-head">
+              <span className="sg-scorecard-cap">INSTALL KIT</span>
+              <CopyButton text={kit} testId="scorecard-kit-copy" />
+            </div>
+            <pre className="sg-scorecard-prompt-text" data-testid="scorecard-kit-text" tabIndex={0}>
+              {kit}
+            </pre>
+          </div>
+        ) : null}
 
         <div className="sg-scorecard-actions">
           {/* Takes the graph the run finished on, which is the one still drawn

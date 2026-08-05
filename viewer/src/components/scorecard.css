@@ -148,6 +148,12 @@
   outline-offset: -2px;
 }
 
+/* The install kit's frozen twin: the same block as the prompt above it, shorter,
+   because it is a handful of commands rather than prose. */
+.sg-scorecard-kit .sg-scorecard-prompt-text {
+  max-height: 120px;
+}
+
 .sg-scorecard-actions {
   display: flex;
   gap: 8px;

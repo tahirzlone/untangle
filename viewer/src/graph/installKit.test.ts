@@ -1,7 +1,7 @@
 import enrichedDoc from '../test/fixtures/enriched.workflow.json';
 import { fixture } from '../test/harness';
 import { applySuggestion, createSession, undo } from './apply';
-import { buildInstallBlock, installKind } from './installKit';
+import { buildInstallBlock, hasInstall, installKind } from './installKit';
 import { appliedInFlowOrder } from './prompt';
 import type { Suggestion } from './types';
 
@@ -15,6 +15,7 @@ const enriched = fixture(enrichedDoc, 'enriched');
 const FIRECRAWL = 'recA7kQ2mZ9pLxT4b';
 const DEVTOOLS = 'recB3nR8vY6wJdK2q';
 const REPLAY = 'recC9tS5uH1zXfM7e';
+const SCAFFOLD = 'recD2vT6yG4kQnP8s';
 const CONVENTIONS = 'recE4wU7zJ3mVbL9d';
 
 const sug = (id: string): Suggestion =>
@@ -53,6 +54,18 @@ it('comments the Claude Code commands under one line saying where they are typed
   expect(buildInstallBlock([sug(CONVENTIONS)])).toBe(
     '# Flowprint install kit\n' +
       '# inside Claude Code, type:\n' +
+      '#   /plugin install codebase-conventions\n',
+  );
+});
+
+// One header over the section, however many commands stand under it: a second
+// "inside Claude Code, type:" between two of them would read as two places to
+// type, and there is only one.
+it('gathers every Claude Code command under a single instruction line', () => {
+  expect(buildInstallBlock([sug(SCAFFOLD), sug(CONVENTIONS)])).toBe(
+    '# Flowprint install kit\n' +
+      '# inside Claude Code, type:\n' +
+      '#   /plugin install scaffold-module\n' +
       '#   /plugin install codebase-conventions\n',
   );
 });
@@ -107,6 +120,33 @@ it('treats an install field with nothing in it as no command at all', () => {
       '# inside Claude Code, type:\n' +
       '#   /plugin install codebase-conventions\n',
   );
+});
+
+// ---------------------------------------------------------------------------
+// The gate the block and the rows on screen both stand behind
+// ---------------------------------------------------------------------------
+
+// The surface that lists the kit decides row by row which suggestions are
+// runnable and which are a page to follow. It asks THIS, so a row drawn as
+// runnable is a row whose command reaches the block — and a row drawn as a link
+// is one the block was always going to skip.
+it('answers which rows have a command in them, and answers it the way the block does', () => {
+  expect(hasInstall(sug(FIRECRAWL))).toBe(true);
+  expect(hasInstall(sug(CONVENTIONS))).toBe(true);
+  // no install field at all
+  expect(hasInstall(sug(REPLAY))).toBe(false);
+  // a field with nothing in it is no command, however much whitespace it holds
+  expect(hasInstall({ ...sug(REPLAY), install: '   ' })).toBe(false);
+  expect(hasInstall({ ...sug(REPLAY), install: '' })).toBe(false);
+
+  // and the agreement itself: what the predicate refuses, the block writes
+  // nothing for — while everything it accepts arrives verbatim
+  for (const row of [sug(REPLAY), { ...sug(REPLAY), install: '  ' }]) {
+    expect(buildInstallBlock([row])).toBe('');
+  }
+  for (const row of [sug(FIRECRAWL), sug(CONVENTIONS)]) {
+    expect(buildInstallBlock([row])).toContain(row.install!);
+  }
 });
 
 // ---------------------------------------------------------------------------

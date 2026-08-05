@@ -1,0 +1,33 @@
+/* The copy control, wherever it stands: the prompt panel's header, the install
+   kit's, and the scorecard's two blocks. Moved here with the component for the
+   same reason the component moved — one button, one look, no stylesheet that has
+   to be loaded by a panel the button is not in. */
+
+/* EXPORT's ghost-button conventions at header scale. */
+.sg-copy-btn {
+  font-size: 9px;
+  padding: 3px 9px;
+}
+/* The moment after the press: the accent the theme spends on things the user
+   earned, and one soft flash that drains. The label swap is what a screen
+   reader hears; the flash is only for the eye. */
+.sg-copy-btn--copied {
+  color: var(--accent);
+  border-color: var(--accent);
+  animation: sg-copy-flash 420ms ease-out;
+}
+@keyframes sg-copy-flash {
+  from {
+    background: var(--accent-soft);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* the swap to COPIED lands instantly; only the flash stands down */
+  .sg-copy-btn--copied {
+    animation: none;
+  }
+}

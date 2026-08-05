@@ -2,9 +2,11 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import gallery from '../../../gallery/add-e2e-tests.workflow.json';
 import enrichedDoc from '../test/fixtures/enriched.workflow.json';
 import { applySuggestion, createSession } from '../graph/apply';
+import { impactSummary } from '../graph/metrics';
 import { assemblePrompt } from '../graph/prompt';
-import { applyOn, cardFor, cardLabels, cardsOf, fixture, LAYOUT_WAIT, reduceMotion } from '../test/harness';
+import { applyOn, cardFor, cardLabels, cardsOf, fixture, LAYOUT_WAIT, mockClipboard, reduceMotion } from '../test/harness';
 import { GraphCanvas } from './GraphCanvas';
+import { Scorecard } from './Scorecard';
 
 /**
  * The PROMPT surface, driven through the whole canvas: the toolbar toggle, the
@@ -105,11 +107,7 @@ it('keeps the panel up while the drawer is open over it', async () => {
 
 it('gives the scorecard the same prompt, frozen, with its own copy', async () => {
   const restore = reduceMotion();
-  const writeText = vi.fn(() => Promise.resolve());
-  Object.defineProperty(navigator, 'clipboard', {
-    value: { writeText },
-    configurable: true,
-  });
+  const clip = mockClipboard(() => Promise.resolve());
   try {
     render(<GraphCanvas workflow={enriched} />);
     await cardsOf(enriched);
@@ -126,9 +124,64 @@ it('gives the scorecard the same prompt, frozen, with its own copy', async () =>
     expect(screen.getByTestId('scorecard-prompt-text').textContent).toBe(expected);
 
     fireEvent.click(screen.getByTestId('scorecard-prompt-copy'));
-    await waitFor(() => expect(writeText).toHaveBeenCalledExactlyOnceWith(expected));
+    await waitFor(() => expect(clip.writeText).toHaveBeenCalledExactlyOnceWith(expected));
   } finally {
-    delete (navigator as { clipboard?: unknown }).clipboard;
+    clip.restore();
     restore();
   }
+});
+
+// The pre-flight for the prompt above it, frozen with the rest of the report: the
+// reader this panel is written for takes both and leaves.
+it('adds the whole run\'s install kit to the scorecard, with its own copy', async () => {
+  const restore = reduceMotion();
+  const clip = mockClipboard(() => Promise.resolve());
+  try {
+    render(<GraphCanvas workflow={enriched} />);
+    await cardsOf(enriched);
+
+    fireEvent.click(screen.getByTestId('optimize-btn'));
+    await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
+
+    // both of the tour's rows install from a shell, so the kit is two bare lines
+    const block =
+      '# Flowprint install kit\n' +
+      'claude mcp add firecrawl -- npx -y firecrawl-mcp\n' +
+      'claude mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest\n';
+
+    expect(screen.getByTestId('scorecard-kit')).toHaveTextContent('INSTALL KIT');
+    expect(screen.getByTestId('scorecard-kit-text').textContent).toBe(block);
+    // a snapshot, not a control surface: nothing in the report to tick or clear
+    expect(screen.queryByTestId('kit-check')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('scorecard-kit-copy'));
+    await waitFor(() => expect(clip.writeText).toHaveBeenCalledExactlyOnceWith(block));
+  } finally {
+    clip.restore();
+    restore();
+  }
+});
+
+// A heading over an empty block would be the template showing through — and the
+// reader would be told to install a kit with nothing in it.
+it('leaves the kit out of the report entirely when the run applied nothing runnable', () => {
+  const replay = enriched.suggestions.find((s) => s.airtableRecordId === 'recC9tS5uH1zXfM7e')!;
+
+  render(
+    <Scorecard
+      report={{
+        applied: [replay],
+        impact: impactSummary(createSession(enriched)),
+        prompt: INTRO,
+      }}
+      onClose={() => {}}
+      onExport={() => {}}
+      exportFailed={false}
+    />,
+  );
+
+  // the row is still reported — it is what the run applied — but there is no kit
+  expect(screen.getByTestId('scorecard-name')).toHaveTextContent('browser-verify plugin');
+  expect(screen.getByTestId('scorecard-prompt')).toBeInTheDocument();
+  expect(screen.queryByTestId('scorecard-kit')).not.toBeInTheDocument();
 });

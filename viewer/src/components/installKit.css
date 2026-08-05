@@ -1,0 +1,154 @@
+/* The install kit — a second section inside the prompt panel, under the prompt it
+   is the pre-flight for. Not a panel of its own: the rail is two panels, and the
+   commands belong to the deliverable above them rather than beside it. A rule
+   across the top is the whole separation, the way the scorecard divides its own
+   sections. */
+.sg-kit {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line);
+}
+
+/* Same header rhythm as the panel's own — title left, its copy right — so the two
+   sections read as one column of blocks rather than a panel with a guest in it. */
+.sg-kit-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 12px;
+}
+
+.sg-kit-title {
+  /* an <h3> in the panel's annotation style: the heading is real, the look is the
+     one .sg-prompt-title already set */
+  margin: 0;
+  font-family: var(--font-anno);
+  font-weight: 400;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--dim);
+}
+
+/* Applied, and nothing among it to install: quiet, like the panel's own
+   nothing-yet line, because it is a fact rather than a fault. */
+.sg-kit-none {
+  margin: 0;
+  padding: 0 12px 10px;
+  font-family: var(--font-anno);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--dim);
+}
+
+/* The rows scroll on their own once there are enough of them: the prompt above is
+   already capped at 38vh, and the two together must still leave the rail inside
+   the viewport. */
+.sg-kit-list {
+  margin: 0;
+  padding: 0 12px 12px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  max-height: 22vh;
+  overflow-y: auto;
+}
+
+.sg-kit-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Box, name and badge on one line — wrapping rather than squeezing, because the
+   panel is 304px wide and resource names are written by a model. */
+.sg-kit-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.sg-kit-check {
+  flex: none;
+  margin: 0;
+  width: 12px;
+  height: 12px;
+  /* the native control, inked by the theme: one accent for everything the user
+     chose, and no re-implementation of a checkbox to keep in step with it */
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.sg-kit-check:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+.sg-kit-check:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.sg-kit-name {
+  font-family: var(--font-anno);
+  font-size: 10.5px;
+  color: var(--text);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+/* A row with nothing to run reads as the quieter thing it is — but it is still
+   here, because the prompt above names it. */
+.sg-kit-row--manual .sg-kit-name {
+  color: var(--dim);
+  cursor: default;
+}
+
+/* Where this one is typed, said before the block says it in a comment. The
+   drawer's kind chip, stood down: an advisory, not a category. */
+.sg-kit-badge {
+  font-family: var(--font-anno);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  color: var(--dim);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-chip);
+  padding: 2px 7px;
+  white-space: nowrap;
+}
+
+/* The string the tick is consenting to, verbatim and taken in one click — the
+   same treatment the drawer gives an install line, because it is the same line. */
+.sg-kit-cmd {
+  box-sizing: border-box;
+  margin-left: 19px;
+  font-family: var(--font-anno);
+  font-size: 9.5px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 3px 7px;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+/* The way to install it anyway: a real link to the resource's own page, standing
+   exactly where the command would have been. */
+.sg-kit-manual {
+  margin-left: 19px;
+  font-family: var(--font-anno);
+  font-size: 9px;
+  line-height: 1.5;
+  color: var(--accent);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.sg-kit-manual:hover {
+  text-decoration: underline;
+}
+.sg-kit-manual:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
