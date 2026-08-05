@@ -243,6 +243,21 @@
   align-items: flex-end;
   gap: 10px;
   padding: 10px 0;
+  /* Everything below the toolbar, and not a pixel more.
+
+     The column is sized by its children, which is right up until the children
+     want more room than the canvas has: a laptop-height window with the impact
+     panel open and the prompt panel under it used to run off the bottom, and what
+     ran off was unreachable — the rail is absolutely positioned inside a canvas
+     that clips, so there was nothing to scroll and no way to get to it.
+
+     A max-height is the whole fix, and it fixes it in the flex algorithm rather
+     than in the panels: with a bound on the column, the panels shrink to fit it,
+     and a panel that has said it can shrink (`min-height: 0`) scrolls its own
+     contents instead of being cut off. The bound is a maximum, so a rail that
+     fits still sizes to its children and the graph under the empty part of the
+     column still takes a pointer. */
+  max-height: calc(100% - var(--toolbar-h, 52px));
 }
 
 /* z-index: 0 gives the viewport its own stacking context, so React Flow's

@@ -8,6 +8,13 @@
   width: 304px;
   display: flex;
   flex-direction: column;
+  /* The panel that gives way when the rail runs out of room, and the one place
+     the giving-way is absorbed: it holds the prompt AND the kit, so a squeeze
+     here is answered by scrolling to the rest of them rather than by losing them
+     off the bottom of the canvas. `min-height: 0` is what lets a flex item shrink
+     past its contents at all; the scroll is what makes the shrink survivable. */
+  min-height: 0;
+  overflow-y: auto;
   background: var(--surface);
   border: 1px solid var(--line);
   /* attached to the right edge of the canvas, so only the left corners are cut */
@@ -50,6 +57,12 @@
   margin: 0;
   padding: 12px;
   max-height: 38vh;
+  /* And a floor under it. The block is a scroller, so when the rail runs short the
+     flex algorithm is free to shrink it to nothing — which it will, because the kit
+     below it is a list of rows with a height of their own to defend. A prompt panel
+     showing one line of prompt is not a prompt panel; below this the PANEL scrolls
+     instead, and both halves keep something to show. */
+  min-height: 118px;
   overflow-y: auto;
   font-family: var(--font-anno);
   font-size: 10.5px;
@@ -63,14 +76,6 @@
 .sg-prompt-text:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
-}
-/* With the kit under it, the prompt gives some of that height back: the two
-   scrollable blocks share one rail with the impact panel above them, and a column
-   that ran off the bottom of the canvas would put the commands somewhere nobody
-   can scroll to. Where `:has()` is not understood the prompt keeps its full
-   height — the behaviour it had before the kit existed, not a broken one. */
-.sg-prompt:has(.sg-kit) .sg-prompt-text {
-  max-height: 28vh;
 }
 
 /* The copy control is in copyButton.css, beside the component: the kit's header

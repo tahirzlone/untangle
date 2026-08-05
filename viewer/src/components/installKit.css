@@ -41,9 +41,10 @@
   color: var(--dim);
 }
 
-/* The rows scroll on their own once there are enough of them: the prompt above is
-   already capped at 38vh, and the two together must still leave the rail inside
-   the viewport. */
+/* No cap and no scroller of its own: the panel around it is the one that gives
+   way when the rail runs short, and a list that scrolled inside a panel that
+   scrolls would be two answers to one gesture. The rows are as tall as the rows
+   are. */
 .sg-kit-list {
   margin: 0;
   padding: 0 12px 12px;
@@ -51,8 +52,6 @@
   display: flex;
   flex-direction: column;
   gap: 9px;
-  max-height: 22vh;
-  overflow-y: auto;
 }
 
 .sg-kit-row {
