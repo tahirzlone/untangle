@@ -34,8 +34,14 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: viewer/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            viewer/package-lock.json
       - uses: actions/configure-pages@v6
+      # The root install is not optional: the viewer bundles the shared
+      # validator from scripts/, whose `ajv` import resolves at the root.
+      - run: npm ci
+        working-directory: .
       - run: npm ci
       # Vite's base is './', so the bundle is subpath-agnostic: it loads the
       # same at /flowprint/ and at whatever path a differently-named fork gets.

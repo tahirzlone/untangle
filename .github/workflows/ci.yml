@@ -43,7 +43,15 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: viewer/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            viewer/package-lock.json
+      # Both installs, in both packages. The viewer imports the shared
+      # validator at scripts/validate-pure.mjs, and that file's own `ajv`
+      # import resolves from the root node_modules — a viewer-only install
+      # leaves it unresolvable for the suite and for the build alike.
+      - run: npm ci
+        working-directory: .
       - run: npm ci
       # The suite runs in one worker: ELK's layout engine is module-level state
       # that parallel files trample.
