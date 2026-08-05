@@ -99,6 +99,25 @@ export function installKind(install: string): InstallKind {
 }
 
 /**
+ * Does THE LINE-BREAK RULE demote this string out of both halves of the block?
+ *
+ * Exported for the same reason `hasInstall` is: the surface listing these rows
+ * has to agree with the block down to the character. `installKind` is blind to
+ * line breaks — it reads the first character of the trimmed string and nothing
+ * else — so a multi-line string starting with a slash classifies as 'slash' and
+ * the row badged it as something to type inside Claude Code, while the block was
+ * demoting it wholesale to the section that says the kit is not offering it. One
+ * string, two answers, is one too many; this is the question the badge has to ask
+ * first.
+ *
+ * Measured on the trimmed string, like every other rule here: the whitespace
+ * around a one-line command is not a second line.
+ */
+export function isMultiLine(install: string): boolean {
+  return LINE_BREAK.test(install.trim());
+}
+
+/**
  * The kit for a selection, as one block — or nothing at all.
  *
  * Shell lines first and bare, so a paste ACTS: a selection of nothing but MCP
@@ -139,7 +158,7 @@ export function buildInstallBlock(selected: Suggestion[]): string {
     // The line-break rule first, and it answers for both classes: a break inside
     // the command is a second line the paste would carry, and neither section
     // above can represent the pair as the one command the row consented to.
-    if (LINE_BREAK.test(install.trim())) demoted.push(install);
+    if (isMultiLine(install)) demoted.push(install);
     else if (installKind(install) === 'slash') slash.push(install);
     else shell.push(install);
   }

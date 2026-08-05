@@ -260,6 +260,21 @@
   max-height: calc(100% - var(--toolbar-h, 52px));
 }
 
+/* Out of the way for as long as the comparison holds the canvas.
+
+   The rail stands at z5 over the divider's z4, so inside the wipe it stood
+   between the user and the one control the mode has — see the note in
+   GraphCanvas beside the rail itself. What matters here is that the column is
+   HIDDEN rather than taken away: `display: none` removes it from the layout,
+   from hit-testing and from the tab order, and leaves the panels inside it
+   mounted with everything the user set them to. A panel folded away to its tab
+   before the press is still folded away after ESC, and the kit's ticks are the
+   ticks that were on it — the mode is a way of looking at the graph, not a
+   reason to re-make the surface around it. */
+.sg-canvas--wipe .sg-rail {
+  display: none;
+}
+
 /* z-index: 0 gives the viewport its own stacking context, so React Flow's
    internal layers (nodes, edge labels) resolve against each other and can
    never climb over the toolbar. */

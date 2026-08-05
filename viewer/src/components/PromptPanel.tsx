@@ -21,8 +21,8 @@ import './prompt.css';
  * this panel at all: the commands are the pre-flight for the text above them, and
  * a toolbar button of their own would have separated a paste from the thing it is
  * a paste FOR. Hosting it here also means it inherits every rule this panel
- * already lives under — off with the PROMPT toggle, gone with the rail while the
- * wipe is open.
+ * already lives under — off with the PROMPT toggle, out of sight with the rail
+ * while the wipe is open.
  */
 export function PromptPanel({ session }: { session: GraphSession }) {
   // Pure functions of the session, memoized on it: every route that moves the

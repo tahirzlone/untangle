@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { createEvent, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import gallery from '../../../gallery/add-e2e-tests.workflow.json';
 import enrichedDoc from '../test/fixtures/enriched.workflow.json';
@@ -492,11 +493,16 @@ it('is a single-purpose view: OPTIMIZE and the version strip step away, the draw
   await onV1(container);
   expect(screen.getByTestId('optimize-btn')).toBeInTheDocument();
   expect(screen.getByTestId('version-strip')).toBeInTheDocument();
+  expect(screen.getByTestId('reset-layout')).toBeEnabled();
 
   await openWipe();
   expect(screen.queryByTestId('optimize-btn')).not.toBeInTheDocument();
   expect(screen.queryByTestId('version-strip')).not.toBeInTheDocument();
   expect(screen.getByTestId('critpath-btn')).toBeDisabled();
+  // RESET LAYOUT was the one control left that MOVES the live half: a relayout
+  // mid-compare walks the cards away from an original anchored on where they
+  // were, and the two sides stop being one world with the seam still open
+  expect(screen.getByTestId('reset-layout')).toBeDisabled();
 
   // a click on a live card opens nothing while the comparison holds the canvas
   fireEvent.click(cardFor(RESEARCH_MCP, screen.getAllByTestId('sg-node')));
@@ -506,6 +512,7 @@ it('is a single-purpose view: OPTIMIZE and the version strip step away, the draw
   await waitFor(() => expect(screen.getByTestId('optimize-btn')).toBeInTheDocument());
   expect(screen.getByTestId('version-strip')).toBeInTheDocument();
   expect(screen.getByTestId('critpath-btn')).toBeEnabled();
+  expect(screen.getByTestId('reset-layout')).toBeEnabled();
 });
 
 /**
@@ -571,10 +578,19 @@ it('drops a selection made before the wipe opened', async () => {
  * The rail stands at z5 and the divider at z4, so dragging the seam rightwards —
  * the mode's whole gesture — used to walk the handle and its deltas in behind
  * the impact panel: numbers unreadable, handle ungrabbable, in the exact band
- * the demo travels through. The rail steps away with the version strip, and the
- * panel state it was holding survives the round trip.
+ * the demo travels through. So the rail goes out of sight with the version strip.
+ *
+ * HIDDEN, not unmounted, and this is the test that says which: the panels in it
+ * are holding state nobody re-made — a panel folded away to its tab, a kit with a
+ * row cleared — and an unmount discarded all of it, so the comparison quietly
+ * undid the setup the user made to get a look at the graph in the first place.
+ *
+ * jsdom lays nothing out and vitest never loads the CSS, so the rule that does
+ * the hiding is read off the stylesheet the way railHeight.test.ts reads the
+ * bounds it pins; what is driven here is that the subtree survives the round trip
+ * holding exactly what it held.
  */
-it('stands the rail down inside the wipe, and brings it back holding what it held', async () => {
+it('hides the rail inside the wipe, and brings it back holding what it held', async () => {
   const { container } = render(<GraphCanvas workflow={enriched} />);
   await onV1(container);
 
@@ -586,14 +602,20 @@ it('stands the rail down inside the wipe, and brings it back holding what it hel
   expect(rail).toContainElement(screen.getByTestId('prompt-panel'));
   expect(rail).toContainElement(screen.getByTestId('install-kit'));
 
+  // set the rail up the way a reader would before pressing VS ORIGINAL: fold the
+  // impact panel away to its tab, and clear the one row already installed
+  fireEvent.click(screen.getByTestId('impact-toggle'));
+  expect(screen.getByTestId('impact-toggle')).toHaveAttribute('aria-expanded', 'false');
+  fireEvent.click(screen.getAllByTestId('kit-check')[0]);
+  expect(screen.getAllByTestId('kit-check')[0]).not.toBeChecked();
+
   await openWipe();
-  expect(screen.queryByTestId('canvas-rail')).not.toBeInTheDocument();
-  expect(screen.queryByTestId('impact-panel')).not.toBeInTheDocument();
-  expect(screen.queryByTestId('prompt-panel')).not.toBeInTheDocument();
-  // the kit's rows are commands with ticks against them: nothing of that survives
-  // into a mode that has stood the panel holding them down
-  expect(screen.queryByTestId('install-kit')).not.toBeInTheDocument();
-  expect(screen.queryByTestId('kit-check')).not.toBeInTheDocument();
+  // the modifier is what the rule is written against, and the rule takes the
+  // column out of the layout, out of the pointer's way and out of the tab order
+  expect(screen.getByTestId('canvas').className).toContain('sg-canvas--wipe');
+  expect(readFileSync('src/components/canvas.css', 'utf8')).toMatch(
+    /\.sg-canvas--wipe \.sg-rail \{\s*display:\s*none;/,
+  );
   // nothing of the rail's is left to paint over the seam — the figures are told
   // at the divide instead, and the handle is grabbable the whole way across
   expect(screen.getByTestId('wipe-deltas')).toBeInTheDocument();
@@ -602,11 +624,17 @@ it('stands the rail down inside the wipe, and brings it back holding what it hel
   expect(screen.getByTestId('wipe-deltas').style.left).toBe('1000px');
 
   fireEvent.keyDown(window, { key: 'Escape' });
-  await waitFor(() => expect(screen.getByTestId('canvas-rail')).toBeInTheDocument());
+  await waitFor(() => expect(screen.queryByTestId('wipe-under')).not.toBeInTheDocument());
+  expect(screen.getByTestId('canvas-rail')).toBeInTheDocument();
   expect(screen.getByTestId('impact-panel')).toBeInTheDocument();
   expect(screen.getByTestId('prompt-panel')).toBeInTheDocument();
   expect(screen.getByTestId('install-kit')).toBeInTheDocument();
   expect(screen.getByTestId('prompt-btn')).toHaveAttribute('aria-pressed', 'true');
+  // and it comes back exactly as it was — the panel still folded, the row still
+  // cleared. The mode is a way of looking at the graph, not a reason to re-make
+  // the surface around it.
+  expect(screen.getByTestId('impact-toggle')).toHaveAttribute('aria-expanded', 'false');
+  expect(screen.getAllByTestId('kit-check')[0]).not.toBeChecked();
 });
 
 // The route would glow on only one side of the divider and read as a difference

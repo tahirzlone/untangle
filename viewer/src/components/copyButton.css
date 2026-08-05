@@ -10,10 +10,22 @@
 }
 /* The moment after the press: the accent the theme spends on things the user
    earned, and one soft flash that drains. The label swap is what a screen
-   reader hears; the flash is only for the eye. */
-.sg-copy-btn--copied {
+   reader hears; the flash is only for the eye.
+
+   The colours are written against BOTH classes, and that is load-bearing rather
+   than decorative: `.sg-ghost-btn` in canvas.css states the same two properties
+   at the same specificity, and canvas.css is emitted after this file — so a
+   single-class rule here loses the tie and COPIED painted in `--dim`, the accent
+   never once reaching the screen. Two classes outrank one wherever the bundler
+   puts either sheet. */
+.sg-ghost-btn.sg-copy-btn--copied {
   color: var(--accent);
   border-color: var(--accent);
+}
+/* The flash stays on the single class, which is what the reduced-motion rule at
+   the foot of this file is written against: equal specificity, later in the
+   file, so the stand-down still wins. */
+.sg-copy-btn--copied {
   animation: sg-copy-flash 420ms ease-out;
 }
 @keyframes sg-copy-flash {

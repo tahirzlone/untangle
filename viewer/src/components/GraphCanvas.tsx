@@ -350,6 +350,19 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const [laidOut, setLaidOut] = useState<LaidOutGraph | null>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState<SignalRFNode>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  /**
+   * The same fact as `selectedId`, readable without depending on it.
+   *
+   * The layout effect must know what is selected without re-running when that
+   * changes — a selection is not a reason to lay the graph out again. Written
+   * through `select` so the two can never part; declared up here because the
+   * workflow swap below is the one place that clears the pair during render.
+   */
+  const selectedRef = useRef<string | null>(null);
+  const select = useCallback((id: string | null) => {
+    selectedRef.current = id;
+    setSelectedId(id);
+  }, []);
   // bumped by RESET LAYOUT — re-running the effect is the whole mechanism
   const [layoutRun, setLayoutRun] = useState(0);
   const [ghosts, setGhosts] = useState<GhostCard[]>(NO_GHOSTS);
@@ -392,7 +405,18 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   // A new graph is a new session, adjusted during render rather than in an effect:
   // React discards this pass and re-runs immediately, so no frame is ever painted
   // with the previous graph's session behind it.
-  if (opened.source !== workflow) setOpened(openSession(workflow));
+  //
+  // The SELECTION goes with the graph it was made on. The drawer closes itself —
+  // its subject is derived from the id against the version on screen, and the new
+  // graph has no such step — but the id itself would survive the swap, and an id
+  // left standing suppresses the peek across the whole canvas (see
+  // `peekSuppressed`) with no panel on screen to explain why. Cleared here, in the
+  // same pass that opens the new session, rather than in an effect for the same
+  // reason the session is.
+  if (opened.source !== workflow) {
+    setOpened(openSession(workflow));
+    select(null);
+  }
 
   const { session } = opened;
   /** The graph on screen: the version the session's cursor is on, always. */
@@ -452,16 +476,10 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
    * describing — see `morphTo` and the landing effect below.
    */
   const focusAfterMorph = useRef<{ id: string | null } | null>(null);
-  // The layout effect must know what is selected without re-running when that
-  // changes — a selection is not a reason to lay the graph out again.
-  const selectedRef = useRef<string | null>(null);
-  const select = useCallback((id: string | null) => {
-    selectedRef.current = id;
-    setSelectedId(id);
-  }, []);
-  // Same bargain for the glow: which steps are on the critical path is not a
-  // reason to run ELK again, so the layout reads the set through a ref — and,
-  // beside it, whether there is a route being pointed at at all.
+  // The same bargain `select` strikes, for the glow: which steps are on the
+  // critical path is not a reason to run ELK again, so the layout reads the set
+  // through a ref — and, beside it, whether there is a route being pointed at at
+  // all.
   const criticalRef = useRef<ReadonlySet<string>>(new Set());
   const critpathRef = useRef(false);
 
@@ -1324,13 +1342,24 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
    * wheel zoom — and the original layer is a sibling of the pane rather than a
    * child of it, so this is what makes the two halves of the wipe move as one
    * world. Off, it costs one comparison per frame of a pan and nothing else.
+   *
+   * It is also where the peek finds out the world moved. The peek's anchor is a
+   * one-shot snapshot of where the card stood when the pointer settled — screen
+   * coordinates, taken once, never re-measured — so a wheel zoom scales the graph
+   * out from under a panel still pointing at where the step USED to be. The
+   * pointer never moved, so no boundary event is coming to take it down. Hidden
+   * rather than re-anchored: a peek is the answer to "what is under my pointer",
+   * and after the pane has moved that question has not been asked of the new
+   * position yet. Every move counts, the camera's own included — a tour recentring
+   * the graph moves the card just as far as a hand on the wheel does.
    */
   const onViewportMove = useCallback(
     (_: unknown, viewport: Viewport) => {
+      hidePeek();
       if (!wipe) return;
       setWipeTransform(`translate(${viewport.x}px,${viewport.y}px) scale(${viewport.zoom})`);
     },
-    [wipe],
+    [hidePeek, wipe],
   );
 
   // The mode goes when the cursor stands on V0 again — a fresh file dropped on
@@ -1573,6 +1602,12 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
             type="button"
             className="sg-ghost-btn"
             data-testid="reset-layout"
+            // Stood down inside the wipe, like CRITICAL PATH beside it and for a
+            // harder reason: this one MOVES the live half. A relayout mid-compare
+            // walks the cards out from under a comparison the user is reading,
+            // against an original layer anchored on where they were — the two
+            // halves stop being one world while the seam is still open.
+            disabled={wipe}
             onClick={resetLayout}
           >
             RESET LAYOUT
@@ -1596,17 +1631,26 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
         {/* The right-hand rail. A column, not a slot: the panels that stand here
             stack under the toolbar, and the drawer draws over all of them.
 
-            Away while the wipe is open, with the version strip and for the same
-            reason: the rail stands at z5 over the divider's z4, so dragging the
-            seam rightwards — the mode's whole gesture — walked the handle and
-            its deltas in behind the impact panel, where the numbers could not be
-            read and the handle could not be grabbed. Raising the divider over
-            the rail would only have decided which of two things reads the same
-            band; inside a single-purpose comparison the rail has nothing to add,
-            because the delta strip at the seam already states the headline
-            figures. It comes back, exactly as it was, the moment the wipe
-            closes. */}
-        {showImpact && !wipe ? (
+            Out of sight while the wipe is open, with the version strip and for
+            the same reason: the rail stands at z5 over the divider's z4, so
+            dragging the seam rightwards — the mode's whole gesture — walked the
+            handle and its deltas in behind the impact panel, where the numbers
+            could not be read and the handle could not be grabbed. Raising the
+            divider over the rail would only have decided which of two things
+            reads the same band; inside a single-purpose comparison the rail has
+            nothing to add, because the delta strip at the seam already states
+            the headline figures.
+
+            HIDDEN, not unmounted — `.sg-canvas--wipe .sg-rail` in canvas.css.
+            The mode is transient and the rail is full of state nobody re-made:
+            a panel collapsed to its tab, a kit with rows ticked and cleared. An
+            unmount discarded all of it, so a collapsed impact panel came back
+            expanded and the comparison had quietly undone what the user set up
+            to make room for it. `display: none` takes the column out of the
+            layout, out of the pointer's way and out of the tab order for
+            exactly as long as the mode holds the canvas, and the subtree that
+            comes back is the one that left. */}
+        {showImpact ? (
           <div className="sg-rail" data-testid="canvas-rail">
             <ImpactPanel summary={summary} />
             {/* The prompt joins the column under the impact panel — stacked,

@@ -1,7 +1,7 @@
 import enrichedDoc from '../test/fixtures/enriched.workflow.json';
 import { fixture } from '../test/harness';
 import { applySuggestion, createSession, undo } from './apply';
-import { buildInstallBlock, hasInstall, installKind } from './installKit';
+import { buildInstallBlock, hasInstall, installKind, isMultiLine } from './installKit';
 import { appliedInFlowOrder } from './prompt';
 import type { Suggestion } from './types';
 
@@ -51,6 +51,30 @@ it('reads the kind off the trimmed string, so an indented slash command is still
       '# inside Claude Code, type:\n' +
       '#     /plugin install indented\n',
   );
+});
+
+/**
+ * The class and the line-break rule are two questions, and the second one
+ * outranks the first. `installKind` reads the first character of the trimmed
+ * string and nothing else, so a multi-line string starting with a slash comes
+ * back 'slash' while the block is demoting it wholesale into the section that
+ * says the kit is not offering it — and the row above, asking only the class,
+ * badged it as something to type inside Claude Code. One string, two answers, is
+ * one too many: this is the question the surface has to ask first.
+ */
+it('answers whether the line-break rule demotes a string, whatever class it is', () => {
+  expect(isMultiLine('/plugin install codebase-conventions')).toBe(false);
+  expect(isMultiLine('claude mcp add firecrawl -- npx -y firecrawl-mcp')).toBe(false);
+  expect(isMultiLine('/plugin install a\nrm -rf x')).toBe(true);
+  expect(isMultiLine('claude mcp add a\r\nrm -rf x')).toBe(true);
+
+  // trimmed, like every other rule here: the whitespace around a one-line
+  // command is not a second line
+  expect(isMultiLine('\n  /plugin install indented  \n')).toBe(false);
+
+  // and the demoted string is still 'slash' by class, which is precisely why the
+  // two questions cannot be collapsed into one
+  expect(installKind('/plugin install a\nrm -rf x')).toBe('slash');
 });
 
 // ---------------------------------------------------------------------------

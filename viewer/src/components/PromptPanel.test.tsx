@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import enrichedDoc from '../test/fixtures/enriched.workflow.json';
 import { applySuggestion, createSession, undo } from '../graph/apply';
@@ -35,7 +36,7 @@ it('labels the opening-alone state instead of hiding it', () => {
 });
 
 // The kit is a section of THIS panel, so it inherits the panel's rules for free:
-// off with the PROMPT toggle, gone with the rail while the wipe is open.
+// off with the PROMPT toggle, out of sight with the rail while the wipe is open.
 it('holds the install kit under the prompt, once something has been applied', () => {
   const { rerender } = render(<PromptPanel session={fresh()} />);
   // nothing applied is nothing to install, and NO UPGRADES APPLIED YET already
@@ -95,6 +96,28 @@ it('copies the prompt, flashes COPIED, and goes back to offering', async () => {
     vi.useRealTimers();
     clip.restore();
   }
+});
+
+/**
+ * And the accent the flash is made of actually reaches the screen.
+ *
+ * `.sg-ghost-btn` in canvas.css states `color` and `border-color` at the same
+ * specificity as a single-class copy rule, and it is emitted after this
+ * stylesheet — so the one-class version lost the tie and COPIED rendered in
+ * `--dim`, the earned colour never once painting. jsdom computes no cascade and
+ * vitest loads no CSS, so what is pinned here is the shape of the fix: the rule
+ * carries BOTH classes and outranks the ghost button wherever either sheet lands.
+ */
+it('writes the COPIED accent at a specificity the ghost button cannot outrank', () => {
+  const css = readFileSync('src/components/copyButton.css', 'utf8');
+  const accent = css.match(/\.sg-ghost-btn\.sg-copy-btn--copied\s*\{([^}]*)\}/);
+  expect(accent).not.toBeNull();
+  expect(accent![1]).toMatch(/color:\s*var\(--accent\)/);
+  expect(accent![1]).toMatch(/border-color:\s*var\(--accent\)/);
+  // the flash stays on the single class, which is what the reduced-motion rule
+  // is written against — moving it up would put the stand-down out of reach
+  expect(css).toMatch(/\n\.sg-copy-btn--copied\s*\{[^}]*animation:\s*sg-copy-flash/);
+  expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*animation:\s*none/);
 });
 
 // The clipboard API is permission-gated and absent entirely off HTTPS. A press

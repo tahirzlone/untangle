@@ -45,6 +45,21 @@ export function CopyButton({
   const timer = useRef(0);
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
+  /**
+   * COPIED is a claim about a STRING, so it does not outlive the string.
+   *
+   * The block under this button is live: clearing a kit row rewrites it while the
+   * flash is still up, and what the label would then be claiming is a paste
+   * nobody took. Clear the last row and the claim gets worse — COPIED on a
+   * control that is now disabled, two states that cannot both be true. The moment
+   * passes on its own after COPIED_MS; this is the other way it ends, and the
+   * timer goes with it so a flash already spent cannot re-open one.
+   */
+  useEffect(() => {
+    window.clearTimeout(timer.current);
+    setCopied(false);
+  }, [text]);
+
   const onCopy = useCallback(() => {
     const clipboard = navigator.clipboard;
     if (!clipboard?.writeText) return;

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { buildInstallBlock, hasInstall, installKind } from '../graph/installKit';
+import { buildInstallBlock, hasInstall, installKind, isMultiLine } from '../graph/installKit';
 import type { Suggestion } from '../graph/types';
 import { CopyButton } from './CopyButton';
 import './installKit.css';
@@ -61,8 +61,14 @@ function KitRow({
         </label>
         {/* No shell runs `/plugin install`, so a kit that offered it as a command
             would be offering a paste that fails. The badge says where it goes
-            before the block says it in a comment. */}
-        {command !== null && installKind(command) === 'slash' ? (
+            before the block says it in a comment.
+
+            The line-break rule is asked FIRST, because it outranks the class: a
+            multi-line string is demoted out of both halves of the block and into
+            the section that says the kit is not offering it, so a badge reading
+            TYPED INSIDE CLAUDE CODE over that row would be pointing at a place
+            the command is not going. Single line and slash, or no badge. */}
+        {command !== null && !isMultiLine(command) && installKind(command) === 'slash' ? (
           <span className="sg-kit-badge" data-testid="kit-badge">
             TYPED INSIDE CLAUDE CODE
           </span>

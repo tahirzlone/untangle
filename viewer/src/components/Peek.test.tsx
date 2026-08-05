@@ -38,9 +38,21 @@ function rest(el: HTMLElement) {
  * takes the timers away before it answers waits for a graph that never arrives.
  */
 async function canvas() {
-  render(<GraphCanvas workflow={enriched} />);
+  const view = render(<GraphCanvas workflow={enriched} />);
   await cardsOf(enriched);
   vi.useFakeTimers();
+  return view;
+}
+
+/**
+ * Moves the world under the pointer, the way a wheel does.
+ *
+ * A real wheel event on React Flow's own pane: d3-zoom answers it, React Flow
+ * reports the new viewport through `onMove`, and that is the handler under test.
+ * Nothing here reaches past the pane — the whole route is React Flow's.
+ */
+function zoomPane(container: HTMLElement) {
+  fireEvent.wheel(container.querySelector('.react-flow__renderer')!, { deltaY: -120 });
 }
 
 afterEach(() => {
@@ -255,6 +267,66 @@ it('stays down while the tour has the canvas', async () => {
 
   rest(card(VERIFY));
   expect(screen.queryByTestId('sg-peek')).not.toBeInTheDocument();
+});
+
+/**
+ * The one gesture that moves the graph without moving the pointer.
+ *
+ * The anchor is a one-shot snapshot in screen coordinates, taken when the pointer
+ * settled and never re-measured — so a wheel zoom scales the card out from under
+ * a panel still pointing at where the step used to be, and because the pointer
+ * itself never moved there is no boundary event coming to take it down.
+ */
+it('goes when the viewport moves under it', async () => {
+  const { container } = await canvas();
+
+  rest(card(RESEARCH));
+  expect(screen.getByTestId('sg-peek')).toBeInTheDocument();
+
+  zoomPane(container);
+  expect(screen.queryByTestId('sg-peek')).not.toBeInTheDocument();
+
+  // and the one still waiting out its delay goes with it: the pointer rested on
+  // a card that is no longer where it rested
+  fireEvent.mouseOver(card(VERIFY));
+  zoomPane(container);
+  act(() => {
+    vi.advanceTimersByTime(PEEK_DELAY_MS * 4);
+  });
+  expect(screen.queryByTestId('sg-peek')).not.toBeInTheDocument();
+
+  // the canvas is still a graph to ask about — the pointer settling again after
+  // the move is a new question, and it gets an answer
+  rest(card(VERIFY));
+  expect(screen.getByTestId('sg-peek')).toBeInTheDocument();
+});
+
+/**
+ * A second file dropped on the viewer replaces the graph without unmounting the
+ * canvas, and the selection was made on the graph that left. The drawer's own
+ * subject is derived per version, so the panel goes — but an id left standing
+ * suppresses the peek across the WHOLE canvas, with nothing on screen to explain
+ * the silence.
+ */
+it('answers again on a graph that replaced the one a step was selected on', async () => {
+  const { rerender } = render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+
+  fireEvent.click(card(RESEARCH));
+  expect(screen.getByTestId('detail-drawer')).toHaveTextContent(RESEARCH);
+
+  // the same document, PARSED again: a drop hands the canvas a fresh object
+  // rather than the one it is already holding, and the swap is keyed on that
+  // identity. Same content, so the new graph still HAS the selected step — which
+  // leaves the swap itself as the only thing that can drop the selection.
+  const dropped = fixture(structuredClone(enrichedDoc), 'enriched again');
+  rerender(<GraphCanvas workflow={dropped} />);
+  await cardsOf(dropped);
+  expect(screen.queryByTestId('detail-drawer')).not.toBeInTheDocument();
+
+  vi.useFakeTimers();
+  rest(card(RESEARCH));
+  expect(screen.getByTestId('sg-peek')).toHaveTextContent(rows('research-docs')[0].name);
 });
 
 // A pointer on a card mid-drag is doing something, not asking something — and a

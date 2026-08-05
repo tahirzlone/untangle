@@ -130,6 +130,11 @@ it('shows every line of a command that carries a line break, and hands it over c
     const css = readFileSync('src/components/installKit.css', 'utf8');
     expect(css).toMatch(/\.sg-kit-cmd\s*\{[^}]*white-space:\s*pre-wrap/);
 
+    // no badge, however the string starts: the block demotes it wholesale to the
+    // section that says the kit is NOT offering it, so TYPED INSIDE CLAUDE CODE
+    // would be the row pointing at a place this command is not going
+    expect(screen.queryByTestId('kit-badge')).not.toBeInTheDocument();
+
     // and the tick's block agrees with the row: both lines commented, neither bare
     await copy();
     expect(clip.writeText).toHaveBeenCalledExactlyOnceWith(
@@ -197,6 +202,38 @@ it('drops a cleared row out of the block and leaves the rest of it alone', async
     expect(clip.writeText).toHaveBeenLastCalledWith(
       `# Flowprint install kit\n${FIRECRAWL_CMD}\n${DEVTOOLS_CMD}\n`,
     );
+  } finally {
+    clip.restore();
+  }
+});
+
+/**
+ * COPIED is a claim about the string that was copied, and the block under this
+ * button is live: clearing a row rewrites it while the flash is still up, and the
+ * label would then be claiming a paste nobody took. Clear the LAST row and the
+ * claim gets worse — COPIED on a control that has just stood down, two states
+ * that cannot both be true, held there for the rest of the 1600ms.
+ */
+it('takes COPIED back the moment the ticks rewrite the block', async () => {
+  const clip = mockClipboard(() => Promise.resolve());
+  try {
+    render(<InstallKit rows={[sug(FIRECRAWL), sug(DEVTOOLS)]} />);
+    const button = screen.getByTestId('kit-copy');
+
+    await copy();
+    expect(button).toHaveTextContent('COPIED');
+
+    // no timer waited out: the block changed, so the claim about it is over
+    fireEvent.click(screen.getByLabelText('firecrawl-mcp'));
+    expect(button).toHaveTextContent('COPY');
+    expect(button.className).not.toContain('sg-copy-btn--copied');
+
+    // and the pair that cannot both be true never happens
+    await copy();
+    expect(button).toHaveTextContent('COPIED');
+    fireEvent.click(screen.getByLabelText('chrome-devtools-mcp'));
+    expect(button).toBeDisabled();
+    expect(button).toHaveTextContent('COPY');
   } finally {
     clip.restore();
   }
