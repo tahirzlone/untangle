@@ -483,7 +483,9 @@ One table, one row per deduped install string plus one per link-only resource. T
 
 | Resource | Category | Status | Action |
 | --- | --- | --- | --- |
-| the suggestion's `name` | its `category` | `INSTALLED` / `MISSING` / `MANUAL` | `run:` or `print:` followed by the verbatim install string — or `MANUAL — <url>` |
+| the suggestion's `name` | its `category` | `INSTALLED` / `MISSING` / `MANUAL` | `run:` or `print:` followed by the verbatim install string — `print: (2 lines, below)` for a line-break demotion — or `MANUAL — <url>` |
+
+That `(2 lines, below)` cell is the medium bowing to the rule, not the rule bending: a markdown cell cannot carry a line break, and the line-break-demoted string is exactly the one whose every physical line must be on this table. So the cell states the true line count and points down, and the string itself stands directly beneath the table in a fenced code block — verbatim, every line, one fence per demoted row, introduced by the resource's `name` so row and fence cannot be mismatched. The fence is part of the consent artifact: what step 4 prints for that row is what its fence showed.
 
 Count the table — N is every row, K the INSTALLED rows, M the MISSING rows (MANUAL rows are neither: they carry nothing to install) — and ask:
 
@@ -518,7 +520,7 @@ That is the whole close. No advice loop, no second pass, no "want me to try agai
 
 Walk the list; every miss here is a consent or honesty bug, not a formatting one:
 
-- [ ] everything run or printed appeared in the checklist first, string-for-string — nothing acted on that the table did not show
+- [ ] everything run or printed appeared in the checklist first, string-for-string — nothing acted on that the table, or a demoted row's fence beneath it, did not show
 - [ ] no string starting with `/` was executed — slash rows were printed only
 - [ ] no string with a line break (post-trim) was executed — demoted rows were printed whole, every line of them
 - [ ] every run row got exactly one attempt — no retries, no reworded commands
