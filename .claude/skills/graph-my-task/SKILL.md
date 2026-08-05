@@ -410,10 +410,12 @@ Bin every suggestion by **parsing its install string** — the row's `category` 
 
 | The suggestion has | Bin | Probe (step 2) | On consent (step 4) |
 | --- | --- | --- | --- |
-| `install` starting `claude mcp add <name>` | MCP server | `claude mcp get <name>` exit code | **run** |
+| `install` starting `claude mcp add` | MCP server | `claude mcp get <name>` exit code (`<name>` parsed in step 2) | **run** |
 | `install` starting `/` | slash command | settings-file grep, when it is `/plugin install <name>` | **print** |
 | any other `install` | unclassifiable | none — MISSING by definition | **print** verbatim, never run |
 | no `install` key | link-only | none — never probed, never guessed | shown as `MANUAL — <url>` |
+
+One demotion is possible: step 2 moves a `claude mcp add` whose `<name>` will not parse into the **print** bin — before the checklist is drawn, so the table the user consents to already shows it as `print:`.
 
 Dedupe before going further: **identical install strings collapse to one row** — two suggestions sharing a resource get one checklist line, one consent, one run (name both resources on the line).
 
@@ -421,7 +423,7 @@ Dedupe before going further: **identical install strings collapse to one row** �
 
 Establish what is already present before asking for anything.
 
-**MCP servers.** `<name>` is the token immediately after `add`. If that token starts with `-`, or quoting leaves any doubt which token is the name, do not guess: the row is MISSING, print-only. Otherwise check the exit code — it is stable where parsing `claude mcp list` text is not, and the probe command is identical in both shells:
+**MCP servers.** The CLI's shape is `claude mcp add [flags] <name> <commandOrUrl> [args…]`, so parse for the name: starting at the token after `add`, drop each `-`-leading token together with the one token that follows it, and the first token left standing is `<name>` — `claude mcp add --transport http sentry https://mcp.sentry.dev/mcp` parses to `sentry`; `claude mcp add my-server -- npx my-mcp-server` to `my-server`. If no token survives, or the survivor does not read as a server name (an `=`, a `://`, a stray quote), or anything else leaves doubt, do not guess: **demote the row to the print bin** — step 3 writes it `print:`, step 4 prints it untouched, and the re-probe never asks after it. With a name in hand, check the exit code — it is stable where parsing `claude mcp list` text is not, and the probe command is identical in both shells:
 
 ```powershell
 claude mcp get <name> *> $null; $LASTEXITCODE
@@ -433,17 +435,17 @@ claude mcp get <name> >/dev/null 2>&1; echo $?
 
 (`0` = INSTALLED; anything else = MISSING. No `claude` on PATH → every MCP row is UNKNOWN = MISSING.)
 
-**Plugins** — `/plugin install <name>` rows only. `<name>` is the token after `/plugin install`; if it carries an `@marketplace` suffix, probe with the part before the `@`. An enabled plugin appears as a `"<name>@<marketplace>"` key under `enabledPlugins` in the settings files, so look for the opening `"<name>@` — user settings first, then the project's:
+**Plugins** — `/plugin install <name>` rows only. `<name>` is the token after `/plugin install`; if it carries an `@marketplace` suffix, probe with the part before the `@`. An enabled plugin appears as a `"<name>@<marketplace>"` key under `enabledPlugins` in the settings files — user-level and the project's — so ask, quietly, whether that key opening exists. The probe answers yes or no and never echoes the line it matched: a settings file's contents stay out of the transcript.
 
 ```powershell
-Get-Content "$HOME\.claude\settings.json", ".claude\settings*.json" -ErrorAction SilentlyContinue | Select-String '"<name>@' -SimpleMatch
+Select-String -Path "$HOME\.claude\settings.json", ".claude\settings*.json" -Pattern '"<name>@' -SimpleMatch -Quiet -ErrorAction SilentlyContinue
 ```
 
 ```bash
-grep -h '"<name>@' ~/.claude/settings.json .claude/settings*.json 2>/dev/null
+grep -q '"<name>@' ~/.claude/settings.json .claude/settings*.json 2>/dev/null; echo $?
 ```
 
-(run from the project root; any matching line = INSTALLED, none = MISSING. That key layout is observed, not a contract — one more reason a plugin is only ever printed, never run. No settings file at all → UNKNOWN = MISSING.)
+(run from the project root; PowerShell answers `True`, bash answers `0`, when the plugin is enabled — anything else, including no output at all, is MISSING. That key layout is observed, not a contract — one more reason a plugin is only ever printed, never run. No settings file at all → UNKNOWN = MISSING.)
 
 Link-only rows and unclassifiable strings are never probed. Their statuses are fixed: MANUAL and MISSING respectively.
 
@@ -467,7 +469,7 @@ Count the table — N is every row, K the INSTALLED rows, M the MISSING rows (MA
 
 Consented rows only, in checklist order:
 
-- **Run rows** (the MCP-server bin, and only it — no runnable string starts with `/`, but lacking the `/` is not what makes a string runnable: anything unrecognized stayed a print row in step 1): run the string **verbatim, once**, and capture the exit code. Non-zero → one line naming the code, the string printed back for manual use, and straight on to the next row — no retry, no rewording. Worth one passing note to the user: `claude mcp add` installs at **project scope by default**, so the server lands in this project unless the string itself says otherwise.
+- **Run rows** (the MCP-server bin, and only it — no runnable string starts with `/`, but lacking the `/` is not what makes a string runnable: anything unrecognized stayed a print row in step 1, and a `claude mcp add` whose name would not parse was demoted to one in step 2): run the string **verbatim, once**, and capture the exit code. Non-zero → one line naming the code, the string printed back for manual use, and straight on to the next row — no retry, no rewording. Worth one passing note to the user: `claude mcp add` installs at **local scope by default**, so the server lands in this project unless the string itself says otherwise.
 - **Print rows** (slash commands and unclassifiable strings): print the string verbatim plus one line of instruction — a slash command is typed inside Claude Code by the user; an unclassifiable string is handed over as-is, for the user to run where it belongs.
 
 ### 5. Re-probe what ran, then report
