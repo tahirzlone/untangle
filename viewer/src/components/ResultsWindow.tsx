@@ -194,6 +194,18 @@ export function ResultsWindow({
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLElement>(null);
+  /**
+   * Did the press start on the backdrop ITSELF? A drag that selects text in a
+   * pane and overshoots the window's edge releases on the backdrop, and the
+   * browser then dispatches the click on the two targets' common ancestor —
+   * the backdrop — so a bare `onClick={onClose}` there threw away the window
+   * AND the selection over a ~35px overshoot, on the one surface whose whole
+   * point is text to take. Closing is therefore decided on the pointer events,
+   * and only when the press and the release BOTH originated on the backdrop:
+   * a gesture that touched the window at either end is the window's gesture,
+   * not the way out.
+   */
+  const pressOnBackdrop = useRef(false);
 
   // Focus arrives with the window, whichever entry opened it — same bargain the
   // scorecard struck: landing focus here is what hands it back on the way out.
@@ -273,7 +285,18 @@ export function ResultsWindow({
     <div
       className="sg-results-back"
       data-testid="results-backdrop"
-      onClick={onClose}
+      // Both ends of the gesture are read here, off the pointer events, because
+      // the browser dispatches a mixed-target CLICK on the common ancestor —
+      // this element — where no stopPropagation of the panel's can reach it.
+      // See `pressOnBackdrop` for what that protects.
+      onPointerDown={(e) => {
+        pressOnBackdrop.current = e.target === e.currentTarget;
+      }}
+      onPointerUp={(e) => {
+        const pressed = pressOnBackdrop.current;
+        pressOnBackdrop.current = false;
+        if (pressed && e.target === e.currentTarget) onClose();
+      }}
       role="presentation"
     >
       <section
@@ -284,8 +307,6 @@ export function ResultsWindow({
         aria-labelledby="sg-results-title"
         ref={panelRef}
         onKeyDown={onKeyDown}
-        // the backdrop closes; the window is not the backdrop
-        onClick={(e) => e.stopPropagation()}
       >
         {/* ------------------------------------------------------------------ */}
         {/* 1. The summary: what changed, in the impact panel's own figures.    */}

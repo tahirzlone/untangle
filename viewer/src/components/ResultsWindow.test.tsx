@@ -415,13 +415,54 @@ it('closes on Escape and on the backdrop, and not on its own body', () => {
   fireEvent.keyDown(window, { key: 'Escape' });
   expect(onClose).toHaveBeenCalledTimes(1);
 
-  fireEvent.click(screen.getByTestId('results-backdrop'));
+  // a plain backdrop press: down and up both on the backdrop itself — the
+  // pointer pair a real click always arrives as
+  const backdrop = screen.getByTestId('results-backdrop');
+  fireEvent.pointerDown(backdrop);
+  fireEvent.pointerUp(backdrop);
+  fireEvent.click(backdrop);
   expect(onClose).toHaveBeenCalledTimes(2);
 
   // dialog semantics carried the same way the scorecard carried them
   const dialog = screen.getByRole('dialog');
   expect(dialog).toHaveAttribute('aria-modal', 'true');
   expect(dialog).toHaveAccessibleName(/RESULTS/);
+});
+
+/**
+ * The panes are text to take, and taking text is a drag — one that routinely
+ * overshoots the window's edge (the AFTER pane sits ~25px from it). The
+ * release then lands on the backdrop, and the browser dispatches the CLICK on
+ * the two targets' common ancestor — the backdrop — where no stopPropagation
+ * of the panel's can reach it. A bare onClick there closed the window and
+ * destroyed the selection. Closing therefore requires the press AND the
+ * release to have both originated on the backdrop itself.
+ */
+it('keeps the window when a selection drag overshoots onto the backdrop', () => {
+  const onClose = vi.fn();
+  render(<Host session={sessionWith(enriched, FIRECRAWL)} onClose={onClose} />);
+  const backdrop = screen.getByTestId('results-backdrop');
+  const pane = screen.getByTestId('results-after');
+
+  // the overshoot, as the browser dispatches it: press in the pane, release on
+  // the backdrop, click synthesized on their common ancestor
+  fireEvent.pointerDown(pane);
+  fireEvent.pointerUp(backdrop);
+  fireEvent.click(backdrop);
+  expect(onClose).not.toHaveBeenCalled();
+
+  // the reverse overshoot — press on the backdrop, release in the pane — is a
+  // gesture that touched the window too, and keeps it for the same reason
+  fireEvent.pointerDown(backdrop);
+  fireEvent.pointerUp(pane);
+  fireEvent.click(backdrop);
+  expect(onClose).not.toHaveBeenCalled();
+
+  // and the way out still works: both ends on the backdrop
+  fireEvent.pointerDown(backdrop);
+  fireEvent.pointerUp(backdrop);
+  fireEvent.click(backdrop);
+  expect(onClose).toHaveBeenCalledTimes(1);
 });
 
 // The window arrives quietly when motion is not wanted: the entrance animations

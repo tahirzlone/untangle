@@ -501,8 +501,13 @@ it('makes the canvas behind it inert, and gives it back on close', async () => {
     await windowAfterInstantTour();
     expect(screen.getByTestId('canvas')).toHaveAttribute('inert');
 
-    // the third way out — the backdrop — through the same restore as the other two
-    fireEvent.click(screen.getByTestId('results-backdrop'));
+    // the third way out — the backdrop — through the same restore as the other
+    // two. Down and up both on the backdrop itself: closing is decided on the
+    // pointer pair, so a selection drag overshooting the window cannot take it
+    // down — see ResultsWindow.test.tsx for that pin.
+    const backdrop = screen.getByTestId('results-backdrop');
+    fireEvent.pointerDown(backdrop);
+    fireEvent.pointerUp(backdrop);
     await waitFor(() => expect(screen.queryByTestId('results-window')).not.toBeInTheDocument());
     expect(screen.getByTestId('canvas')).not.toHaveAttribute('inert');
     // focus lands on the standing entry — inside the canvas that was inert a
