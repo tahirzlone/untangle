@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://flowprint.dev/schema/workflow.schema.json",
-  "title": "Flowprint Workflow",
+  "$id": "https://untangle.dev/schema/workflow.schema.json",
+  "title": "Untangle Workflow",
   "type": "object",
   "additionalProperties": false,
   "required": ["meta", "nodes", "edges", "suggestions"],

@@ -1,6 +1,6 @@
 ---
 name: graph-my-task
-description: Generate a Flowprint workflow graph — decompose a task into the flowchart of how Claude would execute it with ZERO helpers (no skills, plugins, connectors, or MCP servers), written as a validated .workflow.json. Use when the user runs /graph-my-task, or asks to graph, flowchart, or map a task, workflow, or pipeline, or asks to install a workflow's suggested resources.
+description: Generate an Untangle workflow graph — decompose a task into the flowchart of how Claude would execute it with ZERO helpers (no skills, plugins, connectors, or MCP servers), written as a validated .workflow.json. Use when the user runs /graph-my-task, or asks to graph, flowchart, or map a task, workflow, or pipeline, or asks to install a workflow's suggested resources.
 ---
 
 # Graph My Task
@@ -81,8 +81,8 @@ Resolve the base and table from the environment, with Tahir's base as the defaul
 
 | Variable | Default |
 | --- | --- |
-| `FLOWPRINT_AIRTABLE_BASE` | `appRSePRgk4jlaRUc` |
-| `FLOWPRINT_AIRTABLE_TABLE` | `tblOJzSLHAW7lbBWv` |
+| `UNTANGLE_AIRTABLE_BASE` | `appRSePRgk4jlaRUc` |
+| `UNTANGLE_AIRTABLE_TABLE` | `tblOJzSLHAW7lbBWv` |
 
 Endpoint: `https://api.airtable.com/v0/<base>/<table>` · Header: `Authorization: Bearer $AIRTABLE_API_KEY`
 
@@ -93,14 +93,14 @@ Use whichever of these fits the session. All three do the same thing.
 **Node (any platform, walks all pages by itself, prints `id` + fields per row):**
 
 ```bash
-node -e "(async()=>{const B=process.env.FLOWPRINT_AIRTABLE_BASE||'appRSePRgk4jlaRUc',T=process.env.FLOWPRINT_AIRTABLE_TABLE||'tblOJzSLHAW7lbBWv';let out=[],offset;do{const u=new URL('https://api.airtable.com/v0/'+B+'/'+T);u.searchParams.set('pageSize','100');if(offset)u.searchParams.set('offset',offset);const r=await fetch(u,{headers:{Authorization:'Bearer '+process.env.AIRTABLE_API_KEY}});if(!r.ok){console.error('airtable',r.status,await r.text());process.exitCode=1;return}const j=await r.json();out=out.concat(j.records);offset=j.offset}while(offset);console.log(JSON.stringify(out.map(r=>Object.assign({id:r.id},r.fields)),null,1))})()"
+node -e "(async()=>{const B=process.env.UNTANGLE_AIRTABLE_BASE||'appRSePRgk4jlaRUc',T=process.env.UNTANGLE_AIRTABLE_TABLE||'tblOJzSLHAW7lbBWv';let out=[],offset;do{const u=new URL('https://api.airtable.com/v0/'+B+'/'+T);u.searchParams.set('pageSize','100');if(offset)u.searchParams.set('offset',offset);const r=await fetch(u,{headers:{Authorization:'Bearer '+process.env.AIRTABLE_API_KEY}});if(!r.ok){console.error('airtable',r.status,await r.text());process.exitCode=1;return}const j=await r.json();out=out.concat(j.records);offset=j.offset}while(offset);console.log(JSON.stringify(out.map(r=>Object.assign({id:r.id},r.fields)),null,1))})()"
 ```
 
 **curl (bash / Git Bash) — page 1:**
 
 ```bash
 curl -sS -H "Authorization: Bearer $AIRTABLE_API_KEY" \
-  "https://api.airtable.com/v0/${FLOWPRINT_AIRTABLE_BASE:-appRSePRgk4jlaRUc}/${FLOWPRINT_AIRTABLE_TABLE:-tblOJzSLHAW7lbBWv}?pageSize=100"
+  "https://api.airtable.com/v0/${UNTANGLE_AIRTABLE_BASE:-appRSePRgk4jlaRUc}/${UNTANGLE_AIRTABLE_TABLE:-tblOJzSLHAW7lbBWv}?pageSize=100"
 ```
 
 **curl — every page after the first** (paste the previous response's `offset` value verbatim; `-G` + `--data-urlencode` escapes it safely):
@@ -109,14 +109,14 @@ curl -sS -H "Authorization: Bearer $AIRTABLE_API_KEY" \
 curl -sS -G -H "Authorization: Bearer $AIRTABLE_API_KEY" \
   --data-urlencode "pageSize=100" \
   --data-urlencode "offset=PASTE_OFFSET_FROM_PREVIOUS_RESPONSE" \
-  "https://api.airtable.com/v0/${FLOWPRINT_AIRTABLE_BASE:-appRSePRgk4jlaRUc}/${FLOWPRINT_AIRTABLE_TABLE:-tblOJzSLHAW7lbBWv}"
+  "https://api.airtable.com/v0/${UNTANGLE_AIRTABLE_BASE:-appRSePRgk4jlaRUc}/${UNTANGLE_AIRTABLE_TABLE:-tblOJzSLHAW7lbBWv}"
 ```
 
 **PowerShell** (in PowerShell 5.1 `curl` is an alias for `Invoke-WebRequest`, so the bash flags above fail — use this instead; it walks all pages):
 
 ```powershell
-$base = if ($env:FLOWPRINT_AIRTABLE_BASE) { $env:FLOWPRINT_AIRTABLE_BASE } else { 'appRSePRgk4jlaRUc' }
-$table = if ($env:FLOWPRINT_AIRTABLE_TABLE) { $env:FLOWPRINT_AIRTABLE_TABLE } else { 'tblOJzSLHAW7lbBWv' }
+$base = if ($env:UNTANGLE_AIRTABLE_BASE) { $env:UNTANGLE_AIRTABLE_BASE } else { 'appRSePRgk4jlaRUc' }
+$table = if ($env:UNTANGLE_AIRTABLE_TABLE) { $env:UNTANGLE_AIRTABLE_TABLE } else { 'tblOJzSLHAW7lbBWv' }
 $headers = @{ Authorization = "Bearer $env:AIRTABLE_API_KEY" }
 $rows = @(); $offset = $null
 do {
@@ -144,12 +144,12 @@ This is the tier for both keyless runs and runs whose Airtable fetch broke. If y
 
 | Variable | Default |
 | --- | --- |
-| `FLOWPRINT_KB_URL` | `https://tahirlone.com/api/flowprint/kb` |
+| `UNTANGLE_KB_URL` | `https://tahirlone.com/api/untangle/kb` |
 
 **curl (bash / Git Bash)** — body to a file, status to the terminal. Keep it that way: a failing feed answers with a full HTML error page, and dumping that into the session costs thousands of tokens for nothing.
 
 ```bash
-curl -sS -o kb.json -w 'HTTP %{http_code}\n' "${FLOWPRINT_KB_URL:-https://tahirlone.com/api/flowprint/kb}"
+curl -sS -o kb.json -w 'HTTP %{http_code}\n' "${UNTANGLE_KB_URL:-https://tahirlone.com/api/untangle/kb}"
 ```
 
 Read `kb.json` **only** when that line printed `HTTP 200`; on any other status leave the file unopened (it holds an error body or a site error page) and go to tier 2.5. Delete `kb.json` once the suggestions are authored — it is scratch, not a repo artifact.
@@ -157,7 +157,7 @@ Read `kb.json` **only** when that line printed `HTTP 200`; on any other status l
 **PowerShell** (`Invoke-RestMethod` parses the JSON for you and *throws* on any non-200 — that throw is your signal to go to tier 2.5):
 
 ```powershell
-$kbUrl = if ($env:FLOWPRINT_KB_URL) { $env:FLOWPRINT_KB_URL } else { 'https://tahirlone.com/api/flowprint/kb' }
+$kbUrl = if ($env:UNTANGLE_KB_URL) { $env:UNTANGLE_KB_URL } else { 'https://tahirlone.com/api/untangle/kb' }
 $feed = Invoke-RestMethod -Uri $kbUrl
 $feed.records | ConvertTo-Json -Depth 6
 ```

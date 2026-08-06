@@ -90,7 +90,7 @@ export function kebab(title: string): string {
  * the first in the downloads folder.
  */
 export function exportFilename(title: string, version: number): string {
-  return `flowprint-${kebab(title)}-v${version}.png`;
+  return `untangle-${kebab(title)}-v${version}.png`;
 }
 
 /** The smallest rect holding every rect handed in, or an empty one from nothing. */

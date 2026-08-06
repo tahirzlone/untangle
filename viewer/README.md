@@ -1,4 +1,4 @@
-# Flowprint Viewer
+# Untangle Viewer
 
 Vite + React static SPA that renders `*.workflow.json` files as Signal graphs — dark canvas, left→right flow, ported node cards, live edges.
 

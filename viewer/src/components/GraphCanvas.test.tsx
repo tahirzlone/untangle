@@ -95,7 +95,7 @@ it('hangs nothing off the root but the toolbar and the viewport', async () => {
   await waitFor(() => {
     expect(container.querySelector('.react-flow__viewport > .sg-defs')).not.toBeNull();
   });
-  expect(container.querySelectorAll('#fp-arrow')).toHaveLength(1);
+  expect(container.querySelectorAll('#ut-arrow')).toHaveLength(1);
 });
 
 // React Flow 12 stamps `draggable` (and its own `nopan`) onto the node wrapper

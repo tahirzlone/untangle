@@ -1,14 +1,14 @@
-# Flowprint
+# Untangle
 
 Map your Claude workflows. Describe a task → see the flowchart of how Claude would break it down with zero helpers → watch skills, plugins, connectors, and MCP servers from a curated knowledge base collapse it into something radically simpler → leave with the task rewritten as a prompt you can paste into Claude.
 
-![The Flowprint viewer: the payments graph after its three upgrades landed — the flow left→right on a dark canvas, the version strip at V3, and the impact panel reading −26% pain, −1 step, −115 min, −8000 tokens.](docs/assets/hero.png)
+![The Untangle viewer: the payments graph after its three upgrades landed — the flow left→right on a dark canvas, the version strip at V3, and the impact panel reading −26% pain, −1 step, −115 min, −8000 tokens.](docs/assets/hero.png)
 
 **What works today.** The `/graph-my-task` Claude Code skill generates validated `*.workflow.json` graphs, matching each step against a live Airtable knowledge base of real skills, plugins, and MCP servers; the viewer renders them as Signal graphs — dark canvas, left→right flow, pain glowing ember — and you apply the suggestions one at a time or hand the whole graph to OPTIMIZE, walk it back with UNDO, hold it against the original in a before/after wipe, and leave with the task rewritten as a prompt plus the install kit that makes the prompt runnable. The picture above is one session, ended.
 
 ## Try the demo
 
-**[tahirzlone.github.io/flowprint](https://tahirzlone.github.io/flowprint/)** — the gallery, hosted. No account, no key, nothing to install: open **Ship a Payments Feature End-to-End**, press **OPTIMIZE** and watch the flow collapse step by step, then **VS ORIGINAL** to drag the seam between where it started and where it ended, and **PROMPT** for the thing you leave with.
+**[tahirzlone.github.io/untangle](https://tahirzlone.github.io/untangle/)** — the gallery, hosted. No account, no key, nothing to install: open **Ship a Payments Feature End-to-End**, press **OPTIMIZE** and watch the flow collapse step by step, then **VS ORIGINAL** to drag the seam between where it started and where it ended, and **PROMPT** for the thing you leave with.
 
 ## Run it yourself
 
@@ -38,7 +38,7 @@ Open this repo in Claude Code and run `/graph-my-task "your task here"`: the ski
 | Tier | When | Rows come from | What you set up |
 | --- | --- | --- | --- |
 | 1 | `AIRTABLE_API_KEY` is set | your own Airtable base, read live | a token, and the schema in [`kb/airtable-template.md`](kb/airtable-template.md) |
-| 2 | no key set, or the key path failed | the public feed — `https://tahirlone.com/api/flowprint/kb` | nothing |
+| 2 | no key set, or the key path failed | the public feed — `https://tahirlone.com/api/untangle/kb` | nothing |
 | 2.5 | the feed is unreachable, non-200, or empty | [`kb/kb.json`](kb/kb.json), this repo's daily mirror of that feed | nothing — it is already on disk |
 | 3 | no source returned rows | nothing: the vanilla graph, `suggestions: []` | — |
 

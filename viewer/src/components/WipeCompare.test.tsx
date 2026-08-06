@@ -335,7 +335,7 @@ it('renders the original at full fidelity: real cards, real edges, its own pips'
   // every V0 edge, in the live vocabulary, arrowheads included
   const paths = screen.getByTestId('wipe-under').querySelectorAll('path.sg-edge');
   expect(paths).toHaveLength(enriched.edges.length);
-  for (const p of paths) expect(p.getAttribute('marker-end')).toBe('url(#fp-arrow)');
+  for (const p of paths) expect(p.getAttribute('marker-end')).toBe('url(#ut-arrow)');
   // and the conditions on those edges ride along as tags
   expect(under.getByText('all green')).toBeInTheDocument();
 });

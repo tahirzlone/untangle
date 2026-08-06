@@ -185,7 +185,7 @@ it('adds the whole run\'s install kit to the scorecard, with its own copy', asyn
 
     // both of the tour's rows install from a shell, so the kit is two bare lines
     const block =
-      '# Flowprint install kit\n' +
+      '# Untangle install kit\n' +
       'claude mcp add firecrawl -- npx -y firecrawl-mcp\n' +
       'claude mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest\n';
 
@@ -219,7 +219,7 @@ it('hands the report the same block the panel has ticked by default', async () =
     fireEvent.click(screen.getByTestId('optimize-btn'));
     await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
     const frozen = screen.getByTestId('scorecard-kit-text').textContent!;
-    expect(frozen).toContain('# Flowprint install kit');
+    expect(frozen).toContain('# Untangle install kit');
 
     // the report leaves the canvas standing on the version the run ended on, so
     // the panel is being asked about exactly the same applied set

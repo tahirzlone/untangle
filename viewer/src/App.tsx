@@ -80,7 +80,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="app-masthead">
-        Flowprint{' '}
+        Untangle{' '}
         <button className="masthead-sub masthead-link" onClick={() => setView({ mode: 'gallery' })}>
           graph index
         </button>

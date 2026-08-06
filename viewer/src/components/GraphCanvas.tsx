@@ -737,7 +737,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   /**
    * Finds React Flow's transformed layer, which is where the arrowhead lives.
    *
-   * The marker is referenced by `url(#fp-arrow)` — a document-wide lookup — so on
+   * The marker is referenced by `url(#ut-arrow)` — a document-wide lookup — so on
    * screen it makes no difference at all where the definition is written. It makes
    * every difference to the EXPORT: a capture is a clone of one element and its
    * descendants, and a definition outside that element is a definition the clone
@@ -1429,7 +1429,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
         // Nothing here can fix a refused capture — a font the rasterizer could not
         // inline, a canvas the browser considers tainted — so it is reported where
         // the press was and written out for whoever opens the console.
-        console.warn('flowprint: PNG export failed', err);
+        console.warn('untangle: PNG export failed', err);
         setExportFailed(from);
         exportTimer.current = window.setTimeout(() => setExportFailed(null), EXPORT_NOTE_MS);
       });
@@ -1485,13 +1485,13 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
       >
         {/* Inside React Flow's viewport, which is the element an export captures —
             see the effect that finds it. On screen the placement is immaterial:
-            `url(#fp-arrow)` is looked up across the whole document either way. */}
+            `url(#ut-arrow)` is looked up across the whole document either way. */}
         {defsHost
           ? createPortal(
               <>
                 <svg className="sg-defs" aria-hidden="true">
                   <defs>
-                    <marker id="fp-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+                    <marker id="ut-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
                       <path d="M 0 0 L 8 4 L 0 8" fill="none" stroke="context-stroke" strokeWidth="1.5" />
                     </marker>
                   </defs>

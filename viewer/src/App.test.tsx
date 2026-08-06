@@ -3,7 +3,7 @@ import App from './App';
 
 it('renders the graph-index masthead', () => {
   render(<App />);
-  expect(screen.getByText(/flowprint/i)).toBeInTheDocument();
+  expect(screen.getByText(/untangle/i)).toBeInTheDocument();
   expect(screen.getByText(/graph index/i)).toBeInTheDocument();
 });
 

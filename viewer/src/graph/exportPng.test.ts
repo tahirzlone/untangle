@@ -79,10 +79,10 @@ it('falls back to a name rather than an empty one', () => {
 
 it('names the file after the graph and the version on screen', () => {
   expect(exportFilename('Payments — Refund Flow', 3)).toBe(
-    'flowprint-payments-refund-flow-v3.png',
+    'untangle-payments-refund-flow-v3.png',
   );
   expect(exportFilename('Ship a Feature End to End', 0)).toBe(
-    'flowprint-ship-a-feature-end-to-end-v0.png',
+    'untangle-ship-a-feature-end-to-end-v0.png',
   );
 });
 
@@ -154,7 +154,7 @@ it('downloads what came back, under the graph’s name', async () => {
   });
 
   expect(downloads.links).toHaveLength(1);
-  expect(downloads.links[0].download).toBe('flowprint-payments-refund-flow-v2.png');
+  expect(downloads.links[0].download).toBe('untangle-payments-refund-flow-v2.png');
   expect(downloads.links[0].href).toBe(PNG);
 });
 

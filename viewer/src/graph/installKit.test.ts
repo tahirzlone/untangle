@@ -47,7 +47,7 @@ it('reads the kind off the trimmed string, so an indented slash command is still
   // and the block acts on that answer: commented under its line, never bare
   const indented: Suggestion = { ...sug(CONVENTIONS), install: '  /plugin install indented' };
   expect(buildInstallBlock([indented])).toBe(
-    '# Flowprint install kit\n' +
+    '# Untangle install kit\n' +
       '# inside Claude Code, type:\n' +
       '#     /plugin install indented\n',
   );
@@ -83,7 +83,7 @@ it('answers whether the line-break rule demotes a string, whatever class it is',
 
 it('writes shell commands bare under the kit header, in the order it was handed them', () => {
   expect(buildInstallBlock([sug(DEVTOOLS), sug(FIRECRAWL)])).toBe(
-    '# Flowprint install kit\n' +
+    '# Untangle install kit\n' +
       'claude mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest\n' +
       'claude mcp add firecrawl -- npx -y firecrawl-mcp\n',
   );
@@ -93,7 +93,7 @@ it('writes shell commands bare under the kit header, in the order it was handed 
 // bare `/plugin install`, which is not a command any shell has.
 it('comments the Claude Code commands under one line saying where they are typed', () => {
   expect(buildInstallBlock([sug(CONVENTIONS)])).toBe(
-    '# Flowprint install kit\n' +
+    '# Untangle install kit\n' +
       '# inside Claude Code, type:\n' +
       '#   /plugin install codebase-conventions\n',
   );
@@ -104,7 +104,7 @@ it('comments the Claude Code commands under one line saying where they are typed
 // type, and there is only one.
 it('gathers every Claude Code command under a single instruction line', () => {
   expect(buildInstallBlock([sug(SCAFFOLD), sug(CONVENTIONS)])).toBe(
-    '# Flowprint install kit\n' +
+    '# Untangle install kit\n' +
       '# inside Claude Code, type:\n' +
       '#   /plugin install scaffold-module\n' +
       '#   /plugin install codebase-conventions\n',
@@ -113,7 +113,7 @@ it('gathers every Claude Code command under a single instruction line', () => {
 
 it('puts the runnable half first, whatever order the selection arrived in', () => {
   expect(buildInstallBlock([sug(CONVENTIONS), sug(DEVTOOLS)])).toBe(
-    '# Flowprint install kit\n' +
+    '# Untangle install kit\n' +
       'claude mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest\n' +
       '# inside Claude Code, type:\n' +
       '#   /plugin install codebase-conventions\n',
@@ -129,7 +129,7 @@ it('lists a command once, however many steps suggested it', () => {
   expect(
     buildInstallBlock([sug(FIRECRAWL), alsoFirecrawl, sug(CONVENTIONS), alsoConventions]),
   ).toBe(
-    '# Flowprint install kit\n' +
+    '# Untangle install kit\n' +
       'claude mcp add firecrawl -- npx -y firecrawl-mcp\n' +
       '# inside Claude Code, type:\n' +
       '#   /plugin install codebase-conventions\n',
@@ -144,7 +144,7 @@ it('writes nothing at all for a selection with no command in it', () => {
 
 it('skips the rows with no install rather than refusing the selection they are in', () => {
   expect(buildInstallBlock([sug(REPLAY), sug(DEVTOOLS)])).toBe(
-    '# Flowprint install kit\n' +
+    '# Untangle install kit\n' +
       'claude mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest\n',
   );
 });
@@ -157,7 +157,7 @@ it('treats an install field with nothing in it as no command at all', () => {
 
   expect(buildInstallBlock([blank])).toBe('');
   expect(buildInstallBlock([blank, sug(CONVENTIONS)])).toBe(
-    '# Flowprint install kit\n' +
+    '# Untangle install kit\n' +
       '# inside Claude Code, type:\n' +
       '#   /plugin install codebase-conventions\n',
   );
@@ -174,7 +174,7 @@ it('comments every physical line of a Claude Code command that carries a line br
   const smuggled: Suggestion = { ...sug(CONVENTIONS), install: '/plugin install a\nrm -rf x' };
 
   expect(buildInstallBlock([smuggled])).toBe(
-    '# Flowprint install kit\n' +
+    '# Untangle install kit\n' +
       '# more than one line — read it, then run it yourself:\n' +
       '#   /plugin install a\n' +
       '#   rm -rf x\n',
@@ -188,7 +188,7 @@ it('demotes a shell string with a line break in it rather than pasting it bare',
   const smuggled: Suggestion = { ...sug(FIRECRAWL), install: 'claude mcp add a\nrm -rf x' };
 
   expect(buildInstallBlock([smuggled])).toBe(
-    '# Flowprint install kit\n' +
+    '# Untangle install kit\n' +
       '# more than one line — read it, then run it yourself:\n' +
       '#   claude mcp add a\n' +
       '#   rm -rf x\n',
@@ -206,7 +206,7 @@ it('keeps the demoted lines last, behind everything the paste can act on', () =>
   const smuggled: Suggestion = { ...sug(FIRECRAWL), install: 'claude mcp add a\nrm -rf x' };
 
   expect(buildInstallBlock([smuggled, sug(DEVTOOLS), sug(CONVENTIONS)])).toBe(
-    '# Flowprint install kit\n' +
+    '# Untangle install kit\n' +
       'claude mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest\n' +
       '# inside Claude Code, type:\n' +
       '#   /plugin install codebase-conventions\n' +
@@ -223,7 +223,7 @@ it('leaves a one-line command runnable when the only break is the whitespace aro
   const padded: Suggestion = { ...sug(FIRECRAWL), install: '\nclaude mcp add firecrawl\n' };
 
   expect(buildInstallBlock([padded])).toBe(
-    '# Flowprint install kit\n\nclaude mcp add firecrawl\n\n',
+    '# Untangle install kit\n\nclaude mcp add firecrawl\n\n',
   );
 });
 
@@ -278,7 +278,7 @@ it('builds a session kit off the applied set, and follows the cursor back out of
   session = applySuggestion(session, CONVENTIONS);
 
   expect(buildInstallBlock(appliedInFlowOrder(session))).toBe(
-    '# Flowprint install kit\n' +
+    '# Untangle install kit\n' +
       'claude mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest\n' +
       '# inside Claude Code, type:\n' +
       '#   /plugin install codebase-conventions\n',
@@ -287,7 +287,7 @@ it('builds a session kit off the applied set, and follows the cursor back out of
   // undo takes the conventions skill out of the kit with it — and the section
   // it was the only line of goes too
   expect(buildInstallBlock(appliedInFlowOrder(undo(session)))).toBe(
-    '# Flowprint install kit\n' +
+    '# Untangle install kit\n' +
       'claude mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest\n',
   );
   // at V0 nothing has been applied, so there is nothing to install
@@ -302,7 +302,7 @@ it('keeps flow order inside a class, not the order of the presses', () => {
   session = applySuggestion(session, FIRECRAWL);
 
   expect(buildInstallBlock(appliedInFlowOrder(session))).toBe(
-    '# Flowprint install kit\n' +
+    '# Untangle install kit\n' +
       'claude mcp add firecrawl -- npx -y firecrawl-mcp\n' +
       'claude mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest\n',
   );

@@ -81,7 +81,7 @@ it('curves from the source port to the target port', () => {
   expect(d.startsWith('M252,74')).toBe(true);
   expect(d).toContain('C');
   expect(d.endsWith('342,278')).toBe(true);
-  expect(path.getAttribute('marker-end')).toBe('url(#fp-arrow)');
+  expect(path.getAttribute('marker-end')).toBe('url(#ut-arrow)');
   expect(path.getAttribute('pathLength')).toBe('1');
 });
 

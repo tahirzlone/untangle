@@ -341,7 +341,7 @@ export function WipeCompare({
                 className={`sg-edge sg-edge--${r.kind}`}
                 d={r.d}
                 fill="none"
-                markerEnd="url(#fp-arrow)"
+                markerEnd="url(#ut-arrow)"
                 pathLength={1}
                 {...edgeInk(r.kind, false, false)}
               />

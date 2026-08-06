@@ -1,4 +1,4 @@
-# Flowprint
+# Untangle
 
 The contract is `schema/workflow.schema.json` — every `*.workflow.json` in `out/`, `gallery/`, or `tests/fixtures/` must pass `node scripts/validate.mjs <file>`.
 

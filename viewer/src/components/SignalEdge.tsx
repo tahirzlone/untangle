@@ -192,7 +192,7 @@ export function SignalEdge(props: EdgeProps) {
         className={`sg-edge sg-edge--${kind}${critical ? ' sg-edge--critical' : ''}${offPath ? ' sg-edge--offpath' : ''}`}
         d={d}
         fill="none"
-        markerEnd="url(#fp-arrow)"
+        markerEnd="url(#ut-arrow)"
         pathLength={1}
         {...ink}
       />

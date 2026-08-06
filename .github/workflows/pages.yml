@@ -44,7 +44,7 @@ jobs:
         working-directory: .
       - run: npm ci
       # Vite's base is './', so the bundle is subpath-agnostic: it loads the
-      # same at /flowprint/ and at whatever path a differently-named fork gets.
+      # same at /untangle/ and at whatever path a differently-named fork gets.
       - run: npm run build
       - uses: actions/upload-pages-artifact@v5
         with:

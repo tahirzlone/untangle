@@ -34,7 +34,7 @@ import type { Suggestion } from './types';
  */
 
 /** The block's own first line, so a kit found in a terminal says what it is. */
-const HEADER = '# Flowprint install kit';
+const HEADER = '# Untangle install kit';
 
 /** The line every Claude Code command stands under. */
 const SLASH_HEADER = '# inside Claude Code, type:';

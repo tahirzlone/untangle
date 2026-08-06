@@ -67,7 +67,7 @@ it('exports the graph on screen, in the theme it is drawn in', async () => {
 
   await waitFor(() => expect(downloads.links).toHaveLength(1), LAYOUT_WAIT);
   expect(downloads.links[0].download).toBe(
-    'flowprint-add-e2e-tests-to-an-existing-web-app-v0.png',
+    'untangle-add-e2e-tests-to-an-existing-web-app-v0.png',
   );
   expect(downloads.links[0].href).toBe(PNG);
 });
@@ -85,7 +85,7 @@ it('names the file after the version the cursor is on', async () => {
 
     fireEvent.click(exportBtn());
     await waitFor(() => expect(downloads.links).toHaveLength(1), LAYOUT_WAIT);
-    expect(downloads.links[0].download).toBe('flowprint-ship-a-feature-end-to-end-v1.png');
+    expect(downloads.links[0].download).toBe('untangle-ship-a-feature-end-to-end-v1.png');
   } finally {
     restore();
   }
@@ -130,7 +130,7 @@ it('exports from the scorecard, and stays open afterwards', async () => {
     fireEvent.click(button);
     await waitFor(() => expect(downloads.links).toHaveLength(1), LAYOUT_WAIT);
     // V2 of this graph: the run applied both patches on offer
-    expect(downloads.links[0].download).toBe('flowprint-ship-a-feature-end-to-end-v2.png');
+    expect(downloads.links[0].download).toBe('untangle-ship-a-feature-end-to-end-v2.png');
     // the panel is a report, not a wizard — exporting is not leaving
     expect(screen.getByTestId('scorecard')).toBeInTheDocument();
   } finally {

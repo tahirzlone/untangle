@@ -17,7 +17,7 @@ describe('validate CLI', () => {
   });
 
   it('exits 1 and prints REJECTED for an invalid file', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'flowprint-'));
+    const dir = mkdtempSync(join(tmpdir(), 'untangle-'));
     const bad = join(dir, 'bad.workflow.json');
     writeFileSync(bad, JSON.stringify({ meta: {} }));
     const res = run(bad);
@@ -26,7 +26,7 @@ describe('validate CLI', () => {
   });
 
   it('exits 1 for a file that is not JSON at all', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'flowprint-'));
+    const dir = mkdtempSync(join(tmpdir(), 'untangle-'));
     const bad = join(dir, 'not-json.txt');
     writeFileSync(bad, 'hello');
     const res = run(bad);
@@ -41,13 +41,13 @@ describe('validate CLI', () => {
   });
 
   it('exits 1 with "cannot read file" for a missing path', () => {
-    const res = run(join(tmpdir(), 'flowprint-does-not-exist', 'nope.workflow.json'));
+    const res = run(join(tmpdir(), 'untangle-does-not-exist', 'nope.workflow.json'));
     expect(res.status).toBe(1);
     expect(res.stderr).toContain('cannot read file');
   });
 
   it('accepts a valid file with a UTF-8 BOM', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'flowprint-'));
+    const dir = mkdtempSync(join(tmpdir(), 'untangle-'));
     const bomFile = join(dir, 'bom.workflow.json');
     writeFileSync(bomFile, '\uFEFF' + readFileSync(fixture, 'utf8'));
     const res = run(bomFile);

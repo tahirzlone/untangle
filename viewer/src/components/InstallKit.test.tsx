@@ -138,7 +138,7 @@ it('shows every line of a command that carries a line break, and hands it over c
     // and the tick's block agrees with the row: both lines commented, neither bare
     await copy();
     expect(clip.writeText).toHaveBeenCalledExactlyOnceWith(
-      '# Flowprint install kit\n' +
+      '# Untangle install kit\n' +
         '# more than one line — read it, then run it yourself:\n' +
         '#   /plugin install a\n' +
         '#   rm -rf x\n',
@@ -170,7 +170,7 @@ it('copies the whole kit while every row is still ticked', async () => {
     // the runnable half first and bare, the typed half commented under its line —
     // the rows are in flow order, the BLOCK is in paste order
     expect(clip.writeText).toHaveBeenCalledExactlyOnceWith(
-      '# Flowprint install kit\n' +
+      '# Untangle install kit\n' +
         `${FIRECRAWL_CMD}\n` +
         `${DEVTOOLS_CMD}\n` +
         '# inside Claude Code, type:\n' +
@@ -193,14 +193,14 @@ it('drops a cleared row out of the block and leaves the rest of it alone', async
 
     await copy();
     expect(clip.writeText).toHaveBeenCalledExactlyOnceWith(
-      `# Flowprint install kit\n${DEVTOOLS_CMD}\n`,
+      `# Untangle install kit\n${DEVTOOLS_CMD}\n`,
     );
 
     // and back: a tick restored is a command restored, in its own place
     fireEvent.click(screen.getByLabelText('firecrawl-mcp'));
     await copy();
     expect(clip.writeText).toHaveBeenLastCalledWith(
-      `# Flowprint install kit\n${FIRECRAWL_CMD}\n${DEVTOOLS_CMD}\n`,
+      `# Untangle install kit\n${FIRECRAWL_CMD}\n${DEVTOOLS_CMD}\n`,
     );
   } finally {
     clip.restore();
@@ -258,7 +258,7 @@ it('stands COPY down once every row has been cleared', async () => {
     expect(button).toBeEnabled();
     await copy();
     expect(clip.writeText).toHaveBeenCalledExactlyOnceWith(
-      '# Flowprint install kit\n' +
+      '# Untangle install kit\n' +
         '# inside Claude Code, type:\n' +
         '#   /plugin install codebase-conventions\n',
     );
@@ -277,7 +277,7 @@ it('copies an all-slash selection as commented lines under one header', async ()
 
     await copy();
     expect(clip.writeText).toHaveBeenCalledExactlyOnceWith(
-      '# Flowprint install kit\n' +
+      '# Untangle install kit\n' +
         '# inside Claude Code, type:\n' +
         '#   /plugin install scaffold-module\n' +
         '#   /plugin install codebase-conventions\n',
@@ -302,7 +302,7 @@ it('lists one row per command, however many steps asked for it', async () => {
     fireEvent.click(screen.getByLabelText('firecrawl-mcp'));
     await copy();
     expect(clip.writeText).toHaveBeenCalledExactlyOnceWith(
-      `# Flowprint install kit\n${DEVTOOLS_CMD}\n`,
+      `# Untangle install kit\n${DEVTOOLS_CMD}\n`,
     );
   } finally {
     clip.restore();
@@ -319,7 +319,7 @@ it('leaves the link-only rows out of the block while still listing them', async 
 
     await copy();
     expect(clip.writeText).toHaveBeenCalledExactlyOnceWith(
-      `# Flowprint install kit\n${DEVTOOLS_CMD}\n`,
+      `# Untangle install kit\n${DEVTOOLS_CMD}\n`,
     );
   } finally {
     clip.restore();

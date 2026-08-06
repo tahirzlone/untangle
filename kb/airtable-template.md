@@ -1,6 +1,6 @@
 # The knowledge base — Airtable template
 
-Flowprint's suggestions come from exactly one place: an Airtable table of real, existing resources. The `/graph-my-task` skill reads it at generation time — through a public feed by default, or straight from the Airtable REST API when you bring your own key — and may only ever suggest rows it actually fetched: no invented tools, no remembered ones. There is no sync script and no cached copy in this repo; the table *is* the knowledge base.
+Untangle's suggestions come from exactly one place: an Airtable table of real, existing resources. The `/graph-my-task` skill reads it at generation time — through a public feed by default, or straight from the Airtable REST API when you bring your own key — and may only ever suggest rows it actually fetched: no invented tools, no remembered ones. There is no sync script and no cached copy in this repo; the table *is* the knowledge base.
 
 This document is the contract. Replicate the table below and your fork suggests from your own curated list.
 
@@ -9,7 +9,7 @@ This document is the contract. Replicate the table below and your fork suggests 
 Suggestions work out of the box. With nothing configured — no Airtable account, no token, no environment variable — `/graph-my-task` reads Tahir's curated table through a public, read-only feed:
 
 ```
-https://tahirlone.com/api/flowprint/kb
+https://tahirlone.com/api/untangle/kb
 ```
 
 Plain `GET`, no authentication, no pagination: one response carries every row, as `{ updatedAt, recordCount, records }`. Field names are camelCased versions of the ones in [the table](#the-table) (`Capability Tags` → `capabilityTags`, `Improvement Claim` → `improvementClaim`, and so on), and each record's `id` is its Airtable record id. Graphs generated this way carry `meta.kbSource: "airtable"` — it is Airtable data either way — and matched nodes get suggestion cards.
@@ -20,7 +20,7 @@ Two environment variables change what a run reads:
 
 | Variable | Effect |
 | --- | --- |
-| `FLOWPRINT_KB_URL` | Point the skill at a different feed — any URL serving the same envelope. Default: `https://tahirlone.com/api/flowprint/kb`. |
+| `UNTANGLE_KB_URL` | Point the skill at a different feed — any URL serving the same envelope. Default: `https://tahirlone.com/api/untangle/kb`. |
 | `AIRTABLE_API_KEY` | **Overrides the feed entirely** — the skill goes straight to Airtable instead. If that fetch fails, the run falls back to this feed and says so in its report, so you always know which knowledge base the suggestions came from. See [Bring your own knowledge base](#bring-your-own-knowledge-base). |
 
 If the feed is unreachable and no key is set, nothing breaks: the skill produces the vanilla graph with `meta.kbSource: "none"` and reports "KB not linked".
@@ -31,9 +31,9 @@ The override path: set `AIRTABLE_API_KEY` and the skill skips the feed and reads
 
 1. Create an Airtable base (any name) with one table (any name) shaped like [the schema below](#the-table).
 2. Add rows: one resource per row, deduplicated by `URL`.
-3. Fill `Capability Tags`, `Step Archetypes`, and `Improvement Claim` on the rows you want suggested — an unenriched row is invisible to the matcher (see [what makes a row a candidate](#what-flowprint-does-with-the-table)).
+3. Fill `Capability Tags`, `Step Archetypes`, and `Improvement Claim` on the rows you want suggested — an unenriched row is invisible to the matcher (see [what makes a row a candidate](#what-untangle-does-with-the-table)).
 4. [Create a read-only personal access token](#creating-the-token) and export it as `AIRTABLE_API_KEY`.
-5. Point the skill at your base with `FLOWPRINT_AIRTABLE_BASE` and `FLOWPRINT_AIRTABLE_TABLE` (see [environment variables](#environment-variables)).
+5. Point the skill at your base with `UNTANGLE_AIRTABLE_BASE` and `UNTANGLE_AIRTABLE_TABLE` (see [environment variables](#environment-variables)).
 6. Run `/graph-my-task "your task"`. The graph's `meta.kbSource` reads `"airtable"` and matched nodes carry suggestion cards.
 
 No token? Nothing breaks and nothing is lost — you stay on the [public feed](#zero-setup-default) and still get suggestions. This section is only for suggesting from rows you curate yourself.
@@ -76,7 +76,7 @@ Fields 10–13 are the **enrichment fields**. Without them a row can still be a 
 
 `browser-automation` · `code-search` · `code-generation` · `testing` · `deployment` · `documentation` · `data-etl` · `research` · `orchestration` · `memory` · `security` · `ui-design` · `api-integration` · `image-generation` · `review`
 
-`Step Archetypes` — multiple select, ten options, one per workflow-step type Flowprint graphs produce:
+`Step Archetypes` — multiple select, ten options, one per workflow-step type Untangle graphs produce:
 
 `research` · `scaffold` · `code` · `test` · `browser-verify` · `deploy` · `document` · `data-etl` · `review` · `orchestrate`
 
@@ -84,9 +84,9 @@ Keep the archetype option names exactly as written — the matcher compares them
 
 ### Optional extra fields
 
-Tahir's live base carries five more fields the daily scan writes for his own reading: `Domain` (single select), `How It Works` (long text), `How To Run` (long text), `Wow Factor` (rating), `Source` (single line text). Flowprint ignores them. Add them if they are useful to you; leaving them out changes nothing.
+Tahir's live base carries five more fields the daily scan writes for his own reading: `Domain` (single select), `How It Works` (long text), `How To Run` (long text), `Wow Factor` (rating), `Source` (single line text). Untangle ignores them. Add them if they are useful to you; leaving them out changes nothing.
 
-## What Flowprint does with the table
+## What Untangle does with the table
 
 **Candidate filter.** A row can be suggested only if *either* its `Category` is `Claude Skill`, `Claude Plugin`, or `MCP Server`, *or* its `Capability Tags` is non-empty (any category, including `GitHub Trending` and `Other`). Everything else is skipped — an unenriched trending row is not a defect, just not a candidate.
 
@@ -103,11 +103,11 @@ Tahir's live base carries five more fields the daily scan writes for his own rea
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
 | `AIRTABLE_API_KEY` | no (without it the skill uses the [public feed](#zero-setup-default)) | — | Personal access token with read access to your base. Setting it overrides the feed. |
-| `FLOWPRINT_KB_URL` | no | `https://tahirlone.com/api/flowprint/kb` | The public feed read when there is no `AIRTABLE_API_KEY`. |
-| `FLOWPRINT_AIRTABLE_BASE` | no | `appRSePRgk4jlaRUc` | Your base id (`app` + 14 characters). |
-| `FLOWPRINT_AIRTABLE_TABLE` | no | `tblOJzSLHAW7lbBWv` | Your table id (`tbl` + 14 characters) — a table name also works in the REST path, but the id never breaks when the table is renamed. |
+| `UNTANGLE_KB_URL` | no | `https://tahirlone.com/api/untangle/kb` | The public feed read when there is no `AIRTABLE_API_KEY`. |
+| `UNTANGLE_AIRTABLE_BASE` | no | `appRSePRgk4jlaRUc` | Your base id (`app` + 14 characters). |
+| `UNTANGLE_AIRTABLE_TABLE` | no | `tblOJzSLHAW7lbBWv` | Your table id (`tbl` + 14 characters) — a table name also works in the REST path, but the id never breaks when the table is renamed. |
 
-`FLOWPRINT_AIRTABLE_BASE` and `FLOWPRINT_AIRTABLE_TABLE` matter only when `AIRTABLE_API_KEY` is set; the feed URL is self-contained.
+`UNTANGLE_AIRTABLE_BASE` and `UNTANGLE_AIRTABLE_TABLE` matter only when `AIRTABLE_API_KEY` is set; the feed URL is self-contained.
 
 Find both ids in the browser URL while the table is open: `https://airtable.com/appXXXXXXXXXXXXXX/tblXXXXXXXXXXXXXX/viwXXXXXXXXXXXXXX`.
 
@@ -116,8 +116,8 @@ Set them where the Claude Code session can see them — export before launching,
 ```bash
 # bash / Git Bash — current shell
 export AIRTABLE_API_KEY='patXXXXXXXXXXXXXX.XXXXXXXX…'
-export FLOWPRINT_AIRTABLE_BASE='appYOUROWNBASEID'
-export FLOWPRINT_AIRTABLE_TABLE='tblYOUROWNTABLEID'
+export UNTANGLE_AIRTABLE_BASE='appYOUROWNBASEID'
+export UNTANGLE_AIRTABLE_TABLE='tblYOUROWNTABLEID'
 ```
 
 ```powershell
@@ -130,7 +130,7 @@ $env:AIRTABLE_API_KEY = 'patXXXXXXXXXXXXXX.XXXXXXXX…'
 ## Creating the token
 
 1. Go to <https://airtable.com/create/tokens> and click **Create new token**.
-2. Name it something like `flowprint-read`.
+2. Name it something like `untangle-read`.
 3. **Scopes:** add `data.records:read` — and nothing else. The skill only ever reads; never grant a write scope for this.
 4. **Access:** add the one base holding your knowledge-base table.
 5. Create the token and copy it immediately (`pat…`) — Airtable shows it once.
@@ -140,7 +140,7 @@ Verify it end to end before running the skill:
 
 ```bash
 curl -sS -H "Authorization: Bearer $AIRTABLE_API_KEY" \
-  "https://api.airtable.com/v0/${FLOWPRINT_AIRTABLE_BASE:-appRSePRgk4jlaRUc}/${FLOWPRINT_AIRTABLE_TABLE:-tblOJzSLHAW7lbBWv}?pageSize=3"
+  "https://api.airtable.com/v0/${UNTANGLE_AIRTABLE_BASE:-appRSePRgk4jlaRUc}/${UNTANGLE_AIRTABLE_TABLE:-tblOJzSLHAW7lbBWv}?pageSize=3"
 ```
 
 Rows back means you are wired. `AUTHENTICATION_REQUIRED` means the token is wrong or lacks access to that base; `NOT_FOUND` means the base or table id is wrong. The API returns at most 100 records per request plus an `offset` — the skill pages through all of them.

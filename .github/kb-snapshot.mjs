@@ -22,7 +22,7 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 
-const FEED_URL = process.env.FLOWPRINT_KB_URL ?? 'https://tahirlone.com/api/flowprint/kb';
+const FEED_URL = process.env.UNTANGLE_KB_URL ?? 'https://tahirlone.com/api/untangle/kb';
 const OUT_PATH = new URL('../kb/kb.json', import.meta.url);
 const RECORD_ID = /^rec[A-Za-z0-9]{14}$/;
 
