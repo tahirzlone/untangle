@@ -44,7 +44,7 @@
       "category": "MCP Server",
       "claim": "Gives Claude live eyes on a real browser — debugging, performance traces, and page inspection in one MCP.",
       "install": "claude mcp add chrome-devtools -- npx chrome-devtools-mcp@latest",
-      "promptFragment": "Read the pricing pages with ChromeDevTools/chrome-devtools-mcp instead of opening each one and copying cells by hand: let it drive a real browser past the cookie wall and the monthly/annual toggle, then inspect the pricing table once the page has settled. Do that for every competitor before you normalize anything, so each figure comes off a page that actually rendered. Add it first with `claude mcp add chrome-devtools -- npx chrome-devtools-mcp@latest`.",
+      "promptFragment": "Read the pricing pages with ChromeDevTools/chrome-devtools-mcp instead of opening each one and copying cells by hand: let it drive a real browser past the cookie wall and the monthly/annual toggle, then inspect the pricing table once the page has settled. Do that for every competitor before you normalize anything, so each figure comes off a page that actually rendered.",
       "effect": {
         "removeNodes": [],
         "mergeNodes": ["open-each-page"],

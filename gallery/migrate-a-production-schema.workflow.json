@@ -51,7 +51,7 @@
       "category": "MCP Server",
       "claim": "Sub-millisecond architectural queries over a whole codebase — up to 99% fewer tokens.",
       "install": "curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash",
-      "promptFragment": "Before you design anything, ask DeusData/codebase-memory-mcp who reads and writes the orders table, instead of grepping the monolith and every service for its name. Query it for the models, queries and jobs that touch those columns and treat that answer as the migration's blast radius. Add it first with `curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash`.",
+      "promptFragment": "Before you design anything, ask DeusData/codebase-memory-mcp who reads and writes the orders table, instead of grepping the monolith and every service for its name. Query it for the models, queries and jobs that touch those columns and treat that answer as the migration's blast radius.",
       "effect": {
         "removeNodes": [],
         "mergeNodes": ["map-callers"],

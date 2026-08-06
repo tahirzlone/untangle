@@ -54,7 +54,7 @@
       "category": "MCP Server",
       "claim": "Sub-millisecond architectural queries over a whole codebase — up to 99% fewer tokens.",
       "install": "curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash",
-      "promptFragment": "Once the failure reproduces, ask DeusData/codebase-memory-mcp which code owns the failing path instead of following stack frames through unfamiliar services file by file. Query it for the handler and its callers, and take that structure straight into the fix. Add it first with `curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash`.",
+      "promptFragment": "Once the failure reproduces, ask DeusData/codebase-memory-mcp which code owns the failing path instead of following stack frames through unfamiliar services file by file. Query it for the handler and its callers, and take that structure straight into the fix.",
       "effect": {
         "removeNodes": [],
         "mergeNodes": ["locate-code"],
@@ -74,7 +74,7 @@
       "category": "Claude Plugin",
       "claim": "Second-model code review and task delegation — GPT checks Claude's work from inside Claude Code.",
       "install": "/plugin install codex-plugin-cc (see repo README)",
-      "promptFragment": "With the suite green, hand the hotfix diff to openai/codex-plugin-cc for a second-model review rather than re-reading it yourself looking for the mistake you just made under pressure. Give it the diff and the failing case it is meant to fix, and carry anything it flags into the change before the on-call reviewer sees it. Add it first with `/plugin install codex-plugin-cc (see repo README)`.",
+      "promptFragment": "With the suite green, hand the hotfix diff to openai/codex-plugin-cc for a second-model review rather than re-reading it yourself looking for the mistake you just made under pressure. Give it the diff and the failing case it is meant to fix, and carry anything it flags into the change before the on-call reviewer sees it.",
       "effect": {
         "removeNodes": [],
         "mergeNodes": ["self-review-diff"],

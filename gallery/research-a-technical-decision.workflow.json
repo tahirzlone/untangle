@@ -46,7 +46,7 @@
       "category": "Claude Skill",
       "claim": "Turns any technical book into an on-demand agent skill at 24-51x fewer tokens.",
       "install": "pip install \"book-to-skill[pdf,epub,docx]\"",
-      "promptFragment": "Before you start reading, run the books, spec PDFs and whitepapers through virgiliojr94/book-to-skill and query the skill it produces, instead of working through them page by page for the few paragraphs that matter. Pull the frameworks and decision rules you need on demand as the argument takes shape, and keep the per-chapter files for the citations. Add it first with `pip install \"book-to-skill[pdf,epub,docx]\"`.",
+      "promptFragment": "Before you start reading, run the books, spec PDFs and whitepapers through virgiliojr94/book-to-skill and query the skill it produces, instead of working through them page by page for the few paragraphs that matter. Pull the frameworks and decision rules you need on demand as the argument takes shape, and keep the per-chapter files for the citations.",
       "effect": {
         "removeNodes": [],
         "mergeNodes": ["read-long-form"],

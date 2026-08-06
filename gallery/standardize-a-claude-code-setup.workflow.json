@@ -65,7 +65,7 @@
       "url": "https://github.com/VoltAgent/awesome-agent-skills",
       "category": "Claude Skill",
       "claim": "1,000+ ready-made skills — check here before building any capability from scratch.",
-      "promptFragment": "Before authoring any capability yourself, check VoltAgent/awesome-agent-skills for one that already exists — over a thousand ready-made skills, so the gap the shortlist left is usually already filled by someone's dev team. Adopt what you find there and go straight on to wiring the servers up. It is a catalog to read rather than a tool to add.",
+      "promptFragment": "Before authoring any capability yourself, check VoltAgent/awesome-agent-skills for one that already exists — over a thousand ready-made skills, so the gap the shortlist left is usually already filled by someone's dev team. Adopt what you find there and go straight on to wiring the servers up.",
       "effect": {
         "removeNodes": ["write-missing-skill"],
         "mergeNodes": [],
@@ -83,7 +83,7 @@
       "category": "Other",
       "claim": "Self-maintaining wiki + AGENTS.md/CLAUDE.md for any repo or knowledge base.",
       "install": "npm install -g openwiki",
-      "promptFragment": "Generate the agent instructions with langchain-ai/openwiki instead of writing CLAUDE.md and AGENTS.md by hand and rewriting them every time the repo moves. Point it at the repo once the servers are wired, and re-run it whenever a pilot shows the instructions have drifted from the code. Add it first with `npm install -g openwiki`.",
+      "promptFragment": "Generate the agent instructions with langchain-ai/openwiki instead of writing CLAUDE.md and AGENTS.md by hand and rewriting them every time the repo moves. Point it at the repo once the servers are wired, and re-run it whenever a pilot shows the instructions have drifted from the code.",
       "effect": {
         "removeNodes": [],
         "mergeNodes": ["write-agent-docs"],
@@ -104,7 +104,7 @@
       "category": "Claude Plugin",
       "claim": "Second-model code review and task delegation — GPT checks Claude's work from inside Claude Code.",
       "install": "/plugin install codex-plugin-cc (see repo README)",
-      "promptFragment": "Make openai/codex-plugin-cc the review step this setup is missing: after the pilot task, have it check what the agent produced from inside Claude Code, instead of reading every diff line by line yourself. Keep it in the loop afterwards so every agent change on this repo gets the same second read. Add it first with `/plugin install codex-plugin-cc (see repo README)`.",
+      "promptFragment": "Make openai/codex-plugin-cc the review step this setup is missing: after the pilot task, have it check what the agent produced from inside Claude Code, instead of reading every diff line by line yourself. Keep it in the loop afterwards so every agent change on this repo gets the same second read.",
       "effect": {
         "removeNodes": [],
         "mergeNodes": ["review-pilot-output"],
