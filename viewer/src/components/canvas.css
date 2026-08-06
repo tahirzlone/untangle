@@ -95,8 +95,6 @@
 }
 .sg-chip b { color: var(--accent); font-weight: 500; }
 .sg-chip-hot { color: var(--ember); }
-/* the provenance chip sits alone on the right */
-.sg-chip--end { margin-left: auto; }
 /* A graph the reducer will not open a session on (two cards, one Airtable row).
    Ember, not accent: nothing here is on offer. */
 .sg-chip--refused {
@@ -106,17 +104,10 @@
 }
 
 /* Below this the row cannot hold the title, the chips, the meter and the controls
-   on one line, so it takes two — and everything under it starts that much lower.
-   Written after the rules it overrides, because a media query adds no specificity
-   of its own: source order is the only thing making these win. */
+   on one line, so it takes two — and everything under it starts that much lower. */
 @media (max-width: 1000px) {
   .sg-canvas {
     --toolbar-h: 92px;
-  }
-  /* the provenance chip stops being pushed to the far right: on a wrapped row
-     that strands it alone on a line with a gap where the rest of the row was */
-  .sg-chip--end {
-    margin-left: 0;
   }
 }
 

@@ -68,4 +68,4 @@ If the order slips, Actions → Deploy Pages → **Run workflow** re-runs it onc
 
 ## Credits
 
-Built by Tahir Zamaan — [tahirlone.com](https://tahirlone.com). The knowledge base is his own curated Airtable of Claude skills, plugins, and MCP servers, served to every keyless run through the public feed. MIT licensed; see [`LICENSE`](LICENSE).
+Built by Tahir Lone — [tahirlone.com](https://tahirlone.com). The knowledge base is his own curated Airtable of Claude skills, plugins, and MCP servers, served to every keyless run through the public feed. MIT licensed; see [`LICENSE`](LICENSE).
