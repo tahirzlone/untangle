@@ -31,7 +31,7 @@ Node 20+ (CI runs 22). First time: `npm install` at the root **and** `npm --pref
 
 ## The skill: `/graph-my-task`
 
-Open this repo in Claude Code and run `/graph-my-task "your task here"`: the skill decomposes the task into 6–16 honest steps — the manual gathering, the format wrangling, the retry loops, the human review gates — and writes them as a validated graph in `out/`. Before it validates, it reads a curated knowledge base of real Claude skills, plugins, and MCP servers and attaches the ones that would collapse a step, each with what it claims, what it saves, and the command that installs it. It runs on your own Claude subscription, in your own checkout, and it never invents a helper: a resource that is not in the rows it fetched does not exist for that graph.
+Open this repo in Claude Code and run `/graph-my-task "your task here"`: the skill decomposes the task into 6–16 honest steps — the manual gathering, the format wrangling, the retry loops, the human review gates — and writes them as a validated graph in `out/`. Before it validates, it reads a curated knowledge base of real Claude skills, plugins, and MCP servers and attaches the ones that would collapse a step, each with what it claims, what it saves, and the command that installs it, when there is one. It runs on your own Claude subscription, in your own checkout, and it never invents a helper: a resource that is not in the rows it fetched does not exist for that graph.
 
 **Suggestions need no setup.** The knowledge base resolves in four tiers, tried strictly in order, stopping at the first that hands over rows — it never climbs back up:
 
@@ -42,9 +42,9 @@ Open this repo in Claude Code and run `/graph-my-task "your task here"`: the ski
 | 2.5 | the feed is unreachable, non-200, or empty | [`kb/kb.json`](kb/kb.json), this repo's daily mirror of that feed | nothing — it is already on disk |
 | 3 | no source returned rows | nothing: the vanilla graph, `suggestions: []` | — |
 
-Tiers 1, 2, and 2.5 are the same table read three ways — live, mirrored, and mirrored to disk — so all three report `kbSource: "airtable"`, and every run says in one line which one answered. Tier 3 is not a failure: the honest flowchart is the deliverable either way.
+Tiers 1, 2, and 2.5 are the same table read three ways — live, mirrored, and mirrored to disk — so all three report `kbSource: "airtable"`, and every run reports the knowledge-base state in one line. Tier 3 is not a failure: the honest flowchart is the deliverable either way.
 
-**Set the helpers up.** When the suggestions carry install commands, the skill offers to add them for real — it probes what is already on the machine, puts every exact command in a table and waits for `all` / `pick` / `none`, then runs the shell ones once each and prints the ones you type inside Claude Code yourself. Consent is per-string and the strings are never edited, not even to rescue a failure; point the skill at any existing `*.workflow.json` and ask to install its resources to run the same stage later.
+**Set the helpers up.** When the suggestions carry install commands, the skill offers to add them for real — it probes what is already on the machine, puts every exact command in a table and waits for `all` / `pick` / `none`, then runs the `claude mcp add` ones once each and prints everything else for you to run yourself. Consent is per-string and the strings are never edited, not even to rescue a failure; point the skill at any existing `*.workflow.json` and ask to install its resources to run the same stage later.
 
 ## Fork it
 
@@ -68,4 +68,4 @@ If the order slips, Actions → Deploy Pages → **Run workflow** re-runs it onc
 
 ## Credits
 
-Built by Tahir Zamaan — [tahirlone.com](https://tahirlone.com). The knowledge base is his own curated Airtable of Claude skills, plugins, and MCP servers, served to every run through the public feed. MIT licensed; see [`LICENSE`](LICENSE).
+Built by Tahir Zamaan — [tahirlone.com](https://tahirlone.com). The knowledge base is his own curated Airtable of Claude skills, plugins, and MCP servers, served to every keyless run through the public feed. MIT licensed; see [`LICENSE`](LICENSE).
