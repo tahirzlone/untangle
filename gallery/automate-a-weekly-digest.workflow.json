@@ -46,7 +46,6 @@
       "url": "https://github.com/modelcontextprotocol/servers",
       "category": "MCP Server",
       "claim": "Official gallery of reference MCP servers — copy-paste connector starting points.",
-      "install": "npx -y @modelcontextprotocol/server-<name>",
       "promptFragment": "Start the gathering step from modelcontextprotocol/servers rather than writing the fetching plumbing yourself: take the reference server closest to pulling web content and adapt it to the source list. Wire that up before anything is ranked, so every source arrives through one connector instead of a pile of one-off HTTP calls and hand-tuned retries.",
       "effect": {
         "removeNodes": [],

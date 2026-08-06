@@ -1,6 +1,6 @@
 {
-  "fetchedAt": "2026-08-05T20:27:21.467Z",
-  "updatedAt": "2026-08-05T20:11:20.672Z",
+  "fetchedAt": "2026-08-06T01:05:21.707Z",
+  "updatedAt": "2026-08-06T01:00:33.740Z",
   "recordCount": 59,
   "records": [
     {
@@ -189,7 +189,6 @@
       "dateFirstSeen": "2026-07-28",
       "description": "AI coding assistant skill that transforms code folders into queryable knowledge graphs.",
       "improvementClaim": "Turns a codebase into a queryable knowledge graph so agents reason over structure instead of grepping.",
-      "install": "Install as Claude Code skill (clone into ~/.claude/skills)",
       "language": "Python",
       "name": "safishamsi/graphify",
       "stars": 76935,
@@ -472,7 +471,6 @@
       "dateFirstSeen": "2026-07-28",
       "description": "Curated collection of 1,000+ agent skills from official dev teams.",
       "improvementClaim": "1,000+ ready-made skills — check here before building any capability from scratch.",
-      "install": "Browse the list — no install",
       "language": "Markdown",
       "name": "VoltAgent/awesome-agent-skills",
       "stars": 28200,
@@ -778,7 +776,6 @@
       "dateFirstSeen": "2026-07-28",
       "description": "MCP server for searching and retrieving Claude Agent Skills using vector search.",
       "improvementClaim": "Vector-search over skill libraries so the right skill loads itself at the right moment.",
-      "install": "claude mcp add claude-skills-mcp (see repo README)",
       "language": "Python",
       "name": "K-Dense-AI/claude-skills-mcp",
       "stepArchetypes": [
@@ -797,7 +794,6 @@
       "dateFirstSeen": "2026-07-28",
       "description": "ARIS — autonomous overnight ML-research skills for Claude Code with cross-model review loops.",
       "improvementClaim": "Overnight autonomous research loops with cross-model review — wake up to finished experiments.",
-      "install": "git clone + follow README setup",
       "language": "Python",
       "name": "wanshuiyin/Auto-claude-code-research-in-sleep",
       "stars": 13500,
@@ -917,7 +913,6 @@
       "dateFirstSeen": "2026-07-28",
       "description": "Official reference implementations of Model Context Protocol servers in multiple languages — the canonical starting point for building MCP servers.",
       "improvementClaim": "Official gallery of reference MCP servers — copy-paste connector starting points.",
-      "install": "npx -y @modelcontextprotocol/server-<name>",
       "language": "TypeScript",
       "name": "modelcontextprotocol/servers",
       "stars": 86700,

@@ -46,8 +46,7 @@
       "url": "https://github.com/K-Dense-AI/claude-skills-mcp",
       "category": "MCP Server",
       "claim": "Vector-search over skill libraries so the right skill loads itself at the right moment.",
-      "install": "claude mcp add claude-skills-mcp (see repo README)",
-      "promptFragment": "Find the candidates with K-Dense-AI/claude-skills-mcp rather than trawling GitHub and guessing which look-alike repo is the real one: search the skill libraries by what the team actually needs, and let the matching skill load itself when that work comes up. Do this before anything is tried on a real task, so the shortlist arrives already narrowed. Add it first with `claude mcp add claude-skills-mcp (see repo README)`.",
+      "promptFragment": "Find the candidates with K-Dense-AI/claude-skills-mcp rather than trawling GitHub and guessing which look-alike repo is the real one: search the skill libraries by what the team actually needs, and let the matching skill load itself when that work comes up. Do this before anything is tried on a real task, so the shortlist arrives already narrowed.",
       "effect": {
         "removeNodes": [],
         "mergeNodes": ["hunt-skills"],
@@ -66,8 +65,7 @@
       "url": "https://github.com/VoltAgent/awesome-agent-skills",
       "category": "Claude Skill",
       "claim": "1,000+ ready-made skills — check here before building any capability from scratch.",
-      "install": "Browse the list — no install",
-      "promptFragment": "Before authoring any capability yourself, check VoltAgent/awesome-agent-skills for one that already exists — over a thousand ready-made skills, so the gap the shortlist left is usually already filled by someone's dev team. Adopt what you find there and go straight on to wiring the servers up. It is a catalog to read rather than a tool to add: `Browse the list — no install`.",
+      "promptFragment": "Before authoring any capability yourself, check VoltAgent/awesome-agent-skills for one that already exists — over a thousand ready-made skills, so the gap the shortlist left is usually already filled by someone's dev team. Adopt what you find there and go straight on to wiring the servers up. It is a catalog to read rather than a tool to add.",
       "effect": {
         "removeNodes": ["write-missing-skill"],
         "mergeNodes": [],

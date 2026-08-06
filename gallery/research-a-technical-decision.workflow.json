@@ -65,7 +65,6 @@
       "url": "https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep",
       "category": "Claude Skill",
       "claim": "Overnight autonomous research loops with cross-model review — wake up to finished experiments.",
-      "install": "git clone + follow README setup",
       "promptFragment": "Once the candidates and the workload are settled, hand the benchmark runs to wanshuiyin/Auto-claude-code-research-in-sleep and let them run overnight under its cross-model review, instead of sitting with each run for hours as it finishes. Read the finished results in the morning and take those numbers into the comparison.",
       "effect": {
         "removeNodes": [],
