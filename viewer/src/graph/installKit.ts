@@ -3,9 +3,8 @@ import type { Suggestion } from './types';
 /**
  * The install kit: what the prompt is about to rely on, as commands to run.
  *
- * The optimized prompt already NAMES every install — quoted inside an authored
- * fragment, templated into a fallback line, or gathered into the closing line
- * prompt.ts writes. Naming is not installing. A skill that is not on the machine
+ * The optimized prompt already NAMES every install — gathered into the setup
+ * block prompt.ts writes under the prose. Naming is not installing. A skill that is not on the machine
  * does nothing when the pasted prompt asks for it, and an MCP server added
  * halfway through a session is not there until the next one, so the commands
  * belong BEFORE the prompt rather than inside it.
@@ -123,8 +122,8 @@ export function isMultiLine(install: string): boolean {
  * Shell lines first and bare, so a paste ACTS: a selection of nothing but MCP
  * servers comes out as commands with no prose to step over. The Claude Code
  * section follows, and only when something is in it — a heading with no list
- * under it is the template showing through, the same bargain prompt.ts's closing
- * line strikes. Within each class the order is the order the caller gave, which
+ * under it is the template showing through, the same bargain prompt.ts's setup
+ * block strikes. Within each class the order is the order the caller gave, which
  * is flow order when the caller is reading off `appliedInFlowOrder`.
  *
  * A suggestion with no install is SKIPPED here rather than refused: the KB has

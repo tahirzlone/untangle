@@ -69,7 +69,8 @@ export interface Suggestion {
   /**
    * Imperative instructions for using this resource at this step, written by the
    * generator. Optional: without it the optimized prompt falls back to a line
-   * templated from `name`, `category`, `claim`, and `install`.
+   * templated from `name`, `category`, and `claim`. Either way the install is
+   * the assembler's to state, in the setup block — never the fragment's.
    */
   promptFragment?: string;
   effect: Effect;

@@ -1,4 +1,5 @@
 import type { GraphSession } from './apply';
+import { hasInstall } from './installKit';
 import type { Suggestion, Workflow } from './types';
 
 /**
@@ -17,10 +18,25 @@ import type { Suggestion, Workflow } from './types';
  * wherever the cursor is standing, with no cache to go stale.
  *
  * The assembly contract is stated in `.claude/skills/graph-my-task/SKILL.md`
- * ("The optimized prompt") and implemented here verbatim: `meta.promptIntro`
- * first, then the `promptFragment` of every applied suggestion in flow order,
- * then a closing line naming any install no fragment mentioned — with a
- * templated fallback wherever the generator omitted the optional prose.
+ * ("The optimized prompt") and implemented here verbatim. Contract v2:
+ * `meta.promptIntro` first, then the `promptFragment` of every applied
+ * suggestion in flow order — passed through as written, never edited — then the
+ * SETUP BLOCK, one line per install the included resources rely on.
+ *
+ * What v2 moved is the installs. Under v1 a fragment quoted its own install and
+ * the closing line swept up whatever no fragment had mentioned; the command was
+ * therefore wherever its author happened to put it. That is unworkable the
+ * moment a resource can be ticked out of the prompt: prose cannot be un-said one
+ * row at a time, so an excluded resource would keep instructing the reader to
+ * install it. Under v2 the assembler owns every install line, and SKILL.md tells
+ * fragment authors to name no command at all.
+ *
+ * LEGACY PROSE IS NOT STRIPPED. Files written against v1 exist, and a fragment
+ * of theirs still ends "Add it first with `…`". This module does not rewrite
+ * them — an assembler that edited authored prose would be guessing at a sentence
+ * it did not write, on a string the user is about to run. The install therefore
+ * appears twice on those files: once in the fragment, once in the setup block.
+ * The fix for that is content, not code — the fragments get rewritten.
  */
 
 /** The text with a full stop it may already own — never two, never none. */
@@ -47,36 +63,57 @@ function opening(wf: Workflow): string {
 
 /**
  * One applied suggestion, as prompt prose: the fragment its author wrote, or a
- * line templated from the fields every suggestion carries. The Install clause
- * goes only where there is an install — "Install:" with nothing after it would
- * be the template showing through the prose.
+ * line templated from the fields every suggestion carries.
+ *
+ * The template names no install, and that is v2 rather than an omission. This
+ * line is the assembler's own prose, so it is the assembler's to keep honest:
+ * a templated "Install: …" here would be an install line outside the setup
+ * block, and a reader who excluded that resource would still be told to run it.
+ * The command has exactly one home now, and it is below.
  */
 function paragraphFor(s: Suggestion): string {
-  if (s.promptFragment) return s.promptFragment;
-  const use = `Use ${s.name} (${s.category}) here: ${ended(s.claim)}`;
-  return s.install ? `${use} Install: ${s.install}` : use;
+  return s.promptFragment ?? `Use ${s.name} (${s.category}) here: ${ended(s.claim)}`;
 }
 
+/** The setup block's own first line — the sentence every command stands under. */
+const SETUP_LEAD = 'Before you start, install what the steps above rely on:';
+
 /**
- * The closing line: every install the paragraphs above did NOT already state,
- * so nothing the prompt relies on arrives unannounced. An install quoted inside
- * an authored fragment — or templated into a fallback line — is mentioned, and
- * saying it twice would read as two tools where there is one. No unmentioned
- * installs, no line: a closing that listed nothing would be a heading with no
- * list under it.
+ * The setup block: every install the included resources rely on, gathered under
+ * one line so nothing the prompt depends on arrives unannounced.
+ *
+ * One command per line, because the line is the unit the reader toggles: a row
+ * ticked out of the prompt takes its whole line with it, and what is left is
+ * still a list rather than a sentence with a hole in it. Backticked, so a
+ * command reads as a command in the prose around it.
+ *
+ * Gated on `hasInstall`, which is the same predicate the paste block and the
+ * rows on screen are drawn through — a field holding nothing but spaces is not
+ * a command, and listing it would invite the reader to run a blank line. Deduped
+ * by the exact string for the same reason the kit dedupes by it: the same MCP
+ * suggested at two steps is one `mcp add`.
+ *
+ * EXCLUSION AND DEDUPE MEET HERE. Excluded rows are skipped before the string is
+ * ever registered as seen, so a command two resources share survives while any
+ * one of them is still included — the line belongs to the string, not to
+ * whichever row reached it first. Only when the last includer goes does it go.
+ *
+ * Nothing to install — everything excluded, or nothing installable — and there
+ * is no block: a heading with no list under it is the template showing through.
  */
-function closing(applied: Suggestion[], paragraphs: string[]): string | null {
+function setupBlock(applied: Suggestion[], exclude: ReadonlySet<string>): string | null {
   const seen = new Set<string>();
-  const unmentioned: string[] = [];
+  const lines: string[] = [];
+
   for (const s of applied) {
-    const install = s.install;
-    if (!install || seen.has(install)) continue;
-    seen.add(install);
-    if (!paragraphs.some((p) => p.includes(install))) unmentioned.push(install);
+    if (exclude.has(s.airtableRecordId)) continue;
+    if (!hasInstall(s)) continue;
+    if (seen.has(s.install)) continue;
+    seen.add(s.install);
+    lines.push(`- \`${s.install}\``);
   }
-  if (unmentioned.length === 0) return null;
-  const list = unmentioned.map((install) => `\`${install}\``).join('; ');
-  return `Before you start, install what the steps above rely on: ${list}.`;
+
+  return lines.length === 0 ? null : [SETUP_LEAD, ...lines].join('\n');
 }
 
 /**
@@ -113,16 +150,43 @@ export function appliedInFlowOrder(session: GraphSession): Suggestion[] {
 }
 
 /**
+ * How the caller shapes an assembly. One dial so far, and it names RESOURCES
+ * rather than strings: the surface doing the excluding has a checkbox per
+ * applied row, and `airtableRecordId` is the one thing that identifies a row
+ * whatever its install says.
+ */
+export interface AssembleOptions {
+  /** Applied resources whose install line the prompt leaves out. */
+  excludeInstalls?: ReadonlySet<string>;
+}
+
+/** The default: nothing excluded, every applied install listed. */
+const NOTHING_EXCLUDED: ReadonlySet<string> = new Set<string>();
+
+/**
  * The whole prompt for the session as it stands: opening, one paragraph per
- * applied suggestion in flow order, closing installs line — blank lines
- * between, because the result is for pasting, not for parsing.
+ * applied suggestion in flow order, then the setup block — blank lines between,
+ * because the result is for pasting, not for parsing.
+ *
+ * Called with no options it lists every install the applied set carries, which
+ * is the shape of the prompt anyone who never touches a checkbox gets. Pass
+ * `excludeInstalls` and exactly those resources' commands drop out; nothing else
+ * in the text moves, which is what makes the toggle safe to drive from a live
+ * surface.
+ *
+ * Pure, and it caches nothing: two calls with different exclusions are two
+ * assemblies of the same session, and neither can leave a trace on the other.
  *
  * At V0 the prompt is the opening alone. That is not an empty state: the task
  * as a prompt is a valid prompt, just one no upgrade has improved yet.
  */
-export function assemblePrompt(session: GraphSession): string {
+export function assemblePrompt(session: GraphSession, opts?: AssembleOptions): string {
   const applied = appliedInFlowOrder(session);
-  const paragraphs = applied.map(paragraphFor);
-  const close = closing(applied, paragraphs);
-  return [opening(session.versions[0]), ...paragraphs, ...(close ? [close] : [])].join('\n\n');
+  const setup = setupBlock(applied, opts?.excludeInstalls ?? NOTHING_EXCLUDED);
+
+  return [
+    opening(session.versions[0]),
+    ...applied.map(paragraphFor),
+    ...(setup ? [setup] : []),
+  ].join('\n\n');
 }
