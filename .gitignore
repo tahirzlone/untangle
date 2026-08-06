@@ -4,5 +4,6 @@ out/*
 *.log
 .superpowers/
 docs/superpowers/
+docs/specs/
 viewer/dist/
 *.tsbuildinfo
