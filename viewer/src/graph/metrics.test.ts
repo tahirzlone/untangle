@@ -266,8 +266,8 @@ it('reports the shape of a patch that claims no saving', () => {
 });
 
 // ---------------------------------------------------------------------------
-// The words. Moved here with the numbers: the panel, the peek, the scorecard and
-// the celebration floats all write a saving from this one table.
+// The words. Moved here with the numbers: the panel, the peek, the results
+// window and the celebration floats all write a saving from this one table.
 // ---------------------------------------------------------------------------
 
 it('names only the components a set of totals actually moved, in reading order', () => {

@@ -11,8 +11,8 @@ import type { EffectMetrics, Workflow } from './types';
  * Two families live here. The COUNTS — pain, complexity, the per-version series —
  * are measured off the workflow itself. The WORDS — which components of a saving
  * moved, and how one is written — are the vocabulary every surface states a
- * saving in: the panel, the peek, the scorecard and the celebration floats all
- * read them from here, so the same saving cannot read two ways in two places.
+ * saving in: the panel, the peek, the results window and the celebration floats
+ * all read them from here, so the same saving cannot read two ways in two places.
  */
 
 /** U+2212, not a hyphen: these are negative quantities set in a mono face. */

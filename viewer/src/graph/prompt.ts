@@ -1,5 +1,5 @@
 import type { GraphSession } from './apply';
-import { hasInstall } from './installKit';
+import { hasInstall, isMultiLine } from './installKit';
 import type { Suggestion, Workflow } from './types';
 
 /**
@@ -93,6 +93,15 @@ const SETUP_LEAD = 'Before you start, install what the steps above rely on:';
  * by the exact string for the same reason the kit dedupes by it: the same MCP
  * suggested at two steps is one `mcp add`.
  *
+ * THE LINE-BREAK RULE holds here too. A string still carrying a line break after
+ * trimming never gets a setup line: the line is the unit of this block — one
+ * backticked command the reader can tick out whole — and a second physical line
+ * inside the backticks is a broken code span carrying text the line never
+ * vouched for. installKit.ts demotes the same string to its commented
+ * read-it-yourself section, and that section is the command's ONE home: the kit
+ * hands it over as a thing to read, and the prompt does not hand it over at all.
+ * Same predicate (`isMultiLine`), so the two surfaces cannot part over a string.
+ *
  * EXCLUSION AND DEDUPE MEET HERE. Excluded rows are skipped before the string is
  * ever registered as seen, so a command two resources share survives while any
  * one of them is still included — the line belongs to the string, not to
@@ -108,6 +117,9 @@ function setupBlock(applied: Suggestion[], exclude: ReadonlySet<string>): string
   for (const s of applied) {
     if (exclude.has(s.airtableRecordId)) continue;
     if (!hasInstall(s)) continue;
+    // the line-break rule: a multi-line string lives only in the kit's
+    // commented section — see the module note above
+    if (isMultiLine(s.install)) continue;
     if (seen.has(s.install)) continue;
     seen.add(s.install);
     lines.push(`- \`${s.install}\``);

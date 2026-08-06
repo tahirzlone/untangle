@@ -6,15 +6,13 @@ export const COPIED_MS = 1600;
 
 /**
  * COPY, and the moment after it: the label swaps to COPIED and the button
- * flashes once, then goes back to offering. Shared by the prompt panel, the
- * install kit inside it, and the scorecard — the same deliverables are copied
- * from all of them, and two buttons that behaved differently about the same text
- * would be two claims about one fact.
+ * flashes once, then goes back to offering. Shared by every surface the results
+ * window copies from — its two prompt panes and its install kit — because the
+ * same deliverables are copied from all of them, and two buttons that behaved
+ * differently about the same text would be two claims about one fact.
  *
- * In its own module for that last reason made structural: the kit is drawn
- * INSIDE the prompt panel, so a control the child borrowed from its parent would
- * be a circle in the module graph. What three surfaces share belongs to none of
- * them.
+ * In its own module for that reason made structural: what several surfaces
+ * share belongs to none of them.
  *
  * The clipboard is permission-gated and absent entirely off HTTPS, so the copy
  * only ever CLAIMS after the write resolved: a COPIED over a rejected write

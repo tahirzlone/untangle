@@ -19,7 +19,7 @@ const CAT_CLASS: Record<SuggestionCategory, string> = {
 /**
  * What kind of resource this is, in its own ink.
  *
- * Exported because the scorecard lists the same rows at the end of a cinematic,
+ * Exported because the results window lists the same rows the drawer offers,
  * and a chip that reads a different colour there would break the one thing the
  * palette is for: a row wears the same colour wherever it is named.
  */

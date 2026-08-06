@@ -499,6 +499,10 @@ it('is a single-purpose view: OPTIMIZE and the version strip step away, the draw
   expect(screen.queryByTestId('optimize-btn')).not.toBeInTheDocument();
   expect(screen.queryByTestId('version-strip')).not.toBeInTheDocument();
   expect(screen.getByTestId('critpath-btn')).toBeDisabled();
+  // the results window's standing entry stands down with the other
+  // read-the-graph controls: a modal opened over the seam would be two modes
+  // fighting for one canvas
+  expect(screen.getByTestId('prompt-btn')).toBeDisabled();
   // RESET LAYOUT was the one control left that MOVES the live half: a relayout
   // mid-compare walks the cards away from an original anchored on where they
   // were, and the two sides stop being one world with the seam still open
@@ -513,6 +517,7 @@ it('is a single-purpose view: OPTIMIZE and the version strip step away, the draw
   expect(screen.getByTestId('version-strip')).toBeInTheDocument();
   expect(screen.getByTestId('critpath-btn')).toBeEnabled();
   expect(screen.getByTestId('reset-layout')).toBeEnabled();
+  expect(screen.getByTestId('prompt-btn')).toBeEnabled();
 });
 
 /**
@@ -526,25 +531,23 @@ it('is a single-purpose view: OPTIMIZE and the version strip step away, the draw
 it('closes the canvas to text selection while the wipe holds it, and opens it again on exit', async () => {
   const { container } = render(<GraphCanvas workflow={enriched} />);
   await onV1(container);
-  // the prompt is the surface that deliberately offers its text — the one the
-  // no-select must not outlive the mode to reach
-  fireEvent.click(screen.getByTestId('prompt-btn'));
-  const selectable = screen.getByTestId('prompt-text');
-  expect(selectable.className).toContain('sg-prompt-text');
 
   const canvas = screen.getByTestId('canvas');
-  // the modifier is what the rule is written against — the base class says
-  // nothing about selection, so outside the mode the prompt's own word stands
+  // the modifier is what the no-select rule in canvas.css is written against —
+  // the base class says nothing about selection, so outside the mode every
+  // surface keeps its own word on the subject
   expect(canvas.className).not.toContain('sg-canvas--wipe');
+  expect(readFileSync('src/components/canvas.css', 'utf8')).toMatch(
+    /\.sg-canvas--wipe \{[^}]*user-select:\s*none/,
+  );
 
   await openWipe();
   expect(canvas.className).toContain('sg-canvas--wipe');
 
   fireEvent.keyDown(window, { key: 'Escape' });
   await waitFor(() => expect(screen.queryByTestId('wipe-under')).not.toBeInTheDocument());
-  // the surface is text again, and the prompt is back offering its own
+  // the surface is text again the moment the mode lets go
   expect(canvas.className).not.toContain('sg-canvas--wipe');
-  expect(screen.getByTestId('prompt-text').className).toContain('sg-prompt-text');
 });
 
 /**
@@ -580,10 +583,10 @@ it('drops a selection made before the wipe opened', async () => {
  * the impact panel: numbers unreadable, handle ungrabbable, in the exact band
  * the demo travels through. So the rail goes out of sight with the version strip.
  *
- * HIDDEN, not unmounted, and this is the test that says which: the panels in it
- * are holding state nobody re-made — a panel folded away to its tab, a kit with a
- * row cleared — and an unmount discarded all of it, so the comparison quietly
- * undid the setup the user made to get a look at the graph in the first place.
+ * HIDDEN, not unmounted, and this is the test that says which: the panel in it
+ * is holding state nobody re-made — folded away to its tab before the press —
+ * and an unmount discarded that, so the comparison quietly undid the setup the
+ * user made to get a look at the graph in the first place.
  *
  * jsdom lays nothing out and vitest never loads the CSS, so the rule that does
  * the hiding is read off the stylesheet the way railHeight.test.ts reads the
@@ -594,20 +597,13 @@ it('hides the rail inside the wipe, and brings it back holding what it held', as
   const { container } = render(<GraphCanvas workflow={enriched} />);
   await onV1(container);
 
-  // open the prompt too, so the rail is carrying state worth losing — and on V1
-  // the prompt is carrying the install kit, which goes wherever the rail goes
-  fireEvent.click(screen.getByTestId('prompt-btn'));
   const rail = screen.getByTestId('canvas-rail');
   expect(rail).toContainElement(screen.getByTestId('impact-panel'));
-  expect(rail).toContainElement(screen.getByTestId('prompt-panel'));
-  expect(rail).toContainElement(screen.getByTestId('install-kit'));
 
-  // set the rail up the way a reader would before pressing VS ORIGINAL: fold the
-  // impact panel away to its tab, and clear the one row already installed
+  // set the rail up the way a reader would before pressing VS ORIGINAL: fold
+  // the impact panel away to its tab
   fireEvent.click(screen.getByTestId('impact-toggle'));
   expect(screen.getByTestId('impact-toggle')).toHaveAttribute('aria-expanded', 'false');
-  fireEvent.click(screen.getAllByTestId('kit-check')[0]);
-  expect(screen.getAllByTestId('kit-check')[0]).not.toBeChecked();
 
   await openWipe();
   // the modifier is what the rule is written against, and the rule takes the
@@ -627,14 +623,9 @@ it('hides the rail inside the wipe, and brings it back holding what it held', as
   await waitFor(() => expect(screen.queryByTestId('wipe-under')).not.toBeInTheDocument());
   expect(screen.getByTestId('canvas-rail')).toBeInTheDocument();
   expect(screen.getByTestId('impact-panel')).toBeInTheDocument();
-  expect(screen.getByTestId('prompt-panel')).toBeInTheDocument();
-  expect(screen.getByTestId('install-kit')).toBeInTheDocument();
-  expect(screen.getByTestId('prompt-btn')).toHaveAttribute('aria-pressed', 'true');
-  // and it comes back exactly as it was — the panel still folded, the row still
-  // cleared. The mode is a way of looking at the graph, not a reason to re-make
-  // the surface around it.
+  // and it comes back exactly as it was — still folded. The mode is a way of
+  // looking at the graph, not a reason to re-make the surface around it.
   expect(screen.getByTestId('impact-toggle')).toHaveAttribute('aria-expanded', 'false');
-  expect(screen.getAllByTestId('kit-check')[0]).not.toBeChecked();
 });
 
 // The route would glow on only one side of the divider and read as a difference

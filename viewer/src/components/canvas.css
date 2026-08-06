@@ -194,8 +194,23 @@
 .sg-optimize--cancel:focus-visible {
   outline-color: var(--ember);
 }
+
+/* The run's way into its results: OPTIMIZE's own weight — it is the same story,
+   one beat later — announced by a single pulse when it lands. One iteration,
+   deliberately: the button STAYS until clicked or the session moves, and a
+   ring that kept pulsing would be chrome nagging about a thing already said. */
+.sg-view-results {
+  animation: sg-results-pulse 700ms ease-out 1;
+}
+@keyframes sg-results-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+  100% { box-shadow: 0 0 0 14px transparent; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sg-optimize { transition: none; }
+  /* no pulse: the button simply appears, which is the reduced-motion answer */
+  .sg-view-results { animation: none; }
 }
 
 /* Cards are grabbable now — say so before the drag starts. */
@@ -237,17 +252,17 @@
   /* Everything below the toolbar, and not a pixel more.
 
      The column is sized by its children, which is right up until the children
-     want more room than the canvas has: a laptop-height window with the impact
-     panel open and the prompt panel under it used to run off the bottom, and what
-     ran off was unreachable — the rail is absolutely positioned inside a canvas
-     that clips, so there was nothing to scroll and no way to get to it.
+     want more room than the canvas has: on a laptop-height window a full rail
+     used to run off the bottom, and what ran off was unreachable — the rail is
+     absolutely positioned inside a canvas that clips, so there was nothing to
+     scroll and no way to get to it.
 
      A max-height is the whole fix, and it fixes it in the flex algorithm rather
-     than in the panels: with a bound on the column, the panels shrink to fit it,
-     and a panel that has said it can shrink (`min-height: 0`) scrolls its own
-     contents instead of being cut off. The bound is a maximum, so a rail that
-     fits still sizes to its children and the graph under the empty part of the
-     column still takes a pointer. */
+     than in the panels: with a bound on the column, a panel shrinks to fit it
+     and scrolls its own contents (the impact panel's body is a scroller of its
+     own — see impact.css) instead of being cut off. The bound is a maximum, so
+     a rail that fits still sizes to its children and the graph under the empty
+     part of the column still takes a pointer. */
   max-height: calc(100% - var(--toolbar-h, 52px));
 }
 
@@ -257,11 +272,10 @@
    between the user and the one control the mode has — see the note in
    GraphCanvas beside the rail itself. What matters here is that the column is
    HIDDEN rather than taken away: `display: none` removes it from the layout,
-   from hit-testing and from the tab order, and leaves the panels inside it
-   mounted with everything the user set them to. A panel folded away to its tab
-   before the press is still folded away after ESC, and the kit's ticks are the
-   ticks that were on it — the mode is a way of looking at the graph, not a
-   reason to re-make the surface around it. */
+   from hit-testing and from the tab order, and leaves the panel inside it
+   mounted with everything the user set it to. A panel folded away to its tab
+   before the press is still folded away after ESC — the mode is a way of
+   looking at the graph, not a reason to re-make the surface around it. */
 .sg-canvas--wipe .sg-rail {
   display: none;
 }

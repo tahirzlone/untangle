@@ -35,19 +35,17 @@ import { criticalPath, NO_PATH } from '../graph/insight';
 import { planLabels, type LabelOffset, type LabelTag } from '../graph/labels';
 import { layoutWorkflow, NODE_HEIGHT, NODE_WIDTH, type LaidOutGraph } from '../graph/layout';
 import { impactSummary } from '../graph/metrics';
-import { assemblePrompt } from '../graph/prompt';
 import { planBackEdges, type BackEdgePlan } from '../graph/backEdge';
 import { CelebrationLayer, useCelebration } from './Celebration';
 import { DetailDrawer } from './DetailDrawer';
 import { EndpointMarks, type EndpointBox } from './EndpointMarks';
 import { ImpactPanel } from './ImpactPanel';
-import { PromptPanel } from './PromptPanel';
 import { PeekCard, peekAnchor, PEEK_DELAY_MS, type PeekAnchor } from './PeekCard';
 import { SignalNode } from './SignalNode';
 import { SignalEdge } from './SignalEdge';
 import { VersionStrip } from './VersionStrip';
 import { WipeCompare } from './WipeCompare';
-import { Scorecard, type ScorecardReport } from './Scorecard';
+import { ResultsWindow } from './ResultsWindow';
 import { useCinematic, type TourResult } from './optimize';
 import { CAMERA_MS, FLIP_MS, GHOST_MS, MOTION_VARS, prefersReducedMotion } from './motion';
 import './canvas.css';
@@ -87,37 +85,8 @@ const TOUR_ZOOM_MAX = 1;
 /** How long a failed export says so before the note clears itself. */
 const EXPORT_NOTE_MS = 4000;
 
-/** Where an export was asked for, so the failure is reported where the press was. */
-type ExportSource = 'toolbar' | 'scorecard';
-
-/**
- * What a session looks like from the outside, the moment a run finished with it.
- *
- * Taken as a copy, not read live: the scorecard is an account of something the
- * user watched happen, and the session behind it goes on moving — an UNDO or a
- * version jump would otherwise rewrite the account into a version nobody ran.
- *
- * `appliedIds` is read to the CURSOR: it spans the redo-future too, and the report
- * describes the graph the run finished on. The rows themselves only survive in V0
- * — applying one strips it from every version after — so that is where they are
- * looked up.
- */
-function reportOn(session: GraphSession): ScorecardReport {
-  const byId = new Map(session.versions[0].suggestions.map((s) => [s.airtableRecordId, s]));
-  return {
-    applied: session.appliedIds
-      .slice(0, session.cursor)
-      .map((id) => byId.get(id))
-      .filter((s): s is Suggestion => s !== undefined),
-    // The same summary the panel is reading, taken as a value: it is a function of
-    // the session rather than a view onto it, so freezing it here is enough.
-    impact: impactSummary(session),
-    // And the deliverable, frozen the same way for the same reason: the prompt
-    // the report hands over is the one this session earned, whatever the session
-    // does next.
-    prompt: assemblePrompt(session),
-  };
-}
+/** Shared by every session that has excluded nothing — which is most of them. */
+const NOTHING_EXCLUDED: ReadonlySet<string> = new Set<string>();
 
 /** The data every SignalNode carries; also how a click finds its workflow node. */
 interface SignalNodeData extends Record<string, unknown> {
@@ -367,13 +336,32 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const [layoutRun, setLayoutRun] = useState(0);
   const [ghosts, setGhosts] = useState<GhostCard[]>(NO_GHOSTS);
   const [ghostTransform, setGhostTransform] = useState('');
+  /** Is the Results Window holding the workspace? */
+  const [resultsOpen, setResultsOpen] = useState(false);
   /**
-   * The frozen account of the last run, or null when there is nothing to report.
-   * Written once, when the run stops, and never re-derived — see `reportOn`.
+   * The session a finished OPTIMIZE run left on the canvas, or null when no
+   * run's result is on offer. Compared by IDENTITY against the live session:
+   * every apply, undo, redo and jump replaces the session object, so the moment
+   * the user leaves the optimized state the comparison fails and VIEW RESULTS
+   * stands down on its own — PROMPT remains the standing entry.
    */
-  const [report, setReport] = useState<ScorecardReport | null>(null);
-  /** Which button's export failed, or null while nothing has gone wrong. */
-  const [exportFailed, setExportFailed] = useState<ExportSource | null>(null);
+  const [tourEnded, setTourEnded] = useState<GraphSession | null>(null);
+  /**
+   * The applied rows whose install the user has ticked OUT of the deliverable.
+   *
+   * Owned here rather than by the window so the choice survives the window
+   * closing and reopening — the set is per SESSION, not per viewing. It also
+   * survives version-cursor moves, and that is a decision rather than an
+   * accident: the set names resources by `airtableRecordId`, an id names one
+   * resource carrying one command, and an entry for a row the cursor has
+   * stepped away from simply goes inert (`assemblePrompt` ignores ids that are
+   * not applied) until a redo brings its row back — at which point the user's
+   * answer about that exact command is still their answer. A workflow swap IS
+   * a different set of questions, and resets it below.
+   */
+  const [excludeInstalls, setExcludeInstalls] = useState<ReadonlySet<string>>(NOTHING_EXCLUDED);
+  /** Did the toolbar's export fail? The note stands beside the button that asked. */
+  const [exportFailed, setExportFailed] = useState(false);
   /** Is the VS ORIGINAL wipe open? A mode, not a hold — ESC or the toggle ends it. */
   const [wipe, setWipe] = useState(false);
   /** The pane's transform, mirrored onto the comparison while it is showing. */
@@ -382,8 +370,6 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   const [wipeClip, setWipeClip] = useState<string | null>(null);
   /** Is CRITICAL PATH down? */
   const [showPath, setShowPath] = useState(false);
-  /** Is the PROMPT panel standing in the rail? */
-  const [showPrompt, setShowPrompt] = useState(false);
   /** Which edge tags had to move to be readable, and by how much. */
   const [tagOffsets, setTagOffsets] = useState<Map<string, LabelOffset>>(NO_OFFSETS);
   /**
@@ -416,6 +402,13 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   if (opened.source !== workflow) {
     setOpened(openSession(workflow));
     select(null);
+    // The install choices go with the graph they were made about: a tick is an
+    // answer about one workflow's rows, and the new file asks different
+    // questions. The window and the run's button go with them — both speak for
+    // a session that no longer exists.
+    setExcludeInstalls(NOTHING_EXCLUDED);
+    setResultsOpen(false);
+    setTourEnded(null);
   }
 
   const { session } = opened;
@@ -1063,10 +1056,13 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   );
 
   const onTourDone = useCallback(({ applied, session: ended }: TourResult) => {
-    // Nothing applied, nothing to report — a cancel before the first patch landed
-    // leaves the graph exactly as it was, and a panel saying so would be noise.
+    // Nothing applied, nothing to offer — a cancel before the first patch landed
+    // leaves the graph exactly as it was, and a button saying so would be noise.
     if (applied === 0 || !ended) return;
-    setReport(reportOn(ended));
+    // No overlay auto-opens: the graph settles, and VIEW RESULTS appears where
+    // the run's report used to. `ended` is the same object the last apply
+    // committed as the live session, which is what the identity check reads.
+    setTourEnded(ended);
   }, []);
 
   const { running, start, cancel } = useCinematic({
@@ -1080,46 +1076,86 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
 
   const startTour = useCallback(() => {
     // The tour owns the canvas: a panel left open would sit over the camera, and
-    // its subject is about to be applied out from under it anyway.
+    // its subject is about to be applied out from under it anyway. A stale VIEW
+    // RESULTS goes too — the run about to start supersedes the one it spoke for.
     closeDrawer();
-    setReport(null);
+    setTourEnded(null);
     start();
   }, [closeDrawer, start]);
 
-  /** Set when the report is dismissed, spent by the focus effect below. */
-  const focusAfterReport = useRef(false);
+  /**
+   * Lands focus on VIEW RESULTS the moment a run puts it up.
+   *
+   * The tour was started from a button and ran without the keyboard; the old
+   * report used to take focus as a modal, and without that the keystroke after
+   * a full tour would fall on <body> — OPTIMIZE unmounts when the run spends
+   * every patch, taking focus down with it. The button that appeared is the
+   * run's own continuation, so that is where the keyboard lands.
+   */
+  useEffect(() => {
+    if (!tourEnded) return;
+    document.querySelector<HTMLElement>('[data-testid="view-results-btn"]')?.focus();
+  }, [tourEnded]);
 
-  const closeScorecard = useCallback(() => {
-    focusAfterReport.current = true;
-    setReport(null);
+  /** Which entry opened the window matters not; how focus leaves it does. */
+  const focusAfterResults = useRef(false);
+
+  /** The tour's entry: the button is spent by the click — PROMPT stands after. */
+  const openResultsFromTour = useCallback(() => {
+    setTourEnded(null);
+    setResultsOpen(true);
+  }, []);
+
+  /** The standing entry, from the PROMPT toolbar button, at any cursor. */
+  const openResults = useCallback(() => setResultsOpen(true), []);
+
+  const closeResults = useCallback(() => {
+    focusAfterResults.current = true;
+    setResultsOpen(false);
+  }, []);
+
+  /**
+   * The window's one exclusion move: a row's members step in or out TOGETHER.
+   * A shared-string row is one checkbox over one line, so its ids travel as one
+   * — and a single-resource row is the degenerate case of the same rule.
+   */
+  const onToggleInstalls = useCallback((memberIds: string[], include: boolean) => {
+    setExcludeInstalls((prev) => {
+      const next = new Set(prev);
+      for (const id of memberIds) {
+        if (include) next.delete(id);
+        else next.add(id);
+      }
+      return next;
+    });
   }, []);
 
   /**
    * Hands focus back once the canvas is in a state to take it.
    *
-   * Deliberately an effect and not a line in `closeScorecard`: dropping the report
+   * Deliberately an effect and not a line in `closeResults`: dropping the window
    * is a state change, so at the moment the close handler runs the canvas is still
    * carrying `inert` — and a browser REFUSES focus into an inert subtree, silently.
-   * Called there, every route out of the panel (the button, Escape, the backdrop)
+   * Called there, every route out of the window (the button, Escape, the backdrop)
    * left focus on <body>. The effect runs after the commit that takes the attribute
    * off, which is the first moment the target will accept it.
    *
    * jsdom does not implement inert, so this is invisible to the suite by default —
    * the test that pins it installs the browser's refusal by hand.
    *
-   * Where focus goes: the control the run was started from, or, when a tour spent
-   * every patch on offer and that button went with the work it described, a card
-   * the user can actually SEE. A tour ends with the camera somewhere down the
-   * graph, and the first card in the DOM is wherever ELK put it — handing focus
-   * there scrolls the pane out from under the person who was watching. First in the
-   * document is the last resort, for a pane that has measured nothing.
+   * Where focus goes: PROMPT, the window's standing entry — it is on offer
+   * whenever the window was (both stand on `showImpact`), and it is the control
+   * a keyboard user reopens the window from. Failing that, a card the user can
+   * actually SEE: the first card in the DOM is wherever ELK put it, and handing
+   * focus there scrolls the pane out from under the person who was reading.
+   * First in the document is the last resort, for a pane that measured nothing.
    */
   useEffect(() => {
-    if (report !== null || !focusAfterReport.current) return;
-    focusAfterReport.current = false;
-    const button = document.querySelector<HTMLElement>('[data-testid="optimize-btn"]');
+    if (resultsOpen || !focusAfterResults.current) return;
+    focusAfterResults.current = false;
+    const button = document.querySelector<HTMLElement>('[data-testid="prompt-btn"]');
     (button ?? cardInView() ?? document.querySelector<HTMLElement>('.react-flow__node'))?.focus();
-  }, [report]);
+  }, [resultsOpen]);
 
   /** Is there anything for OPTIMIZE to do? The button exists only if there is. */
   const hasAppliable = useMemo(
@@ -1148,13 +1184,14 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   /**
    * Is the canvas answering to the user at all?
    *
-   * False while the tour drives it, and false again while its report is up: the
-   * drawer draws at z6 and the backdrop at z7, so a panel opened now would be a
-   * panel nobody can see, holding the focus. `inert` on the canvas is what stops a
-   * pointer or a Tab reaching it; this is what stops the canvas's own key handlers
-   * acting on something that got through anyway.
+   * False while the tour drives it, and false again while the Results Window is
+   * up: the drawer draws at z6 and the backdrop at z7, so a panel opened now
+   * would be a panel nobody can see, holding the focus. `inert` on the canvas is
+   * what stops a pointer or a Tab reaching it; this is what stops the canvas's
+   * own key handlers acting on something that got through anyway — and what
+   * keeps the cursor still under a window that is reading the session live.
    */
-  const canvasIdle = !running && report === null;
+  const canvasIdle = !running && !resultsOpen;
 
   /**
    * Is the canvas in a state where a peek would be an interruption?
@@ -1321,7 +1358,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   }, []);
 
   // Focus lands after the commit that unmounts the handle it was standing on —
-  // the same bargain the scorecard's close makes, for the same reason.
+  // the same bargain the results window's close makes, for the same reason.
   useEffect(() => {
     if (wipe || !focusAfterWipe.current) return;
     focusAfterWipe.current = false;
@@ -1395,10 +1432,11 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   }, [nodes, original, wipe, workflow]);
 
   const togglePath = useCallback(() => setShowPath((on) => !on), []);
-  const togglePrompt = useCallback(() => setShowPrompt((on) => !on), []);
 
   /**
-   * The graph as a file, from either of the two places that offer it.
+   * The graph as a file. Toolbar-only since the Results Window took over from
+   * the scorecard: the window is about the prompt, and the picture's one home
+   * is the EXPORT button beside the graph it captures.
    *
    * The bounds come from `nodes` rather than from React Flow's instance: it is the
    * same set of cards, and this one is in hand whether or not the pane has
@@ -1411,34 +1449,28 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
    * say about it. Noted rather than done — see `exportPng.ts` on the dot grid,
    * which is the same kind of decision.
    */
-  const runExport = useCallback(
-    (from: ExportSource) => {
-      const viewportEl = document.querySelector<HTMLElement>('.react-flow__viewport');
-      if (!viewportEl) return;
-      window.clearTimeout(exportTimer.current);
-      setExportFailed(null);
-      exportGraphPng({
-        viewportEl,
-        // Cards, the lanes the edges take around them, and the tags on those
-        // edges: a back-edge's return run and a tag hanging off its point both
-        // sit outside the node bounds, and framing on the cards clips them.
-        bounds: contentBounds(getNodesBounds(nodes)),
-        title: graph.meta.title,
-        version: versionAt,
-      }).catch((err: unknown) => {
-        // Nothing here can fix a refused capture — a font the rasterizer could not
-        // inline, a canvas the browser considers tainted — so it is reported where
-        // the press was and written out for whoever opens the console.
-        console.warn('untangle: PNG export failed', err);
-        setExportFailed(from);
-        exportTimer.current = window.setTimeout(() => setExportFailed(null), EXPORT_NOTE_MS);
-      });
-    },
-    [graph, nodes, versionAt],
-  );
-
-  const exportFromToolbar = useCallback(() => runExport('toolbar'), [runExport]);
-  const exportFromScorecard = useCallback(() => runExport('scorecard'), [runExport]);
+  const runExport = useCallback(() => {
+    const viewportEl = document.querySelector<HTMLElement>('.react-flow__viewport');
+    if (!viewportEl) return;
+    window.clearTimeout(exportTimer.current);
+    setExportFailed(false);
+    exportGraphPng({
+      viewportEl,
+      // Cards, the lanes the edges take around them, and the tags on those
+      // edges: a back-edge's return run and a tag hanging off its point both
+      // sit outside the node bounds, and framing on the cards clips them.
+      bounds: contentBounds(getNodesBounds(nodes)),
+      title: graph.meta.title,
+      version: versionAt,
+    }).catch((err: unknown) => {
+      // Nothing here can fix a refused capture — a font the rasterizer could not
+      // inline, a canvas the browser considers tainted — so it is reported where
+      // the press was and written out for whoever opens the console.
+      console.warn('untangle: PNG export failed', err);
+      setExportFailed(true);
+      exportTimer.current = window.setTimeout(() => setExportFailed(false), EXPORT_NOTE_MS);
+    });
+  }, [graph, nodes, versionAt]);
 
   if (!laidOut) {
     return (
@@ -1467,10 +1499,11 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
 
   return (
     <>
-      {/* `inert` is what makes the report modal in fact and not just in ARIA: with
-          it, nothing behind the backdrop takes a click, a Tab or a keystroke — no
-          version chip to jump the session out from under the panel, no card to open
-          an invisible drawer on. It is dropped again the moment the panel closes. */}
+      {/* `inert` is what makes the Results Window modal in fact and not just in
+          ARIA: with it, nothing behind the backdrop takes a click, a Tab or a
+          keystroke — no version chip to jump the session out from under a window
+          that is reading it LIVE, no card to open an invisible drawer on. It is
+          dropped again the moment the window closes. */}
       {/* The morph durations ride on the root: every shell that FLIPs and every
           ghost that fades is inside this element, so one stamp reaches them all
           and the numbers CSS animates on are the ones TypeScript waits for. */}
@@ -1480,7 +1513,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
       <div
         className={`sg-canvas${wipe ? ' sg-canvas--wipe' : ''}`}
         data-testid="canvas"
-        inert={report !== null}
+        inert={resultsOpen}
         style={MOTION_STYLE}
       >
         {/* Inside React Flow's viewport, which is the element an export captures —
@@ -1533,6 +1566,22 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
               {running ? 'CANCEL' : 'OPTIMIZE'}
             </button>
           ) : null}
+          {/* The run's own way into its results, standing where the report used
+              to auto-open. Compared by identity: the moment the session leaves
+              the optimized state — an undo, an apply, a version jump — the
+              button stands down, and PROMPT is the entry that remains. Absent
+              inside the wipe with OPTIMIZE, and back, still on offer, when the
+              mode closes without having moved the session. */}
+          {session && tourEnded === session && !wipe ? (
+            <button
+              type="button"
+              className="sg-optimize sg-view-results"
+              data-testid="view-results-btn"
+              onClick={openResultsFromTour}
+            >
+              VIEW RESULTS
+            </button>
+          ) : null}
           {/* Absent while the tour runs: the camera is travelling and the cards are
               mid-morph, so a capture taken now is a picture of a version nobody has
               seen yet. It comes back the moment the run stops. Disabled while the
@@ -1544,29 +1593,30 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
               className="sg-ghost-btn"
               data-testid="export-btn"
               disabled={wipe}
-              onClick={exportFromToolbar}
+              onClick={runExport}
             >
               EXPORT
             </button>
           )}
-          {exportFailed === 'toolbar' ? (
+          {exportFailed ? (
             <span className="sg-chip sg-chip--refused" data-testid="export-failed" role="status">
               EXPORT FAILED
             </span>
           ) : null}
-          {/* The deliverable's toggle. Offered exactly where the impact panel is
-              — same rail, same story: a graph with no optimization story has no
+          {/* The standing way into the Results Window, at any cursor — V0's
+              honest empty state included. Offered exactly where the impact
+              panel is, same story: a graph with no optimization story has no
               optimized prompt to assemble. Disabled inside the wipe with the
-              other read-the-graph controls, not hidden: the panel state
-              survives the mode. */}
+              other read-the-graph controls, and while the tour is driving —
+              a modal opened over a moving camera would be two modes fighting
+              for one canvas. */}
           {showImpact ? (
             <button
               type="button"
               className="sg-ghost-btn"
               data-testid="prompt-btn"
-              aria-pressed={showPrompt}
-              disabled={wipe}
-              onClick={togglePrompt}
+              disabled={wipe || running}
+              onClick={openResults}
             >
               PROMPT
             </button>
@@ -1625,8 +1675,9 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
             onRedo={onRedo}
           />
         )}
-        {/* The right-hand rail. A column, not a slot: the panels that stand here
-            stack under the toolbar, and the drawer draws over all of them.
+        {/* The right-hand rail: the impact panel's column, alone since the
+            Results Window absorbed the prompt and the kit. Still a column, so a
+            future report panel joins by being rendered beside this one.
 
             Out of sight while the wipe is open, with the version strip and for
             the same reason: the rail stands at z5 over the divider's z4, so
@@ -1639,21 +1690,15 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
             the headline figures.
 
             HIDDEN, not unmounted — `.sg-canvas--wipe .sg-rail` in canvas.css.
-            The mode is transient and the rail is full of state nobody re-made:
-            a panel collapsed to its tab, a kit with rows ticked and cleared. An
-            unmount discarded all of it, so a collapsed impact panel came back
-            expanded and the comparison had quietly undone what the user set up
-            to make room for it. `display: none` takes the column out of the
-            layout, out of the pointer's way and out of the tab order for
-            exactly as long as the mode holds the canvas, and the subtree that
-            comes back is the one that left. */}
+            The mode is transient and the panel is holding state nobody re-made:
+            folded away to its tab before the press, it must still be folded
+            after ESC. `display: none` takes the column out of the layout, out
+            of the pointer's way and out of the tab order for exactly as long as
+            the mode holds the canvas, and the subtree that comes back is the
+            one that left. */}
         {showImpact ? (
           <div className="sg-rail" data-testid="canvas-rail">
             <ImpactPanel summary={summary} />
-            {/* The prompt joins the column under the impact panel — stacked,
-                not tabbed, which is what the rail's own grammar says a second
-                panel does. Both stand at z5; the drawer (z6) draws over both. */}
-            {showPrompt && session ? <PromptPanel session={session} /> : null}
           </div>
         ) : null}
         {/* The pane is a listening post for keys aimed at the focusable cards inside
@@ -1767,16 +1812,16 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
           )
         ) : null}
       </div>
-      {/* Outside the canvas, not inside it: the panel is what the canvas is inert
+      {/* Outside the canvas, not inside it: the window is what the canvas is inert
           FOR, and a modal nested in the thing it disables would disable itself.
           `.app-main` is the positioned ancestor either way, so the backdrop still
           covers exactly the same rectangle. */}
-      {report ? (
-        <Scorecard
-          report={report}
-          onClose={closeScorecard}
-          onExport={exportFromScorecard}
-          exportFailed={exportFailed === 'scorecard'}
+      {resultsOpen && session ? (
+        <ResultsWindow
+          session={session}
+          excludeInstalls={excludeInstalls}
+          onToggleInstalls={onToggleInstalls}
+          onClose={closeResults}
         />
       ) : null}
       {/* Portalled onto the document by the layer itself, for the same reason the

@@ -1,4 +1,5 @@
-import { createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import gallery from '../../../gallery/add-e2e-tests.workflow.json';
 import enrichedDoc from '../test/fixtures/enriched.workflow.json';
 import {
@@ -40,8 +41,9 @@ const REPLAY = 'Replay the recorded walk-through';
 const TOUR_BUDGET = 25000;
 
 const optimizeBtn = () => screen.getByTestId('optimize-btn');
+const viewResultsBtn = () => screen.getByTestId('view-results-btn');
 const appliedNames = () =>
-  screen.getAllByTestId('scorecard-name').map((el) => el.textContent);
+  screen.getAllByTestId('results-name').map((el) => el.textContent);
 
 /**
  * Installs the one thing about `inert` that jsdom does not implement: a browser
@@ -88,10 +90,10 @@ it('offers OPTIMIZE only where there is a patch the reducer will take', async ()
 });
 
 // ---------------------------------------------------------------------------
-// The run, without the pacing
+// What a finished run puts up: a way in, not an overlay
 // ---------------------------------------------------------------------------
 
-it('applies every appliable patch at once when motion is not wanted', async () => {
+it('offers VIEW RESULTS after the run instead of auto-opening anything', async () => {
   const restore = reduceMotion();
   try {
     render(<GraphCanvas workflow={enriched} />);
@@ -99,17 +101,56 @@ it('applies every appliable patch at once when motion is not wanted', async () =
 
     fireEvent.click(optimizeBtn());
 
-    const card = await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
-    expect(card).toHaveTextContent('OPTIMIZED — 2 upgrades applied');
+    // the graph settles and a button appears — no window opened itself
+    const button = await screen.findByTestId('view-results-btn', {}, LAYOUT_WAIT);
+    expect(button).toHaveTextContent('VIEW RESULTS');
+    expect(screen.queryByTestId('results-window')).not.toBeInTheDocument();
+
+    // this tour spent every patch on offer, so OPTIMIZE went with them; PROMPT
+    // stands beside the run's own button as the entry that will remain
+    expect(screen.queryByTestId('optimize-btn')).not.toBeInTheDocument();
+    expect(screen.getByTestId('prompt-btn')).toBeInTheDocument();
+  } finally {
+    restore();
+  }
+});
+
+it('appears only after a completed run — never before, never for a hand apply', async () => {
+  const restore = reduceMotion();
+  try {
+    render(<GraphCanvas workflow={enriched} />);
+    await cardsOf(enriched);
+    expect(screen.queryByTestId('view-results-btn')).not.toBeInTheDocument();
+
+    // a hand-pressed APPLY is not a run: no button lands with the patch
+    await applyOn(RESEARCH);
+    await waitFor(() => expect(cardLabels()).toContain(RESEARCH_MCP), LAYOUT_WAIT);
+    expect(screen.queryByTestId('view-results-btn')).not.toBeInTheDocument();
+  } finally {
+    restore();
+  }
+});
+
+it('opens the window on the run the button speaks for, live off the session', async () => {
+  const restore = reduceMotion();
+  try {
+    render(<GraphCanvas workflow={enriched} />);
+    await cardsOf(enriched);
+
+    fireEvent.click(optimizeBtn());
+    fireEvent.click(await screen.findByTestId('view-results-btn', {}, LAYOUT_WAIT));
+
+    const windowEl = screen.getByTestId('results-window');
+    expect(windowEl).toHaveTextContent('RESULTS — 2 upgrades applied');
     // both patches swap one step for one replacement, so the counts hold and the
     // saving is in what the steps COST, not in how many there are — which is the
-    // whole reason the report states the pain as well as the shape
-    expect(screen.getByTestId('scorecard-count')).toHaveTextContent('6 → 6 nodes · 6 → 6 edges');
-    expect(screen.getByTestId('scorecard-pain')).toHaveTextContent('pain 18 → 12 (−33%)');
+    // whole reason the summary states the pain as well as the shape
+    expect(screen.getByTestId('results-count')).toHaveTextContent('6 → 6 nodes · 6 → 6 edges');
+    expect(screen.getByTestId('results-pain')).toHaveTextContent('pain 18 → 12 (−33%)');
 
-    // the scorecard and the impact panel read off the same totals — 25+40 minutes,
+    // the window and the impact panel read off the same totals — 25+40 minutes,
     // 9000 tokens, 1+3 manual steps
-    const shown = screen.getAllByTestId('scorecard-metric').map((el) => el.textContent);
+    const shown = screen.getAllByTestId('results-metric').map((el) => el.textContent);
     expect(shown).toEqual(['−2 steps', '−65 min', '−9000 tok', '−4 manual']);
     expect(impactStats()).toEqual({
       stepsSaved: '2',
@@ -118,14 +159,44 @@ it('applies every appliable patch at once when motion is not wanted', async () =
       manualInterventionsRemoved: '4',
     });
 
-    // the export is live and has a suite of its own; what matters here is that
-    // the panel's second action is an offer rather than a placeholder
-    expect(screen.getByTestId('export-png')).toBeEnabled();
-    expect(card).not.toHaveTextContent('EXPORT ARRIVES WITH');
+    // the button was the run's own way in, and the click spent it — PROMPT is
+    // the standing entry from here on
+    expect(screen.queryByTestId('view-results-btn')).not.toBeInTheDocument();
   } finally {
     restore();
   }
 });
+
+// The button speaks for the session the run left behind. Any move off it — a
+// version jump, an undo — is the user leaving the optimized state, and a button
+// still offering "the run's results" would be offering a version nobody ran.
+it('stands VIEW RESULTS down the moment the session leaves the optimized state', async () => {
+  const restore = reduceMotion();
+  try {
+    render(<GraphCanvas workflow={enriched} />);
+    await cardsOf(enriched);
+
+    fireEvent.click(optimizeBtn());
+    await screen.findByTestId('view-results-btn', {}, LAYOUT_WAIT);
+
+    fireEvent.click(screen.getByTestId('undo-btn'));
+    await waitFor(() => expect(cardLabels()).toContain(VERIFY), LAYOUT_WAIT);
+    expect(screen.queryByTestId('view-results-btn')).not.toBeInTheDocument();
+
+    // and it does not come back for a redo onto the same version: the state was
+    // left, and PROMPT is the entry that remains
+    fireEvent.click(screen.getByTestId('redo-btn'));
+    await waitFor(() => expect(screen.getAllByTestId('version-chip')).toHaveLength(3), LAYOUT_WAIT);
+    expect(screen.queryByTestId('view-results-btn')).not.toBeInTheDocument();
+    expect(screen.getByTestId('prompt-btn')).toBeInTheDocument();
+  } finally {
+    restore();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// The run, without the pacing
+// ---------------------------------------------------------------------------
 
 // The two rows on the verify step are alternative futures for it: applying either
 // consumes the step, and the other row goes with it. The tour must notice mid-run.
@@ -136,11 +207,11 @@ it('skips the sibling the apply before it consumed', async () => {
     await cardsOf(enriched);
 
     fireEvent.click(optimizeBtn());
-    await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
+    fireEvent.click(await screen.findByTestId('view-results-btn', {}, LAYOUT_WAIT));
 
     expect(appliedNames()).toEqual(['firecrawl-mcp', 'chrome-devtools-mcp']);
     // the sibling and the two rows the first patch's cascade took are all absent
-    expect(screen.getByTestId('scorecard')).not.toHaveTextContent('browser-verify plugin');
+    expect(screen.getByTestId('results-window')).not.toHaveTextContent('browser-verify plugin');
     // every row on offer is spent, so the way in is gone with them
     expect(screen.queryByTestId('optimize-btn')).not.toBeInTheDocument();
   } finally {
@@ -247,6 +318,12 @@ const ORDERED = {
 
 const ordered = fixture(ORDERED, 'ordered');
 
+/**
+ * The window lists rows in FLOW order whatever order they were applied in, so
+ * the tour's own order is read off the history instead: each undo removes the
+ * LAST patch applied, and the time totals tell the three rows apart (near saves
+ * 1 min, mid 2, far 3).
+ */
 it('walks the graph left to right, whatever order the KB answered in', async () => {
   const restore = reduceMotion();
   try {
@@ -254,17 +331,22 @@ it('walks the graph left to right, whatever order the KB answered in', async () 
     await cardsOf(ordered);
 
     fireEvent.click(optimizeBtn());
-    await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
+    await screen.findByTestId('view-results-btn', {}, LAYOUT_WAIT);
+    expect(impactStats().estTimeSavedMin).toBe('6');
 
-    // the KB listed them far, middle, near; the graph reads near, middle, far
-    expect(appliedNames()).toEqual(['near-runner', 'mid-runner', 'far-runner']);
+    // far-runner (3 min) landed last…
+    fireEvent.click(screen.getByTestId('undo-btn'));
+    await waitFor(() => expect(impactStats().estTimeSavedMin).toBe('3'), LAYOUT_WAIT);
+    // …mid-runner (2 min) second, leaving near-runner's 1 min first
+    fireEvent.click(screen.getByTestId('undo-btn'));
+    await waitFor(() => expect(impactStats().estTimeSavedMin).toBe('1'), LAYOUT_WAIT);
   } finally {
     restore();
   }
 });
 
 // ---------------------------------------------------------------------------
-// The run, with it
+// The run, with the pacing
 // ---------------------------------------------------------------------------
 
 /**
@@ -279,11 +361,13 @@ async function tourToFirstApply() {
   fireEvent.click(optimizeBtn());
   // the same slot becomes the way out for as long as the tour is running
   await waitFor(() => expect(optimizeBtn()).toHaveTextContent('CANCEL'));
+  // and the standing entry stands down while the camera has the canvas
+  expect(screen.getByTestId('prompt-btn')).toBeDisabled();
   await waitFor(() => expect(screen.getAllByTestId('version-chip')).toHaveLength(2), LAYOUT_WAIT);
 }
 
 it(
-  'CANCEL stops after the patch in flight and reports what actually landed',
+  'CANCEL stops after the patch in flight and offers what actually landed',
   async () => {
     render(<GraphCanvas workflow={enriched} />);
     await cardsOf(enriched);
@@ -291,9 +375,14 @@ it(
     await tourToFirstApply();
     fireEvent.click(optimizeBtn());
 
-    const card = await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
-    expect(card).toHaveTextContent('OPTIMIZED — 1 upgrade applied');
+    fireEvent.click(await screen.findByTestId('view-results-btn', {}, LAYOUT_WAIT));
+    expect(screen.getByTestId('results-window')).toHaveTextContent(
+      'RESULTS — 1 upgrade applied',
+    );
     expect(appliedNames()).toEqual(['firecrawl-mcp']);
+    fireEvent.click(screen.getByTestId('results-close'));
+    await waitFor(() => expect(screen.queryByTestId('results-window')).not.toBeInTheDocument());
+
     // exactly the applies that completed — one version off the original
     expect(screen.getAllByTestId('version-chip').map((c) => c.textContent)).toEqual(['V0', 'V1']);
     // the tour is over, so the slot is the way in again
@@ -302,12 +391,12 @@ it(
   TOUR_BUDGET,
 );
 
-// The close handler cannot hand focus back itself: dropping the report is a state
+// The close handler cannot hand focus back itself: dropping the window is a state
 // change, so the canvas is still inert when it runs, and the browser refuses. This
 // runs under that refusal, so it goes red the moment the restore stops waiting for
 // the commit that releases the attribute.
 it(
-  'takes focus into the scorecard and hands it back to OPTIMIZE',
+  'lands focus on VIEW RESULTS, takes it into the window, and hands it to PROMPT',
   async () => {
     const allowFocus = refuseFocusInsideInert();
     try {
@@ -317,13 +406,19 @@ it(
       await tourToFirstApply();
       fireEvent.click(optimizeBtn());
 
-      const card = await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
-      expect(card).toContainElement(document.activeElement as HTMLElement);
-      expect(document.activeElement).toBe(screen.getByTestId('scorecard-close'));
+      // the run was started from a button and ran without the keyboard; the
+      // button it puts up is where the keyboard lands on the way out
+      const button = await screen.findByTestId('view-results-btn', {}, LAYOUT_WAIT);
+      await waitFor(() => expect(document.activeElement).toBe(button));
 
-      fireEvent.click(screen.getByTestId('scorecard-close'));
-      await waitFor(() => expect(screen.queryByTestId('scorecard')).not.toBeInTheDocument());
-      expect(document.activeElement).toBe(optimizeBtn());
+      fireEvent.click(button);
+      expect(document.activeElement).toBe(screen.getByTestId('results-close'));
+
+      fireEvent.click(screen.getByTestId('results-close'));
+      await waitFor(() => expect(screen.queryByTestId('results-window')).not.toBeInTheDocument());
+      // VIEW RESULTS was spent by the click, so the keyboard lands on the
+      // standing entry instead
+      expect(document.activeElement).toBe(screen.getByTestId('prompt-btn'));
     } finally {
       allowFocus();
     }
@@ -332,39 +427,34 @@ it(
 );
 
 it(
-  'takes Escape as CANCEL, and the next one as CLOSE',
+  'takes Escape as CANCEL, and opens nothing on its own',
   async () => {
-    const allowFocus = refuseFocusInsideInert();
-    try {
-      render(<GraphCanvas workflow={enriched} />);
-      await cardsOf(enriched);
+    render(<GraphCanvas workflow={enriched} />);
+    await cardsOf(enriched);
 
-      await tourToFirstApply();
-      fireEvent.keyDown(window, { key: 'Escape' });
+    await tourToFirstApply();
+    fireEvent.keyDown(window, { key: 'Escape' });
 
-      // the keystroke that stopped the tour did not also dismiss its report
-      const card = await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
-      expect(card).toHaveTextContent('OPTIMIZED — 1 upgrade applied');
+    // the keystroke stopped the tour; what landed is on offer, not on screen
+    await screen.findByTestId('view-results-btn', {}, LAYOUT_WAIT);
+    expect(screen.queryByTestId('results-window')).not.toBeInTheDocument();
 
-      fireEvent.keyDown(window, { key: 'Escape' });
-      await waitFor(() => expect(screen.queryByTestId('scorecard')).not.toBeInTheDocument());
-      // the keyboard route out lands where the pointer route does
-      expect(document.activeElement).toBe(optimizeBtn());
-    } finally {
-      allowFocus();
-    }
+    // Escape with no window open is nobody's keystroke now — the offer stands
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.getByTestId('view-results-btn')).toBeInTheDocument();
+    expect(screen.queryByTestId('results-window')).not.toBeInTheDocument();
   },
   TOUR_BUDGET,
 );
 
 // ---------------------------------------------------------------------------
-// What the scorecard is describing
+// What the window is describing
 // ---------------------------------------------------------------------------
 
 // A tour started from a version the cursor stepped back to branches, exactly as a
-// hand-pressed APPLY does. The report has to describe the branch on the canvas —
+// hand-pressed APPLY does. The window has to describe the branch on the canvas —
 // the abandoned future is still in the session, and it is not part of this story.
-it('reports the branch the cursor is on, not the future it left behind', async () => {
+it('describes the branch the cursor is on, not the future it left behind', async () => {
   const restore = reduceMotion();
   try {
     render(<GraphCanvas workflow={enriched} />);
@@ -380,50 +470,12 @@ it('reports the branch the cursor is on, not the future it left behind', async (
     await waitFor(() => expect(cardLabels()).toContain(VERIFY), LAYOUT_WAIT);
 
     fireEvent.click(optimizeBtn());
-    const card = await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
+    fireEvent.click(await screen.findByTestId('view-results-btn', {}, LAYOUT_WAIT));
 
+    const windowEl = screen.getByTestId('results-window');
     expect(appliedNames()).toEqual(['firecrawl-mcp', 'chrome-devtools-mcp']);
-    expect(card).not.toHaveTextContent('browser-verify plugin');
-    expect(card).toHaveTextContent('OPTIMIZED — 2 upgrades applied');
-  } finally {
-    restore();
-  }
-});
-
-// ---------------------------------------------------------------------------
-// The scorecard is a report, not a live readout
-// ---------------------------------------------------------------------------
-
-/** Runs a whole tour without the pacing and hands back the scorecard. */
-async function scorecardAfterInstantTour() {
-  render(<GraphCanvas workflow={enriched} />);
-  await cardsOf(enriched);
-  fireEvent.click(optimizeBtn());
-  return screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
-}
-
-// The report is frozen at the moment the run stops. A session that moves under it
-// afterwards — a version jump, an undo — does not get to rewrite what the user
-// just watched happen into "0 upgrades applied".
-it('holds its report still when the session moves underneath it', async () => {
-  const restore = reduceMotion();
-  try {
-    const card = await scorecardAfterInstantTour();
-    expect(card).toHaveTextContent('OPTIMIZED — 2 upgrades applied');
-
-    // straight back to the original graph, behind the open panel
-    fireEvent.click(screen.getAllByTestId('version-chip')[0]);
-    await waitFor(() => expect(cardLabels()).toContain(RESEARCH), LAYOUT_WAIT);
-
-    expect(screen.getByTestId('scorecard')).toHaveTextContent('OPTIMIZED — 2 upgrades applied');
-    expect(appliedNames()).toEqual(['firecrawl-mcp', 'chrome-devtools-mcp']);
-    expect(screen.getAllByTestId('scorecard-metric').map((el) => el.textContent)).toEqual([
-      '−2 steps',
-      '−65 min',
-      '−9000 tok',
-      '−4 manual',
-    ]);
-    expect(screen.getByTestId('scorecard-count')).toHaveTextContent('6 → 6 nodes');
+    expect(windowEl).not.toHaveTextContent('browser-verify plugin');
+    expect(windowEl).toHaveTextContent('RESULTS — 2 upgrades applied');
   } finally {
     restore();
   }
@@ -433,115 +485,45 @@ it('holds its report still when the session moves underneath it', async () => {
 // Nothing behind the backdrop is reachable
 // ---------------------------------------------------------------------------
 
+/** Runs a whole tour without the pacing and opens the window off its button. */
+async function windowAfterInstantTour() {
+  render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+  fireEvent.click(optimizeBtn());
+  fireEvent.click(await screen.findByTestId('view-results-btn', {}, LAYOUT_WAIT));
+  return screen.getByTestId('results-window');
+}
+
 it('makes the canvas behind it inert, and gives it back on close', async () => {
   const restore = reduceMotion();
   const allowFocus = refuseFocusInsideInert();
   try {
-    await scorecardAfterInstantTour();
+    await windowAfterInstantTour();
     expect(screen.getByTestId('canvas')).toHaveAttribute('inert');
 
     // the third way out — the backdrop — through the same restore as the other two
-    fireEvent.click(screen.getByTestId('scorecard-backdrop'));
-    await waitFor(() => expect(screen.queryByTestId('scorecard')).not.toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('results-backdrop'));
+    await waitFor(() => expect(screen.queryByTestId('results-window')).not.toBeInTheDocument());
     expect(screen.getByTestId('canvas')).not.toHaveAttribute('inert');
-    // this tour spent every patch on offer, so OPTIMIZE went with them and the
-    // graph takes the keyboard back instead — inside the canvas that was inert a
+    // focus lands on the standing entry — inside the canvas that was inert a
     // moment ago, which is the whole point of waiting for the commit
-    expect(document.activeElement).toHaveClass('react-flow__node');
+    expect(document.activeElement).toBe(screen.getByTestId('prompt-btn'));
   } finally {
     allowFocus();
-    restore();
-  }
-});
-
-/**
- * Gives the pane and its cards real rectangles, which jsdom otherwise measures as
- * 0×0 for everything.
- *
- * `onScreen` is the set of card ids the pane is showing; every other card is put
- * far below it. The pane itself gets a plain 1000×700 box at the origin.
- */
-function stageCards(onScreen: string[]): () => void {
-  const real = Element.prototype.getBoundingClientRect;
-  Element.prototype.getBoundingClientRect = function (this: Element) {
-    if (this.classList.contains('sg-viewport')) {
-      return { x: 0, y: 0, left: 0, top: 0, right: 1000, bottom: 700, width: 1000, height: 700 } as DOMRect;
-    }
-    if (this.classList.contains('react-flow__node')) {
-      const seen = onScreen.includes(this.getAttribute('data-id') ?? '');
-      const top = seen ? 100 : 4000;
-      return { x: 40, y: top, left: 40, top, right: 292, bottom: top + 148, width: 252, height: 148 } as DOMRect;
-    }
-    return real.call(this);
-  };
-  return () => {
-    Element.prototype.getBoundingClientRect = real;
-  };
-}
-
-// A tour that spends every patch takes OPTIMIZE with it, so closing the report
-// hands focus to the graph — and the camera is somewhere down the graph by then.
-// First-in-the-DOM is wherever ELK put it, which scrolls the pane out from under
-// the person who was watching. The card in front of them is the honest target.
-it('hands focus to a card the pane is actually showing', async () => {
-  const restore = reduceMotion();
-  const allowFocus = refuseFocusInsideInert();
-  // the last two steps of the fixture, which is where a left-to-right tour ends up
-  const staged = stageCards(['ship-release']);
-  try {
-    await scorecardAfterInstantTour();
-
-    fireEvent.click(screen.getByTestId('scorecard-close'));
-    await waitFor(() => expect(screen.queryByTestId('scorecard')).not.toBeInTheDocument());
-
-    expect(document.activeElement).toHaveClass('react-flow__node');
-    expect(document.activeElement).toHaveAttribute('data-id', 'ship-release');
-    // and it is not simply the first card in the document, which is the fallback
-    // this replaces
-    expect(document.querySelector('.react-flow__node')).not.toBe(document.activeElement);
-  } finally {
-    staged();
-    allowFocus();
-    restore();
-  }
-});
-
-// Tab out of the panel would land on the masthead, which the backdrop does not
-// cover — so the panel keeps the key rather than trusting the geometry.
-it('keeps Tab inside the panel', async () => {
-  const restore = reduceMotion();
-  try {
-    await scorecardAfterInstantTour();
-    const promptCopy = screen.getByTestId('scorecard-prompt-copy');
-    const close = screen.getByTestId('scorecard-close');
-    expect(document.activeElement).toBe(close);
-
-    // CLOSE is the last stop in the panel, so Tab comes round to the first —
-    // the prompt section's COPY, which stands above the actions
-    const forward = createEvent.keyDown(close, { key: 'Tab' });
-    fireEvent(close, forward);
-    expect(forward.defaultPrevented).toBe(true);
-    expect(document.activeElement).toBe(promptCopy);
-
-    // and that COPY is the first, so Shift+Tab comes round to the last
-    const back = createEvent.keyDown(promptCopy, { key: 'Tab', shiftKey: true });
-    fireEvent(promptCopy, back);
-    expect(back.defaultPrevented).toBe(true);
-    expect(document.activeElement).toBe(close);
-  } finally {
     restore();
   }
 });
 
 // The drawer draws at z6 and the backdrop at z7, so a panel opened now would be a
-// panel nobody can see holding the focus. The canvas declines to open one.
-it('will not open the drawer while the scorecard is up', async () => {
+// panel nobody can see holding the focus. The canvas declines to open one — and
+// `inert` blocks the session from moving at all while the window reads it live.
+it('will not open the drawer while the window is up', async () => {
   const restore = reduceMotion();
   try {
     const { container } = render(<GraphCanvas workflow={enriched} />);
     await cardsOf(enriched);
     fireEvent.click(optimizeBtn());
-    await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
+    fireEvent.click(await screen.findByTestId('view-results-btn', {}, LAYOUT_WAIT));
 
     const wrapper = container.querySelector<HTMLElement>(
       '.react-flow__node[data-id="gather-brief"]',
@@ -570,8 +552,38 @@ it('closes the drawer to start, and keeps it closed for the run', async () => {
     await screen.findByTestId('detail-drawer');
 
     fireEvent.click(optimizeBtn());
-    await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
+    await screen.findByTestId('view-results-btn', {}, LAYOUT_WAIT);
     expect(screen.queryByTestId('detail-drawer')).not.toBeInTheDocument();
+  } finally {
+    restore();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// How the button arrives
+// ---------------------------------------------------------------------------
+
+// jsdom loads no CSS, so the pulse contract is read off the stylesheet the way
+// railHeight.test.ts reads its bounds: one iteration, and none at all when
+// motion is not wanted — the button simply appears.
+it('pulses once on arrival, and not at all under reduced motion', () => {
+  const css = readFileSync('src/components/canvas.css', 'utf8');
+  const pulse = css.match(/\.sg-view-results\s*\{([^}]*)\}/);
+  expect(pulse).not.toBeNull();
+  expect(pulse![1]).toMatch(/animation:\s*sg-results-pulse [^;]*\b1\b/);
+  expect(css).toMatch(
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.sg-view-results \{ animation: none; \}/,
+  );
+});
+
+// The window is the only surface — there is no frozen report left anywhere.
+it('has retired the scorecard: no report overlay exists anywhere in the run', async () => {
+  const restore = reduceMotion();
+  try {
+    const windowEl = await windowAfterInstantTour();
+    expect(document.querySelector('[data-testid="scorecard"]')).toBeNull();
+    expect(document.querySelector('.sg-scorecard')).toBeNull();
+    expect(within(windowEl).queryByTestId('export-png')).not.toBeInTheDocument();
   } finally {
     restore();
   }

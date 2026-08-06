@@ -102,9 +102,9 @@ export function captureDownloads(): { links: HTMLAnchorElement[]; restore: () =>
  * so a test can hand back a rejection, and the no-clipboard test can DELETE it
  * and model the http:// session where the API simply does not exist.
  *
- * Here rather than in one suite because three surfaces copy now — the prompt, the
- * install kit, and the scorecard's frozen pair — and a clipboard mocked three
- * subtly different ways would be three different claims about one API.
+ * Here rather than in one suite because several surfaces copy now — the results
+ * window's two panes and its install kit — and a clipboard mocked three subtly
+ * different ways would be three different claims about one API.
  */
 export function mockClipboard(writeText: (text: string) => Promise<void>) {
   const spy = vi.fn(writeText);

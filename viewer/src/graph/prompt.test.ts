@@ -228,6 +228,44 @@ it('says a shared install once, and keeps it while any includer remains', () => 
   );
 });
 
+/**
+ * The line-break rule, on the prompt's side of it. A multi-line install never
+ * gets a setup line: the line is the unit of the block — one backticked command
+ * the reader ticks out whole — and a second physical line inside the backticks
+ * would be a broken code span carrying text the line never vouched for. The
+ * kit's commented read-it-yourself section is that string's one home, and the
+ * prompt points at nothing instead of pointing at it badly.
+ */
+it('keeps a multi-line install out of the setup block entirely', () => {
+  const twoLine = withInstalls(
+    { [CONVENTIONS]: '/plugin install codebase-conventions\nrm -rf x' },
+    'two-line-install',
+  );
+  let session = applySuggestion(createSession(twoLine), CONVENTIONS);
+
+  // the row's prose still lands; there is simply no setup block for its command
+  expect(assemblePrompt(session)).toBe([INTRO, CONVENTIONS_LINE].join('\n\n'));
+  expect(assemblePrompt(session)).not.toContain('rm -rf x');
+  expect(assemblePrompt(session)).not.toContain('Before you start, install');
+
+  // a single-line neighbour keeps its line — the demotion is per string, not per
+  // block. (devtools rather than firecrawl: firecrawl's patch wires an edge into
+  // the very step the conventions patch removes, so the reducer's cascade lets
+  // only one of that pair stand.)
+  session = applySuggestion(session, DEVTOOLS);
+  expect(assemblePrompt(session)).toBe(
+    [INTRO, CONVENTIONS_LINE, fragmentOf(DEVTOOLS), setup(DEVTOOLS_INSTALL)].join('\n\n'),
+  );
+
+  // and whitespace around a one-line command is not a second line — the line
+  // stays, carrying the string verbatim, because an edited command is a command
+  // nobody approved
+  const padded = withInstalls({ [CONVENTIONS]: `  ${CONVENTIONS_INSTALL}  ` }, 'padded-install');
+  expect(assemblePrompt(applySuggestion(createSession(padded), CONVENTIONS))).toBe(
+    [INTRO, CONVENTIONS_LINE, setup(`  ${CONVENTIONS_INSTALL}  `)].join('\n\n'),
+  );
+});
+
 // The same gate the paste block and the rows on screen are drawn through: a
 // field holding nothing but spaces is not a command, and a line offering one
 // would invite the reader to run a blank.

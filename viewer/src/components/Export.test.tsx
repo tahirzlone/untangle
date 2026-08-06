@@ -104,35 +104,25 @@ it(
 
     // CANCEL stops it after the patch in flight, and the way out comes back
     fireEvent.click(screen.getByTestId('optimize-btn'));
-    await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
+    await screen.findByTestId('view-results-btn', {}, LAYOUT_WAIT);
     expect(exportBtn()).toBeInTheDocument();
   },
   TOUR_BUDGET,
 );
 
-// ---------------------------------------------------------------------------
-// The scorecard's own
-// ---------------------------------------------------------------------------
-
-it('exports from the scorecard, and stays open afterwards', async () => {
+// EXPORT PNG is toolbar-only: the Results Window is about the prompt, and the
+// picture's one home is the button beside the graph it captures.
+it('offers no export inside the results window', async () => {
   const restore = reduceMotion();
   try {
     render(<GraphCanvas workflow={enriched} />);
     await cardsOf(enriched);
     fireEvent.click(screen.getByTestId('optimize-btn'));
-    const card = await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
+    fireEvent.click(await screen.findByTestId('view-results-btn', {}, LAYOUT_WAIT));
 
-    const button = screen.getByTestId('export-png');
-    expect(button).toBeEnabled();
-    // the placeholder the cinematic shipped with is gone, not merely disabled
-    expect(card).not.toHaveTextContent('EXPORT ARRIVES WITH T3');
-
-    fireEvent.click(button);
-    await waitFor(() => expect(downloads.links).toHaveLength(1), LAYOUT_WAIT);
-    // V2 of this graph: the run applied both patches on offer
-    expect(downloads.links[0].download).toBe('untangle-ship-a-feature-end-to-end-v2.png');
-    // the panel is a report, not a wizard — exporting is not leaving
-    expect(screen.getByTestId('scorecard')).toBeInTheDocument();
+    const windowEl = screen.getByTestId('results-window');
+    expect(windowEl).not.toHaveTextContent('EXPORT');
+    expect(screen.queryByTestId('export-png')).not.toBeInTheDocument();
   } finally {
     restore();
   }
@@ -159,23 +149,3 @@ it('says so, near the button, when the capture fails', async () => {
   }
 });
 
-it('says so inside the scorecard when that is where the press came from', async () => {
-  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-  const restore = reduceMotion();
-  rasterize.mockRejectedValue(new Error('tainted canvas'));
-  try {
-    render(<GraphCanvas workflow={enriched} />);
-    await cardsOf(enriched);
-    fireEvent.click(screen.getByTestId('optimize-btn'));
-    await screen.findByTestId('scorecard', {}, LAYOUT_WAIT);
-
-    fireEvent.click(screen.getByTestId('export-png'));
-
-    expect(await screen.findByTestId('scorecard-export-failed')).toHaveTextContent('EXPORT FAILED');
-    // the note belongs where the press was, not on the toolbar behind the backdrop
-    expect(screen.queryByTestId('export-failed')).not.toBeInTheDocument();
-  } finally {
-    restore();
-    warn.mockRestore();
-  }
-});

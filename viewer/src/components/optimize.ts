@@ -42,7 +42,7 @@ export function orderAppliable(
 const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
 /**
- * A finished run, in the terms the scorecard is written from.
+ * A finished run, in the terms the canvas answers a finished run in.
  *
  * The session comes back WITH the count rather than being fetched afterwards: the
  * instant route commits every patch inside one React batch, so at the moment it

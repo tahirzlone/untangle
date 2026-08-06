@@ -1,7 +1,7 @@
-/* The copy control, wherever it stands: the prompt panel's header, the install
-   kit's, and the scorecard's two blocks. Moved here with the component for the
-   same reason the component moved — one button, one look, no stylesheet that has
-   to be loaded by a panel the button is not in. */
+/* The copy control, wherever it stands: the results window's two panes and its
+   install kit. Moved here with the component for the same reason the component
+   moved — one button, one look, no stylesheet that has to be loaded by a panel
+   the button is not in. */
 
 /* EXPORT's ghost-button conventions at header scale. */
 .sg-copy-btn {
