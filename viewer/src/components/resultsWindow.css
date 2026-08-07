@@ -11,8 +11,12 @@
 .sg-results-back {
   position: absolute;
   inset: 0;
-  /* over the drawer (6) and everything under it, like the scorecard before it */
-  z-index: 7;
+  /* over the drawer (6) and everything under it, like the scorecard before it —
+     and over the transient tier (8: the peek, the celebration floats) too, which
+     is what 9 buys. A float still rising off the step the last patch landed on
+     would otherwise draw through the backdrop and over the window; a modal is the
+     top of the stack for as long as it is open. */
+  z-index: 9;
   display: grid;
   place-items: center;
   padding: 24px;

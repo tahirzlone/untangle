@@ -5,7 +5,8 @@
   position: fixed;
   inset: 0;
   /* the same layer the peek draws on: the topmost transient thing on the screen,
-     and gone within a second of arriving */
+     and gone within a second of arriving — under the results window's backdrop
+     (9), which is modal and outranks anything still in flight */
   z-index: 8;
   /* never a target — a number rising past the cursor must not swallow the click
      the user makes next */

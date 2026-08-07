@@ -520,7 +520,7 @@ it('makes the canvas behind it inert, and gives it back on close', async () => {
   }
 });
 
-// The drawer draws at z6 and the backdrop at z7, so a panel opened now would be a
+// The drawer draws at z6 and the backdrop at z9, so a panel opened now would be a
 // panel nobody can see holding the focus. The canvas declines to open one — and
 // `inert` blocks the session from moving at all while the window reads it live.
 it('will not open the drawer while the window is up', async () => {

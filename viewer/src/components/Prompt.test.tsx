@@ -63,7 +63,7 @@ it('opens the window from PROMPT at any cursor — V0 included, honestly', async
 /**
  * A panel open when PROMPT is pressed does not survive under the window.
  *
- * It would be invisible there — z6 under a z7 backdrop — and, worse, its Escape
+ * It would be invisible there — z6 under a z9 backdrop — and, worse, its Escape
  * listener sits on the window, where `inert` cannot reach it: inert stops focus
  * and pointers, not window listeners. Left mounted, ONE Escape aimed at the
  * results window would take the unseen panel down with it and try to hand focus
