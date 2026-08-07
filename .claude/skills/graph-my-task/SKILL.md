@@ -19,7 +19,7 @@ Turn the user's task description into a **vanilla workflow graph**: an honest fl
 
 ## ROOT
 
-This skill has two homes: a checkout of its own repository (invoked `/graph-my-task`), and the installed `untangle` plugin (invoked `/untangle:graph-my-task`), where these files live in the plugin's install directory while the working directory is the user's own project. One derivation covers both: **ROOT is the directory three levels up from this SKILL.md** — SKILL.md → `graph-my-task/` → `skills/` → `.claude/` → ROOT. The harness names this SKILL.md's directory when it loads the skill; derive ROOT from that path, never from where the session happens to be. In a checkout that lands on the repo root; installed as the plugin it lands on a versioned install directory (e.g. `…/cache/untangle/untangle/1.0.0/`). Wherever `<ROOT>` appears below, write out that absolute path. `schema/`, `scripts/`, and `kb/` always resolve from ROOT and never from the working directory — the working directory is where the output file goes, nothing more.
+This skill has two homes: a checkout of its own repository (invoked `/graph-my-task`), and the installed `untangle` plugin (invoked `/untangle:graph-my-task`), where these files live in the plugin's install directory while the working directory is the user's own project. One derivation covers both: **ROOT is the directory three levels up from this SKILL.md** — SKILL.md → `graph-my-task/` → `skills/` → `.claude/` → ROOT. The harness names this SKILL.md's directory when it loads the skill; derive ROOT from that path, never from where the session happens to be. In a checkout that lands on the repo root; installed as the plugin it lands on a versioned install directory (e.g. `…/cache/untangle/untangle/1.0.0/`). Wherever `<ROOT>` appears below, write out that absolute path. `schema/`, `scripts/`, and `kb/` always resolve from ROOT and never from the working directory — the working directory gets the output file and tier 2's deleted-after scratch, nothing more.
 
 ## Output
 
@@ -153,10 +153,10 @@ This is the tier for both keyless runs and runs whose Airtable fetch broke. If y
 **curl (bash / Git Bash)** — body to a file, status to the terminal. Keep it that way: a failing feed answers with a full HTML error page, and dumping that into the session costs thousands of tokens for nothing.
 
 ```bash
-curl -sS -o kb.json -w 'HTTP %{http_code}\n' "${UNTANGLE_KB_URL:-https://tahirlone.com/api/untangle/kb}"
+curl -sS -o untangle-kb-scratch.json -w 'HTTP %{http_code}\n' "${UNTANGLE_KB_URL:-https://tahirlone.com/api/untangle/kb}"
 ```
 
-Read `kb.json` **only** when that line printed `HTTP 200`; on any other status leave the file unopened (it holds an error body or a site error page) and go to tier 2.5. Delete `kb.json` once the suggestions are authored — it is scratch, not a repo artifact.
+Read `untangle-kb-scratch.json` **only** when that line printed `HTTP 200`; on any other status leave the file unopened (it holds an error body or a site error page) and go to tier 2.5. Delete `untangle-kb-scratch.json` once the suggestions are authored — it is scratch, not a project artifact. (The awkward name is deliberate: this file lands in the working directory — in plugin mode, the user's own project — and a scratch write must never overwrite a file of theirs.)
 
 **PowerShell** (`Invoke-RestMethod` parses the JSON for you and *throws* on any non-200 — that throw is your signal to go to tier 2.5):
 
@@ -238,7 +238,7 @@ The knowledge-base table's fields and select choices are documented in `<ROOT>/k
 
 #### Tier 2.5 — the bundled snapshot (tier 2 unusable)
 
-`<ROOT>/kb/kb.json`, resolved from the root this skill ships in — the checkout or the plugin install directory, whichever home this SKILL.md was read from. It is a daily CI mirror of the very feed tier 2 just failed to reach, committed by the `KB snapshot` workflow, so it is a tracked file that is always there: not tier 2's scratch `kb.json`, and never deleted. No network, no request — just read it from disk.
+`<ROOT>/kb/kb.json`, resolved from the root this skill ships in — the checkout or the plugin install directory, whichever home this SKILL.md was read from. It is a daily CI mirror of the very feed tier 2 just failed to reach, committed by the `KB snapshot` workflow, so it is a tracked file that is always there: not tier 2's scratch `untangle-kb-scratch.json`, and never deleted. No network, no request — just read it from disk.
 
 The file is the tier-2 envelope on disk with one addition: `fetchedAt`, the ISO 8601 timestamp of the run that took the snapshot. That field is the snapshot's age; hold on to it for the report.
 
