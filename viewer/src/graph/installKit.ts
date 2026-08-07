@@ -4,10 +4,10 @@ import type { Suggestion } from './types';
  * The install kit: what the prompt is about to rely on, as commands to run.
  *
  * The optimized prompt already NAMES every install — gathered into the setup
- * block prompt.ts writes under the prose. Naming is not installing. A skill that is not on the machine
- * does nothing when the pasted prompt asks for it, and an MCP server added
- * halfway through a session is not there until the next one, so the commands
- * belong BEFORE the prompt rather than inside it.
+ * block prompt.ts writes under the prose. Naming is not installing. A skill
+ * that is not on the machine does nothing when the pasted prompt asks for it,
+ * and an MCP server added halfway through a session is not there until the
+ * next one, so the commands belong BEFORE the prompt rather than inside it.
  *
  * They come out of here as one block to paste, in two classes, because they are
  * typed in two different places: `claude mcp add …` is a shell command and goes
