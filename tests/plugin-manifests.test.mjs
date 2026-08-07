@@ -10,8 +10,8 @@ const read = (rel) => JSON.parse(readFileSync(join(repoRoot, rel), 'utf8'));
 const marketplace = read('.claude-plugin/marketplace.json');
 const plugin = read('.claude-plugin/plugin.json');
 
-// The name is the namespace users type: `untangle@untangle` to install,
-// `/untangle:graph-my-task` to invoke. Anything outside this shape breaks both.
+// Names are the namespace users type, so kebab-case is the only shape the
+// install and invocation strings can carry.
 const KEBAB = /^[a-z0-9][a-z0-9-]*$/;
 
 // Every "./…" string in either manifest is a promise about the repo layout.
@@ -29,7 +29,13 @@ const relativePaths = (value, found = []) => {
 };
 
 describe('plugin + marketplace manifests', () => {
-  it('both parse and carry kebab-case names', () => {
+  // Pinned to the literal, not merely to the shape: these two strings are the
+  // ones the README hands the reader — `untangle@untangle` is <plugin>@<marketplace>,
+  // and `/untangle:graph-my-task` is the plugin name again. Rename either half
+  // and the documented commands stop working while a shape-only check stays green.
+  it('both parse and name themselves untangle, in kebab case', () => {
+    expect(marketplace.name).toBe('untangle');
+    expect(plugin.name).toBe('untangle');
     expect(marketplace.name).toMatch(KEBAB);
     expect(plugin.name).toMatch(KEBAB);
     for (const entry of marketplace.plugins) expect(entry.name).toMatch(KEBAB);
