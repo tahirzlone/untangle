@@ -30,4 +30,10 @@ await build({
   platform: 'node',
   format: 'esm',
   banner: { js: banner },
+  // esbuild writes its module-path comments relative to absWorkingDir, which
+  // otherwise defaults to process.cwd(). Every path above resolves from this
+  // file's own URL, so the bundler runs from anywhere — and run from anywhere
+  // else, it would stamp this checkout's directory name into ~1400 comment
+  // lines and hand CI a 7800-line diff to explain. Pin it to the repo root.
+  absWorkingDir: fileURLToPath(root),
 });
