@@ -1,0 +1,21 @@
+{
+  "name": "untangle",
+  "version": "1.0.0",
+  "description": "Map your Claude workflows — describe a task, see the flowchart of how Claude would break it down with zero helpers, then watch skills, plugins, and MCP servers collapse it into something radically simpler.",
+  "author": {
+    "name": "Tahir Lone",
+    "url": "https://tahirlone.com"
+  },
+  "homepage": "https://tahirlone.com",
+  "repository": "https://github.com/tahirzlone/untangle",
+  "license": "MIT",
+  "keywords": [
+    "workflow",
+    "visualizer",
+    "skills",
+    "mcp"
+  ],
+  "skills": [
+    "./.claude/skills/"
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "untangle",
+  "description": "The Untangle plugin: map your Claude workflows, then simplify them.",
+  "owner": {
+    "name": "Tahir Lone",
+    "url": "https://tahirlone.com"
+  },
+  "plugins": [
+    {
+      "name": "untangle",
+      "source": "./",
+      "description": "Map your Claude workflows — describe a task, see the flowchart of how Claude would break it down with zero helpers, then watch skills, plugins, and MCP servers collapse it into something radically simpler.",
+      "category": "productivity",
+      "keywords": [
+        "workflow",
+        "visualizer",
+        "skills",
+        "mcp"
+      ]
+    }
+  ]
+}
