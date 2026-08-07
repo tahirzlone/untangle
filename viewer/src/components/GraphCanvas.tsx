@@ -1100,14 +1100,27 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
   /** Which entry opened the window matters not; how focus leaves it does. */
   const focusAfterResults = useRef(false);
 
+  /**
+   * The standing entry, from the PROMPT toolbar button, at any cursor.
+   *
+   * A panel left open goes with it — the window supersedes it, the same move
+   * `startTour` makes for the same canvas. Not merely tidiness: the drawer draws
+   * at z6 under a z7 backdrop, so it would be a panel nobody can see, and its
+   * Escape listener is on the WINDOW, which `inert` never reaches — inert blocks
+   * focus and pointers, not window listeners. One Escape aimed at the results
+   * window would silently close the invisible panel too, and the focus it hands
+   * back to its card would be refused by the inert canvas.
+   */
+  const openResults = useCallback(() => {
+    closeDrawer();
+    setResultsOpen(true);
+  }, [closeDrawer]);
+
   /** The tour's entry: the button is spent by the click — PROMPT stands after. */
   const openResultsFromTour = useCallback(() => {
     setTourEnded(null);
-    setResultsOpen(true);
-  }, []);
-
-  /** The standing entry, from the PROMPT toolbar button, at any cursor. */
-  const openResults = useCallback(() => setResultsOpen(true), []);
+    openResults();
+  }, [openResults]);
 
   const closeResults = useCallback(() => {
     focusAfterResults.current = true;

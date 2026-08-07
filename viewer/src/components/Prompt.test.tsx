@@ -3,7 +3,15 @@ import gallery from '../../../gallery/add-e2e-tests.workflow.json';
 import enrichedDoc from '../test/fixtures/enriched.workflow.json';
 import { applySuggestion, createSession } from '../graph/apply';
 import { assemblePrompt } from '../graph/prompt';
-import { applyOn, cardLabels, cardsOf, fixture, LAYOUT_WAIT, reduceMotion } from '../test/harness';
+import {
+  applyOn,
+  cardFor,
+  cardLabels,
+  cardsOf,
+  fixture,
+  LAYOUT_WAIT,
+  reduceMotion,
+} from '../test/harness';
 import { GraphCanvas } from './GraphCanvas';
 
 /**
@@ -50,6 +58,36 @@ it('opens the window from PROMPT at any cursor — V0 included, honestly', async
   expect(afterText()).toBe(INTRO);
 
   await closeWindow();
+});
+
+/**
+ * A panel open when PROMPT is pressed does not survive under the window.
+ *
+ * It would be invisible there — z6 under a z7 backdrop — and, worse, its Escape
+ * listener sits on the window, where `inert` cannot reach it: inert stops focus
+ * and pointers, not window listeners. Left mounted, ONE Escape aimed at the
+ * results window would take the unseen panel down with it and try to hand focus
+ * to a card the inert canvas refuses. So the window closes it on the way in, the
+ * way OPTIMIZE does, and the keystroke has exactly one thing to close.
+ */
+it('closes a drawer left open, so one Escape closes only the window', async () => {
+  render(<GraphCanvas workflow={enriched} />);
+  const all = await cardsOf(enriched);
+
+  // a step no patch touches, so nothing but the window itself shuts this panel
+  fireEvent.click(cardFor('Gather the brief', all));
+  await screen.findByTestId('detail-drawer');
+
+  openWindow();
+  expect(screen.getByTestId('results-window')).toBeInTheDocument();
+  expect(screen.queryByTestId('detail-drawer')).not.toBeInTheDocument();
+
+  fireEvent.keyDown(window, { key: 'Escape' });
+  await waitFor(() => expect(screen.queryByTestId('results-window')).not.toBeInTheDocument());
+  // the panel neither came back nor was closed behind the user's back — it was
+  // already gone — and focus lands where every route out of the window sends it
+  expect(screen.queryByTestId('detail-drawer')).not.toBeInTheDocument();
+  expect(document.activeElement).toBe(screen.getByTestId('prompt-btn'));
 });
 
 // No optimization story, no deliverable: the same gate the impact rail and
