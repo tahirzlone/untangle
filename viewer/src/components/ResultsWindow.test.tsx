@@ -5,7 +5,7 @@ import enrichedDoc from '../test/fixtures/enriched.workflow.json';
 import { applySuggestion, createSession, type GraphSession } from '../graph/apply';
 import { assemblePrompt } from '../graph/prompt';
 import type { Suggestion } from '../graph/types';
-import { fixture, mockClipboard } from '../test/harness';
+import { fixture, mockClipboard, press } from '../test/harness';
 import { ResultsWindow } from './ResultsWindow';
 
 /**
@@ -418,8 +418,8 @@ it('closes on Escape and on the backdrop, and not on its own body', () => {
   // a plain backdrop press: down and up both on the backdrop itself — the
   // pointer pair a real click always arrives as
   const backdrop = screen.getByTestId('results-backdrop');
-  fireEvent.pointerDown(backdrop);
-  fireEvent.pointerUp(backdrop);
+  press('pointerDown', backdrop);
+  press('pointerUp', backdrop);
   fireEvent.click(backdrop);
   expect(onClose).toHaveBeenCalledTimes(2);
 
@@ -446,21 +446,44 @@ it('keeps the window when a selection drag overshoots onto the backdrop', () => 
 
   // the overshoot, as the browser dispatches it: press in the pane, release on
   // the backdrop, click synthesized on their common ancestor
-  fireEvent.pointerDown(pane);
-  fireEvent.pointerUp(backdrop);
+  press('pointerDown', pane);
+  press('pointerUp', backdrop);
   fireEvent.click(backdrop);
   expect(onClose).not.toHaveBeenCalled();
 
   // the reverse overshoot — press on the backdrop, release in the pane — is a
   // gesture that touched the window too, and keeps it for the same reason
-  fireEvent.pointerDown(backdrop);
-  fireEvent.pointerUp(pane);
+  press('pointerDown', backdrop);
+  press('pointerUp', pane);
   fireEvent.click(backdrop);
   expect(onClose).not.toHaveBeenCalled();
 
   // and the way out still works: both ends on the backdrop
-  fireEvent.pointerDown(backdrop);
-  fireEvent.pointerUp(backdrop);
+  press('pointerDown', backdrop);
+  press('pointerUp', backdrop);
+  fireEvent.click(backdrop);
+  expect(onClose).toHaveBeenCalledTimes(1);
+});
+
+/**
+ * The way out is the LEFT button's. A right-click on the backdrop is how a
+ * browser context menu is asked for — over a window whose panes are text to
+ * take — and it arrives as the same pointer pair a close is read off. Closing
+ * on it would take the window away underneath the menu it just raised.
+ */
+it('keeps the window on a press that is not the left button', () => {
+  const onClose = vi.fn();
+  render(<Host session={sessionWith(enriched, FIRECRAWL)} onClose={onClose} />);
+  const backdrop = screen.getByTestId('results-backdrop');
+
+  press('pointerDown', backdrop, { button: 2 });
+  press('pointerUp', backdrop, { button: 2 });
+  fireEvent.click(backdrop);
+  expect(onClose).not.toHaveBeenCalled();
+
+  // and the right-click left nothing behind it: the next left press still closes
+  press('pointerDown', backdrop);
+  press('pointerUp', backdrop);
   fireEvent.click(backdrop);
   expect(onClose).toHaveBeenCalledTimes(1);
 });

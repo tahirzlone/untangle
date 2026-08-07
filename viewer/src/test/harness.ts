@@ -76,6 +76,26 @@ export function mouse(
 }
 
 /**
+ * One end of a pointer gesture, carrying the two fields a real device always
+ * sends: which button, and whether this is the primary pointer.
+ *
+ * jsdom has no PointerEvent, so testing-library builds these on the base Event
+ * constructor and both fields are dropped — they are defined on the instance
+ * instead, the same move `mouse` makes for d3-drag's `view`. Defaults are a
+ * plain left press, so a caller only names a field when that is the point.
+ */
+export function press(
+  type: 'pointerDown' | 'pointerUp',
+  target: Element,
+  init: { button?: number; isPrimary?: boolean } = {},
+) {
+  const event = createEvent[type](target);
+  Object.defineProperty(event, 'button', { value: init.button ?? 0 });
+  Object.defineProperty(event, 'isPrimary', { value: init.isPrimary ?? true });
+  fireEvent(target, event);
+}
+
+/**
  * Takes the browser's own download route out of play, and keeps what was asked of it.
  *
  * A download is an anchor click, and jsdom answers one with "Not implemented:

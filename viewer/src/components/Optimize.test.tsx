@@ -9,6 +9,7 @@ import {
   fixture,
   impactStats,
   LAYOUT_WAIT,
+  press,
   reduceMotion,
 } from '../test/harness';
 import { GraphCanvas } from './GraphCanvas';
@@ -506,8 +507,8 @@ it('makes the canvas behind it inert, and gives it back on close', async () => {
     // pointer pair, so a selection drag overshooting the window cannot take it
     // down — see ResultsWindow.test.tsx for that pin.
     const backdrop = screen.getByTestId('results-backdrop');
-    fireEvent.pointerDown(backdrop);
-    fireEvent.pointerUp(backdrop);
+    press('pointerDown', backdrop);
+    press('pointerUp', backdrop);
     await waitFor(() => expect(screen.queryByTestId('results-window')).not.toBeInTheDocument());
     expect(screen.getByTestId('canvas')).not.toHaveAttribute('inert');
     // focus lands on the standing entry — inside the canvas that was inert a

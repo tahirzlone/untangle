@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, type KeyboardEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  type KeyboardEvent,
+  type PointerEvent,
+} from 'react';
 import type { GraphSession } from '../graph/apply';
 import { buildInstallBlock, hasInstall, installKind, isMultiLine } from '../graph/installKit';
 import { impactLabel, impactParts, impactSummary, painLabel } from '../graph/metrics';
@@ -39,6 +46,15 @@ const FOCUSABLE =
 
 /** The one neutral thing a tick claims: the command joins the prompt and the kit. */
 const INCLUDE_LABEL = 'include install steps';
+
+/**
+ * Is this end of a gesture one the backdrop may close on? The left button of the
+ * primary pointer, and nothing else. A right-click raises the browser's own menu
+ * over the backdrop and a middle-click pastes on X11 — neither asks for the
+ * window to go, and both dispatch the same pointer pair a close is read off.
+ * `isPrimary` says the same thing to a second finger arriving mid-pinch.
+ */
+const closes = (e: PointerEvent<HTMLDivElement>) => e.button === 0 && e.isPrimary;
 
 /**
  * One row of the resources list: every applied suggestion it speaks for, and
@@ -288,11 +304,15 @@ export function ResultsWindow({
       // Both ends of the gesture are read here, off the pointer events, because
       // the browser dispatches a mixed-target CLICK on the common ancestor —
       // this element — where no stopPropagation of the panel's can reach it.
-      // See `pressOnBackdrop` for what that protects.
+      // See `pressOnBackdrop` for what that protects. Either end that is not a
+      // plain left press is left alone entirely — see `closes` — so a gesture
+      // aimed at something else never touches the one being tracked.
       onPointerDown={(e) => {
+        if (!closes(e)) return;
         pressOnBackdrop.current = e.target === e.currentTarget;
       }}
       onPointerUp={(e) => {
+        if (!closes(e)) return;
         const pressed = pressOnBackdrop.current;
         pressOnBackdrop.current = false;
         if (pressed && e.target === e.currentTarget) onClose();
