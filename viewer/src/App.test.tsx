@@ -1,5 +1,25 @@
+import { gzipSync } from 'node:zlib';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import addE2eTests from '../../gallery/add-e2e-tests.workflow.json';
+import payments from '../../gallery/ship-a-payments-feature.workflow.json';
 import App from './App';
+import { LAYOUT_WAIT } from './test/harness';
+
+/** A share link the way the skill's closing stage writes one. */
+function linkTo(document: unknown): string {
+  return `#g=${gzipSync(JSON.stringify(document), { level: 9 }).toString('base64url')}`;
+}
+
+/** Puts the app at a URL, the way opening one would — without a history entry. */
+function arriveAt(hash: string) {
+  window.history.replaceState(null, '', `/${hash}`);
+}
+
+// The address bar is shared state for a file's worth of tests: a hash left
+// behind by one is a link the next one never asked to arrive on.
+afterEach(() => {
+  window.history.replaceState(null, '', '/');
+});
 
 it('renders the graph-index masthead', () => {
   render(<App />);
@@ -77,6 +97,68 @@ it('rejects an invalid file dropped while a graph is already on the canvas', asy
   const bad = new File(['{"meta":{}}'], 'bad.workflow.json', { type: 'application/json' });
   fireEvent.drop(document.body, { dataTransfer: { files: [bad] } });
   await waitFor(() => expect(screen.getByTestId('rejected-panel')).toBeInTheDocument());
+});
+
+// A run of the skill ends in a link, and this is what the link is worth: the
+// whole canvas, opened from the address bar, with nothing left for the reader
+// to do first.
+it('opens a #g= link straight onto the canvas', async () => {
+  arriveAt(linkTo(payments));
+  render(<App />);
+  await waitFor(() => expect(screen.getByTestId('canvas')).toBeInTheDocument());
+  expect(screen.getByText(payments.meta.title)).toBeInTheDocument();
+});
+
+it('shows GRAPH REJECTED for a link that will not decode, and forgets it on the way back', async () => {
+  arriveAt('#g=!!!!');
+  render(<App />);
+  await waitFor(() => expect(screen.getByTestId('rejected-panel')).toBeInTheDocument());
+  expect(screen.getByText(/not valid base64url/i)).toBeInTheDocument();
+
+  fireEvent.click(screen.getByText('BACK TO GRAPHS'));
+  expect(screen.getAllByText('OPEN GRAPH').length).toBeGreaterThan(0);
+  expect(window.location.hash).toBe('');
+});
+
+// The URL must not claim a graph that is not on screen.
+it('forgets the link when the masthead leaves the graph it carried', async () => {
+  arriveAt(linkTo(payments));
+  render(<App />);
+  await waitFor(() => expect(screen.getByTestId('canvas')).toBeInTheDocument());
+  expect(window.location.hash).not.toBe('');
+
+  fireEvent.click(screen.getByText(/graph index/i));
+  expect(screen.getAllByText('OPEN GRAPH').length).toBeGreaterThan(0);
+  expect(window.location.hash).toBe('');
+});
+
+// The index is on screen while the link is still being unzipped, so a reader who
+// opens a graph from it is not overruled a moment later by one they navigated
+// away from — and the URL stops claiming the one they left.
+it('keeps the gallery graph opened while the link was still decoding', async () => {
+  arriveAt(linkTo(addE2eTests));
+  render(<App />);
+  fireEvent.click(screen.getAllByText('OPEN GRAPH')[0]);
+  expect(window.location.hash).toBe('');
+
+  await waitFor(
+    () => expect(screen.getAllByTestId('sg-node')).toHaveLength(payments.nodes.length),
+    LAYOUT_WAIT,
+  );
+  expect(screen.getByText(payments.meta.title)).toBeInTheDocument();
+  expect(screen.queryByText(addE2eTests.meta.title)).not.toBeInTheDocument();
+});
+
+// A hash the app did not write is none of its business — it neither opens it nor
+// rewrites it.
+it('leaves a URL that carries no graph exactly as it found it', async () => {
+  arriveAt('#somewhere-else');
+  render(<App />);
+  expect(screen.getAllByText('OPEN GRAPH').length).toBeGreaterThan(0);
+
+  fireEvent.click(screen.getAllByText('OPEN GRAPH')[0]);
+  await waitFor(() => expect(screen.getByTestId('canvas')).toBeInTheDocument());
+  expect(window.location.hash).toBe('#somewhere-else');
 });
 
 // The copy sweep is a product decision, not a style preference: nothing in the

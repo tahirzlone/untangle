@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { galleryEntries } from './gallery/galleryData';
+import { decodeFragment, graphPayload, withoutBom } from './graph/fragment';
 import { loadWorkflow } from './graph/load';
 import type { Workflow } from './graph/types';
 import { GraphCanvas } from './components/GraphCanvas';
@@ -10,8 +11,6 @@ type View =
   | { mode: 'gallery' }
   | { mode: 'graph'; workflow: Workflow }
   | { mode: 'rejected'; errors: string[] };
-
-const BOM = 0xfeff;
 
 // FileReader rather than `file.text()`: the latter is unimplemented in jsdom's
 // Blob (26.x) and in older Safari, and this is the one place the app touches
@@ -36,7 +35,7 @@ export default function App() {
         let raw: unknown;
         try {
           // Editors on Windows happily save JSON with a byte-order mark; JSON.parse won't.
-          raw = JSON.parse(text.charCodeAt(0) === BOM ? text.slice(1) : text);
+          raw = JSON.parse(withoutBom(text));
         } catch (err) {
           setView({
             mode: 'rejected',
@@ -53,6 +52,48 @@ export default function App() {
       },
     );
   }, []);
+
+  // A `#g=` link opens straight into the graph it carries — the same two
+  // outcomes a dropped file has, reached from the address bar. Once, on mount:
+  // the app is root-only, and the one hash change it makes is its own.
+  useEffect(() => {
+    let live = true;
+    decodeFragment(window.location.hash).then((res) => {
+      if (!live || res === null) return;
+      const arrived: View = res.ok
+        ? { mode: 'graph', workflow: res.workflow }
+        : { mode: 'rejected', errors: res.errors };
+      // Nobody waits on the decode. A file dropped — or a gallery graph opened —
+      // while it was in flight owns the view, and a link landing afterwards does
+      // not take it back.
+      setView((current) => (current.mode === 'gallery' ? arrived : current));
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  // The URL must not claim a graph that is not on screen: a `#g=` link is spent
+  // the moment the view leaves what it carried. replaceState rather than a hash
+  // write, which would push an entry and leave Back pointing at a link the app
+  // has already consumed.
+  const forgetLink = useCallback(() => {
+    if (graphPayload(window.location.hash) === null) return;
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+  }, []);
+
+  const showGallery = useCallback(() => {
+    forgetLink();
+    setView({ mode: 'gallery' });
+  }, [forgetLink]);
+
+  const showGraph = useCallback(
+    (workflow: Workflow) => {
+      forgetLink();
+      setView({ mode: 'graph', workflow });
+    },
+    [forgetLink],
+  );
 
   // Drop is an app-wide affordance, not a gallery-only one. Without a window
   // guard the browser takes the default action for a dropped file — it
@@ -81,22 +122,16 @@ export default function App() {
     <div className="app-shell">
       <header className="app-masthead">
         Untangle{' '}
-        <button className="masthead-sub masthead-link" onClick={() => setView({ mode: 'gallery' })}>
+        <button className="masthead-sub masthead-link" onClick={showGallery}>
           graph index
         </button>
       </header>
       <main className="app-main">
         {view.mode === 'gallery' && (
-          <GalleryIndex
-            entries={galleryEntries}
-            onOpen={(workflow) => setView({ mode: 'graph', workflow })}
-            onDropFile={handleFile}
-          />
+          <GalleryIndex entries={galleryEntries} onOpen={showGraph} onDropFile={handleFile} />
         )}
         {view.mode === 'graph' && <GraphCanvas workflow={view.workflow} />}
-        {view.mode === 'rejected' && (
-          <RejectedSheet errors={view.errors} onBack={() => setView({ mode: 'gallery' })} />
-        )}
+        {view.mode === 'rejected' && <RejectedSheet errors={view.errors} onBack={showGallery} />}
       </main>
     </div>
   );

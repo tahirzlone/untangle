@@ -1,5 +1,5 @@
 /**
- * The one node API the suite touches, declared rather than depended on.
+ * The one filesystem call the suite touches, declared rather than depended on.
  *
  * `railHeight.test.ts` reads two stylesheets as text, because vitest stubs every
  * CSS import to an empty string (`test.css` is off) — `?raw` included — and jsdom
