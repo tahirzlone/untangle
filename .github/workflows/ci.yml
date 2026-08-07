@@ -30,6 +30,12 @@ jobs:
           cache-dependency-path: package-lock.json
       - run: npm ci
       - run: npm test
+      # scripts/validate.bundle.mjs is a generated file that lives in git, because
+      # the skill runs it where node_modules does not exist. Regenerate it and
+      # insist the tree stays clean: a validator source edited without re-running
+      # the bundler would otherwise ship a stale artifact to every plugin install.
+      - run: npm run bundle:validator
+      - run: git diff --exit-code scripts/validate.bundle.mjs
 
   viewer:
     name: viewer (suite, types, build)

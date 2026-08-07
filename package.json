@@ -3,12 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "type": "module",
   "description": "Map your Claude workflows — graph how Claude would break down a task, then watch skills, plugins, and MCPs simplify it.",
   "scripts": {
     "test": "vitest run",
     "validate": "node scripts/validate.mjs",
+    "bundle:validator": "node scripts/bundle-validator.mjs",
     "test:viewer": "npm --prefix viewer test",
     "dev:viewer": "npm --prefix viewer run dev",
     "build:viewer": "npm --prefix viewer run build"
@@ -16,6 +19,7 @@
   "devDependencies": {
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
+    "esbuild": "^0.28.1",
     "vitest": "^3.2.0"
   }
 }
