@@ -1105,7 +1105,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
    *
    * A panel left open goes with it — the window supersedes it, the same move
    * `startTour` makes for the same canvas. Not merely tidiness: the drawer draws
-   * at z6 under a z7 backdrop, so it would be a panel nobody can see, and its
+   * at z6 under a z9 backdrop, so it would be a panel nobody can see, and its
    * Escape listener is on the WINDOW, which `inert` never reaches — inert blocks
    * focus and pointers, not window listeners. One Escape aimed at the results
    * window would silently close the invisible panel too, and the focus it hands
@@ -1198,7 +1198,7 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
    * Is the canvas answering to the user at all?
    *
    * False while the tour drives it, and false again while the Results Window is
-   * up: the drawer draws at z6 and the backdrop at z7, so a panel opened now
+   * up: the drawer draws at z6 and the backdrop at z9, so a panel opened now
    * would be a panel nobody can see, holding the focus. `inert` on the canvas is
    * what stops a pointer or a Tab reaching it; this is what stops the canvas's
    * own key handlers acting on something that got through anyway — and what

@@ -15,7 +15,13 @@
      and over the transient tier (8: the peek, the celebration floats) too, which
      is what 9 buys. A float still rising off the step the last patch landed on
      would otherwise draw through the backdrop and over the window; a modal is the
-     top of the stack for as long as it is open. */
+     top of the stack for as long as it is open.
+
+     That comparison is only real while `.app-main` stays a plain positioned
+     ancestor. The tier at 8 is portalled onto the body; this backdrop is not, so
+     a transform, filter, opacity, isolation, or z-index landing on `.app-main`
+     would make it a stacking context and seal 9 inside it — leaving the floats to
+     draw over the window again, against a number that still says 9. */
   z-index: 9;
   display: grid;
   place-items: center;

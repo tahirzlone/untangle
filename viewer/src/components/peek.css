@@ -5,7 +5,8 @@
 .sg-peek {
   position: fixed;
   /* above the toolbar (5) and the drawer (6): the peek is the topmost transient
-     thing on the screen, and it is gone the moment the pointer leaves */
+     thing on the screen, and it is gone the moment the pointer leaves — under the
+     results window's backdrop (9), which is modal and outranks the whole tier */
   z-index: 8;
   box-sizing: border-box;
   /* never a target — the pointer is resting on the CARD, and a panel that took
