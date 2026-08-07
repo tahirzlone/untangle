@@ -1,6 +1,6 @@
 ---
 name: graph-my-task
-description: Generate an Untangle workflow graph — decompose a task into the flowchart of how Claude would execute it with ZERO helpers (no skills, plugins, connectors, or MCP servers), written as a validated .workflow.json. Use when the user runs /graph-my-task, or asks to graph, flowchart, or map a task, workflow, or pipeline, or asks to install a workflow's suggested resources.
+description: Generate an Untangle workflow graph — decompose a task into the flowchart of how Claude would execute it with ZERO helpers (no skills, plugins, connectors, or MCP servers), written as a validated .workflow.json. Use when the user runs /graph-my-task or /untangle:graph-my-task, or asks to graph, flowchart, or map a task, workflow, or pipeline, or asks to install a workflow's suggested resources.
 ---
 
 # Graph My Task
@@ -17,9 +17,13 @@ Turn the user's task description into a **vanilla workflow graph**: an honest fl
 6. **Edges:** `sequence` for normal flow, `branch` out of decisions (label each branch), `retry` for backward loops (label the failure reason). The graph must be connected; every non-input node is reachable from the input node.
 7. **ids** are kebab-case (`^[a-z0-9][a-z0-9-]*$`), short and descriptive.
 
+## ROOT
+
+This skill has two homes: a checkout of its own repository (invoked `/graph-my-task`), and the installed `untangle` plugin (invoked `/untangle:graph-my-task`), where these files live in the plugin's install directory while the working directory is the user's own project. One derivation covers both: **ROOT is the directory three levels up from this SKILL.md** — SKILL.md → `graph-my-task/` → `skills/` → `.claude/` → ROOT. The harness names this SKILL.md's directory when it loads the skill; derive ROOT from that path, never from where the session happens to be. In a checkout that lands on the repo root; installed as the plugin it lands on a versioned install directory (e.g. `…/cache/untangle/untangle/1.0.0/`). Wherever `<ROOT>` appears below, write out that absolute path. `schema/`, `scripts/`, and `kb/` always resolve from ROOT and never from the working directory — the working directory is where the output file goes, nothing more.
+
 ## Output
 
-Write to `out/<slug>.workflow.json` where `<slug>` is a kebab-case slug of the title (or `gallery/<slug>.workflow.json` when the user says it's a gallery/showcase piece).
+Write to `out/<slug>.workflow.json` — under the **current working directory**, the project the user is running in — where `<slug>` is a kebab-case slug of the title. The alternative `gallery/<slug>.workflow.json` (when the user says it's a gallery/showcase piece) only makes sense in a checkout of this repo: `gallery/` lives at ROOT.
 
 Document shape:
 
@@ -27,7 +31,7 @@ Document shape:
 - `nodes`, `edges` per the rules above
 - `suggestions`: filled by the knowledge-base stage below; `[]` when no knowledge base is linked or nothing matched
 
-Field names and constraints for nodes, edges, and suggestions (required properties, label length caps, enums, the `airtableRecordId` pattern): see `schema/workflow.schema.json` — read it before authoring.
+Field names and constraints for nodes, edges, and suggestions (required properties, label length caps, enums, the `airtableRecordId` pattern): see `<ROOT>/schema/workflow.schema.json` — read it before authoring.
 
 ## Knowledge base (suggestions)
 
@@ -49,7 +53,7 @@ There are four ways this stage can end up with rows. Try them strictly in order 
 | --- | --- | --- | --- |
 | 1 | `AIRTABLE_API_KEY` is set | Airtable REST, straight from the base (step 2 · tier 1) | `"airtable"` |
 | 2 | tier 1 handed you no rows (no key set, **or** the key path failed) | the public feed — no token, no setup (step 2 · tier 2) | `"airtable"` |
-| 2.5 | tier 2 handed you no rows (feed unreachable, non-200, or empty) | the bundled snapshot — this repo's `kb/kb.json` (step 2 · tier 2.5) | `"airtable"` |
+| 2.5 | tier 2 handed you no rows (feed unreachable, non-200, or empty) | the bundled snapshot — `<ROOT>/kb/kb.json` (step 2 · tier 2.5) | `"airtable"` |
 | 3 | no source returned rows | nothing — the vanilla graph | `"none"` |
 
 Tiers 1, 2, and 2.5 are the same table read three ways — live, mirrored, and mirrored to disk — so all three are `"airtable"`.
@@ -230,29 +234,30 @@ One gap to hold on to: **the feed does not carry `Why Noteworthy`.** Step 5's cl
 
 The feed is a cached snapshot: an edit made in the source base reaches it typically within ~30 minutes (server cache + background refresh); during upstream outages the feed serves the last good copy and `updatedAt` shows its age. Neither case is a failure and neither needs working around: use exactly the rows the feed returned. Rows from tier 2 count fully as reading the knowledge base — `meta.kbSource` is `"airtable"`, same as tier 1 (step 7).
 
-The knowledge-base table's fields and select choices are documented in `kb/airtable-template.md`. Read it if a row's shape surprises you, or if the user is setting up their own base.
+The knowledge-base table's fields and select choices are documented in `<ROOT>/kb/airtable-template.md`. Read it if a row's shape surprises you, or if the user is setting up their own base.
 
 #### Tier 2.5 — the bundled snapshot (tier 2 unusable)
 
-`kb/kb.json`, resolved from the root of the repository this skill ships in — the same checkout this SKILL.md was read from. It is a daily CI mirror of the very feed tier 2 just failed to reach, committed by the `KB snapshot` workflow, so it is a tracked file that is always there: not tier 2's scratch `kb.json`, and never deleted. No network, no request — just read it from disk.
+`<ROOT>/kb/kb.json`, resolved from the root this skill ships in — the checkout or the plugin install directory, whichever home this SKILL.md was read from. It is a daily CI mirror of the very feed tier 2 just failed to reach, committed by the `KB snapshot` workflow, so it is a tracked file that is always there: not tier 2's scratch `kb.json`, and never deleted. No network, no request — just read it from disk.
 
 The file is the tier-2 envelope on disk with one addition: `fetchedAt`, the ISO 8601 timestamp of the run that took the snapshot. That field is the snapshot's age; hold on to it for the report.
 
-**PowerShell** (an error from either line — no file, or a file that is not JSON — is your signal to go to tier 3):
+**PowerShell** (set `$root` to the absolute ROOT first; an error from the read — no file, or a file that is not JSON — is your signal to go to tier 3):
 
 ```powershell
-$snap = Get-Content kb/kb.json -Raw | ConvertFrom-Json
+$root = '<ROOT>'
+$snap = Get-Content (Join-Path $root 'kb/kb.json') -Raw | ConvertFrom-Json
 "mirrored $($snap.fetchedAt) — $($snap.records.Count) records"
 $snap.records | ConvertTo-Json -Depth 6
 ```
 
-**Node (any platform)** — same signal, a thrown error means tier 3:
+**Node (any platform)** — same signal, a thrown error means tier 3; the trailing argument is the snapshot's ROOT-resolved path:
 
 ```bash
-node -e "const s=JSON.parse(require('fs').readFileSync('kb/kb.json','utf8'));console.log('mirrored '+s.fetchedAt+' — '+s.records.length+' records');console.log(JSON.stringify(s.records,null,1))"
+node -e "const s=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log('mirrored '+s.fetchedAt+' — '+s.records.length+' records');console.log(JSON.stringify(s.records,null,1))" "<ROOT>/kb/kb.json"
 ```
 
-Present, parseable, and `records` non-empty → those records **are** the rows: the same flat camelCase shape as tier 2, so the key-translation table above and steps 3–5 apply unchanged, and `meta.kbSource` is `"airtable"` (step 7). One extra duty comes with them: these rows are a mirror, not the live feed, so the report's knowledge-base line (`## Report`, item 4) must carry the staleness note — `KB snapshot — last mirrored <date>`, the date read from `fetchedAt`. (A hand-rolled snapshot might lack that field; then the file's last commit date stands in: `git log -1 --format=%cs -- kb/kb.json`.)
+Present, parseable, and `records` non-empty → those records **are** the rows: the same flat camelCase shape as tier 2, so the key-translation table above and steps 3–5 apply unchanged, and `meta.kbSource` is `"airtable"` (step 7). One extra duty comes with them: these rows are a mirror, not the live feed, so the report's knowledge-base line (`## Report`, item 4) must carry the staleness note — `KB snapshot — last mirrored <date>`, the date read from `fetchedAt`. (A hand-rolled snapshot might lack that field; then the file's last commit date stands in: `git -C "<ROOT>" log -1 --format=%cs -- kb/kb.json`.)
 
 Missing, unparseable, or `records: []` → tier 3. Do not fetch anything to repair the file — the network already had its turn in tier 2.
 
@@ -401,7 +406,7 @@ Grounded in a row named `example/rss-mcp`, claim *"Fetches and filters feeds in 
 
 ## Validation loop (mandatory)
 
-1. From the repo root, run: `node scripts/validate.mjs <path-you-wrote>` (e.g. `out/<slug>.workflow.json` or `gallery/<slug>.workflow.json`).
+1. Run: `node "<ROOT>/scripts/validate.bundle.mjs" <path-you-wrote>` (e.g. `out/<slug>.workflow.json` or `gallery/<slug>.workflow.json`) — from wherever you are. The bundle is dependency-free and resolves its schema relative to itself, so there is no npm-install step and no repo-root cwd to arrange.
 2. If `REJECTED`, fix the listed errors and re-run. If it still fails after one fix attempt, STOP and show the user the errors instead of looping.
 3. Only report success after seeing `OK:`.
 
