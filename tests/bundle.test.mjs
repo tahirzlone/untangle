@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { writeFileSync, mkdtempSync, readFileSync } from 'node:fs';
+import { writeFileSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,6 +27,7 @@ describe('bundled validator CLI', () => {
     const bad = join(dir, 'bad.workflow.json');
     writeFileSync(bad, JSON.stringify({ meta: {} }));
     const res = run(bad);
+    rmSync(dir, { recursive: true, force: true });
     expect(res.status).toBe(1);
     expect(res.stderr).toContain('REJECTED');
   });
@@ -57,6 +58,6 @@ describe('bundled validator artifact', () => {
   // Inlining the schema would fork the contract. It stays a file read through
   // import.meta.url, which in ESM output still points at scripts/.
   it('reads the schema off disk rather than inlining it', () => {
-    expect(src()).toContain("new URL(\"../schema/workflow.schema.json\", import.meta.url)");
+    expect(src()).toContain('new URL("../schema/workflow.schema.json", import.meta.url)');
   });
 });

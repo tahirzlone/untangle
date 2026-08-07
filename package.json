@@ -3,9 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
-  "engines": {
-    "node": ">=20"
-  },
+  "engines": { "node": ">=20" },
   "type": "module",
   "description": "Map your Claude workflows — graph how Claude would break down a task, then watch skills, plugins, and MCPs simplify it.",
   "scripts": {
