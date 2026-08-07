@@ -10,9 +10,37 @@ Map your Claude workflows. Describe a task → see the flowchart of how Claude w
 
 **[tahirzlone.github.io/untangle](https://tahirzlone.github.io/untangle/)** — the gallery, hosted. No account, no key, nothing to install: open **Ship a Payments Feature End-to-End**, press **OPTIMIZE** and watch the flow collapse step by step, then **VS ORIGINAL** to drag the seam between where it started and where it ended, and **VIEW RESULTS** for the thing you leave with.
 
+## Install the skill
+
+Two routes to the same skill; neither ends in an npm install.
+
+**As a plugin (no clone).** This repo is its own Claude Code plugin marketplace, serving itself as the `untangle` plugin:
+
+```sh
+claude plugin marketplace add tahirzlone/untangle
+claude plugin install untangle@untangle
+```
+
+From inside a session, the same two moves are `/plugin marketplace add tahirzlone/untangle` and `/plugin install untangle@untangle`. Then run `/untangle:graph-my-task "your task"` from any project at all: the graph lands in that project's `out/`, and the validation the skill runs needs nothing installed — the repo ships a dependency-free validator bundle. To see what you made, drop the file onto the [hosted demo](https://tahirzlone.github.io/untangle/). Third-party marketplaces do not auto-update by default, so a newer skill waits until you ask for it:
+
+```sh
+claude plugin marketplace update untangle
+claude plugin update untangle@untangle
+```
+
+**From a clone.**
+
+```sh
+git clone https://github.com/tahirzlone/untangle
+cd untangle
+claude
+```
+
+Then `/graph-my-task "your task"`. No npm install is needed to generate and validate graphs; `npm install` at the root and `npm --prefix viewer install` are for the local viewer, the test suites, and development — the next section.
+
 ## Run it yourself
 
-Node 20+ (CI runs 22). First time: `npm install` at the root **and** `npm --prefix viewer install`. The root install is not optional — the shared validator in `scripts/` resolves its `ajv` from the root `node_modules`, and it is what both the viewer and the skill's own validation loop run on, so a viewer-only install leaves a fresh clone unable to validate the graph it just generated. Then `npm run dev:viewer`, and open the printed URL. The graph index lists every graph in `gallery/`; drop any `*.workflow.json` (including files from `out/`) onto the page to open it on the canvas. Then, on the canvas:
+Node 20+ (CI runs 22). First time: `npm install` at the root **and** `npm --prefix viewer install`. The root install is not optional here — the shared validator in `scripts/` resolves its `ajv` from the root `node_modules`, and it is what the viewer, the dev validator (`scripts/validate.mjs`), and the test suites run on, so a viewer-only install leaves the viewer unable to validate the graph it loads. The one thing that no longer waits on it is the skill: its validation loop runs on the committed dependency-free bundle, so a fresh clone can generate and validate graphs before any install. Then `npm run dev:viewer`, and open the printed URL. The graph index lists every graph in `gallery/`; drop any `*.workflow.json` (including files from `out/`) onto the page to open it on the canvas. Then, on the canvas:
 
 - **Both ends are marked.** The first step wears START and takes a chevron into its left port; the last wears END and runs out of its right port to a terminal dot — so which way the work flows reads at a glance, at any zoom, and comes with the graph into an export.
 - **Rest on a badged card** and its best match rises beside it — the name, what it claims, what it saves — without opening anything. Move off and it goes. Once the detail panel is open the peek stays down; the panel is already saying more than it could.
@@ -31,7 +59,7 @@ Node 20+ (CI runs 22). First time: `npm install` at the root **and** `npm --pref
 
 ## The skill: `/graph-my-task`
 
-Open this repo in Claude Code and run `/graph-my-task "your task here"`: the skill decomposes the task into 6–16 honest steps — the manual gathering, the format wrangling, the retry loops, the human review gates — and writes them as a validated graph in `out/`. Before it validates, it reads a curated knowledge base of real Claude skills, plugins, and MCP servers and attaches the ones that would collapse a step, each with what it claims, what it saves, and the command that installs it, when there is one. It runs on your own Claude subscription, in your own checkout, and it never invents a helper: a resource that is not in the rows it fetched does not exist for that graph.
+The skill answers to two names for the same thing: `/graph-my-task "your task here"` in a checkout of this repo, `/untangle:graph-my-task "your task here"` when it is installed as the plugin. Run either and the skill decomposes the task into 6–16 honest steps — the manual gathering, the format wrangling, the retry loops, the human review gates — and writes them as a validated graph in `out/`: the checkout's own from a clone, the current project's when it runs as the plugin. Before it validates, it reads a curated knowledge base of real Claude skills, plugins, and MCP servers and attaches the ones that would collapse a step, each with what it claims, what it saves, and the command that installs it, when there is one. It runs on your own Claude subscription, in your own project, and it never invents a helper: a resource that is not in the rows it fetched does not exist for that graph.
 
 **Suggestions need no setup.** The knowledge base resolves in four tiers, tried strictly in order, stopping at the first that hands over rows — it never climbs back up:
 
@@ -51,6 +79,8 @@ Tiers 1, 2, and 2.5 are the same table read three ways — live, mirrored, and m
 Fork the repo, then two gates, once each: the **Actions** tab, where GitHub parks a fresh fork's workflows until you say "I understand my workflows, go ahead and enable them", and **Settings → Pages → Build and deployment → Source: GitHub Actions**. A fork has no push of its own to publish, so start the first deploy by hand — Actions → Deploy Pages → **Run workflow** — and every push to your `main` after that republishes on its own. Your copy of the demo lives at `https://<you>.github.io/<repo>/`. Nothing here reads a secret, so CI is as green in your fork as it is in this repo, and `vite`'s relative base means the bundle loads the same at whatever path your fork's name gives it.
 
 - **The skill runs on your own Claude subscription**, in your own Claude Code, against your own tasks.
+- **A fork is automatically its own marketplace.** `claude plugin marketplace add <you>/<your-fork>` and it serves your copy of the skill the way this repo serves the original.
+- **When the skill's behavior changes, bump the plugin version** — the version in `.claude-plugin/plugin.json` — so `/plugin update` reinstalls cleanly; the daily kb-snapshot commits do not bump it.
 - **`AIRTABLE_API_KEY` is optional.** Leave it unset and the suggestions come from the public feed, and from the `kb/kb.json` snapshot in the fork you just made if that feed is down. Set it and your base takes over.
 - **The snapshot workflow sleeps in a quiet fork.** GitHub suspends scheduled runs on inactive forks, so `kb-snapshot.yml` stops mirroring on its own; Actions → KB snapshot → **Run workflow** revives it whenever you want a fresh one.
 - **The demo redeploys on real pushes only.** A snapshot commit is pushed by the Actions bot, and a `GITHUB_TOKEN` push does not trigger workflows — which is the right outcome here: the hosted demo is the precomputed gallery, not a live read of the knowledge base.
