@@ -29,29 +29,46 @@ export default function App() {
   // keeps its identity across re-renders (its layout effect is keyed on it).
   const [view, setView] = useState<View>({ mode: 'gallery' });
 
-  const handleFile = useCallback((file: File) => {
-    readFileText(file).then(
-      (text) => {
-        let raw: unknown;
-        try {
-          // Editors on Windows happily save JSON with a byte-order mark; JSON.parse won't.
-          raw = JSON.parse(withoutBom(text));
-        } catch (err) {
-          setView({
-            mode: 'rejected',
-            errors: [`file: not valid JSON (${(err as Error).message})`],
-          });
-          return;
-        }
-        const res = loadWorkflow(raw);
-        if (res.ok) setView({ mode: 'graph', workflow: res.workflow });
-        else setView({ mode: 'rejected', errors: res.errors });
-      },
-      (err: Error) => {
-        setView({ mode: 'rejected', errors: [`file: could not be read (${err.message})`] });
-      },
-    );
+  // The URL must not claim a graph that is not on screen: a `#g=` link is spent
+  // the moment the view leaves what it carried. replaceState rather than a hash
+  // write, which would push an entry and leave Back pointing at a link the app
+  // has already consumed.
+  const forgetLink = useCallback(() => {
+    if (graphPayload(window.location.hash) === null) return;
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
   }, []);
+
+  const handleFile = useCallback(
+    (file: File) => {
+      readFileText(file).then(
+        (text) => {
+          // A file read to the end replaces whatever a link put on the canvas,
+          // with its graph or with its rejection. Spent here rather than at the
+          // drop, so a link outlives a file that never arrives.
+          forgetLink();
+          let raw: unknown;
+          try {
+            // Editors on Windows happily save JSON with a byte-order mark; JSON.parse won't.
+            raw = JSON.parse(withoutBom(text));
+          } catch (err) {
+            setView({
+              mode: 'rejected',
+              errors: [`file: not valid JSON (${(err as Error).message})`],
+            });
+            return;
+          }
+          const res = loadWorkflow(raw);
+          if (res.ok) setView({ mode: 'graph', workflow: res.workflow });
+          else setView({ mode: 'rejected', errors: res.errors });
+        },
+        (err: Error) => {
+          forgetLink();
+          setView({ mode: 'rejected', errors: [`file: could not be read (${err.message})`] });
+        },
+      );
+    },
+    [forgetLink],
+  );
 
   // A `#g=` link opens straight into the graph it carries — the same two
   // outcomes a dropped file has, reached from the address bar. Once, on mount:
@@ -71,15 +88,6 @@ export default function App() {
     return () => {
       live = false;
     };
-  }, []);
-
-  // The URL must not claim a graph that is not on screen: a `#g=` link is spent
-  // the moment the view leaves what it carried. replaceState rather than a hash
-  // write, which would push an entry and leave Back pointing at a link the app
-  // has already consumed.
-  const forgetLink = useCallback(() => {
-    if (graphPayload(window.location.hash) === null) return;
-    window.history.replaceState(null, '', window.location.pathname + window.location.search);
   }, []);
 
   const showGallery = useCallback(() => {

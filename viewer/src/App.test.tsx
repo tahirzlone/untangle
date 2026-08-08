@@ -149,6 +149,43 @@ it('keeps the gallery graph opened while the link was still decoding', async () 
   expect(screen.queryByText(addE2eTests.meta.title)).not.toBeInTheDocument();
 });
 
+// Dropping a file onto a linked graph IS the view leaving that link. Left in
+// place, the URL would name a graph the reader has replaced: copying it would
+// send the wrong one, and a reload would quietly put it back over theirs.
+it('forgets the link when a dropped file replaces the graph it carried', async () => {
+  arriveAt(linkTo(payments));
+  render(<App />);
+  await waitFor(() => expect(screen.getByText(payments.meta.title)).toBeInTheDocument());
+
+  const mine = new File([JSON.stringify(addE2eTests)], 'mine.workflow.json', {
+    type: 'application/json',
+  });
+  fireEvent.drop(document.body, { dataTransfer: { files: [mine] } });
+
+  // Waited out to the painted cards: swapping the workflow re-runs the layout,
+  // and the canvas is back to COMPILING GRAPH in between.
+  await waitFor(
+    () => expect(screen.getAllByTestId('sg-node')).toHaveLength(addE2eTests.nodes.length),
+    LAYOUT_WAIT,
+  );
+  expect(screen.getByText(addE2eTests.meta.title)).toBeInTheDocument();
+  expect(window.location.hash).toBe('');
+});
+
+// A file the loader refuses replaces the linked graph just as surely: the panel
+// is on screen, so the URL has no graph left to claim.
+it('forgets the link when a dropped file is rejected over the graph it carried', async () => {
+  arriveAt(linkTo(payments));
+  render(<App />);
+  await waitFor(() => expect(screen.getByTestId('canvas')).toBeInTheDocument());
+
+  const bad = new File(['{"meta":{}}'], 'bad.workflow.json', { type: 'application/json' });
+  fireEvent.drop(document.body, { dataTransfer: { files: [bad] } });
+
+  await waitFor(() => expect(screen.getByTestId('rejected-panel')).toBeInTheDocument());
+  expect(window.location.hash).toBe('');
+});
+
 // A hash the app did not write is none of its business — it neither opens it nor
 // rewrites it.
 it('leaves a URL that carries no graph exactly as it found it', async () => {
