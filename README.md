@@ -21,7 +21,7 @@ claude plugin marketplace add tahirzlone/untangle
 claude plugin install untangle@untangle
 ```
 
-From inside a session, the same two moves are `/plugin marketplace add tahirzlone/untangle` and `/plugin install untangle@untangle`. Then run `/untangle:graph-my-task "your task"` from any project at all: the graph lands in that project's `out/`, and the validation the skill runs needs nothing installed — the repo ships a dependency-free validator bundle. To see what you made, drop the file onto the [hosted demo](https://tahirzlone.github.io/untangle/). Third-party marketplaces do not auto-update by default, so a newer skill waits until you ask for it:
+From inside a session, the same two moves are `/plugin marketplace add tahirzlone/untangle` and `/plugin install untangle@untangle`. Then run `/untangle:graph-my-task "your task"` from any project at all: the graph lands in that project's `out/`, and the validation the skill runs needs nothing installed — the repo ships a dependency-free validator bundle. Every run ends with a link that opens the finished graph in the [hosted viewer](https://tahirzlone.github.io/untangle/) — no file to handle, no drop needed. Third-party marketplaces do not auto-update by default, so a newer skill waits until you ask for it:
 
 ```sh
 claude plugin marketplace update untangle
@@ -42,6 +42,7 @@ Then `/graph-my-task "your task"`. No npm install is needed to generate and vali
 
 Node 20+ (CI runs 22). First time: `npm install` at the root **and** `npm --prefix viewer install`. The root install is not optional here — the shared validator in `scripts/` resolves its `ajv` from the root `node_modules`, and it is what the viewer, the dev validator (`scripts/validate.mjs`), and the test suites run on, so a viewer-only install leaves the viewer unable to validate the graph it loads. The one thing that no longer waits on it is the skill: its validation loop runs on the committed dependency-free bundle, so a fresh clone can generate and validate graphs before any install. Then `npm run dev:viewer`, and open the printed URL. The graph index lists every graph in `gallery/`; drop any `*.workflow.json` (including files from `out/`) onto the page to open it on the canvas. Then, on the canvas:
 
+- **A link can arrive holding a graph.** The viewer opens `#g=` share links directly — the link every skill run ends with — so the graph is on the canvas the moment the page is, no file in hand.
 - **Both ends are marked.** The first step wears START and takes a chevron into its left port; the last wears END and runs out of its right port to a terminal dot — so which way the work flows reads at a glance, at any zoom, and comes with the graph into an export.
 - **Rest on a badged card** and its best match rises beside it — the name, what it claims, what it saves — without opening anything. Move off and it goes. Once the detail panel is open the peek stays down; the panel is already saying more than it could.
 - **Click a node** for its detail panel — the whole step, unclamped, plus the resources the knowledge base matched to it. Badge pips on the cards show which steps have matches.
@@ -61,16 +62,17 @@ Node 20+ (CI runs 22). First time: `npm install` at the root **and** `npm --pref
 
 The skill answers to two names for the same thing: `/graph-my-task "your task here"` in a checkout of this repo, `/untangle:graph-my-task "your task here"` when it is installed as the plugin. Run either and the skill decomposes the task into 6–16 honest steps — the manual gathering, the format wrangling, the retry loops, the human review gates — and writes them as a validated graph in `out/`: the checkout's own from a clone, the current project's when it runs as the plugin. Before it validates, it reads a curated knowledge base of real Claude skills, plugins, and MCP servers and attaches the ones that would collapse a step, each with what it claims, what it saves, and the command that installs it, when there is one. It runs on your own Claude subscription, in your own project, and it never invents a helper: a resource that is not in the rows it fetched does not exist for that graph.
 
-**Suggestions need no setup.** The knowledge base resolves in four tiers, tried strictly in order, stopping at the first that hands over rows — it never climbs back up:
+**Suggestions need no setup.** The knowledge base resolves in five tiers, tried strictly in order, stopping at the first that hands over rows — it never climbs back up:
 
 | Tier | When | Rows come from | What you set up |
 | --- | --- | --- | --- |
 | 1 | `AIRTABLE_API_KEY` is set | your own Airtable base, read live | a token, and the schema in [`kb/airtable-template.md`](kb/airtable-template.md) |
 | 2 | no key set, or the key path failed | the public feed — `https://tahirlone.com/api/untangle/kb` | nothing |
 | 2.5 | the feed is unreachable, non-200, or empty | [`kb/kb.json`](kb/kb.json), this repo's daily mirror of that feed | nothing — it is already on disk |
+| 2.7 | no snapshot on disk, unparseable, or empty | that same snapshot, fetched from the repo — GitHub raw | nothing |
 | 3 | no source returned rows | nothing: the vanilla graph, `suggestions: []` | — |
 
-Tiers 1, 2, and 2.5 are the same table read three ways — live, mirrored, and mirrored to disk — so all three report `kbSource: "airtable"`, and every run reports the knowledge-base state in one line. Tier 3 is not a failure: the honest flowchart is the deliverable either way.
+Tiers 1, 2, 2.5, and 2.7 are the same table read four ways — live, mirrored, mirrored to disk, and that disk copy fetched from its repo — so all four report `kbSource: "airtable"`, and every run reports the knowledge-base state in one line. Tier 3 is not a failure: the honest flowchart is the deliverable either way. And however locked-down the environment, the skill degrades gracefully — and still ends the run with the link.
 
 **Set the helpers up.** When the suggestions carry install commands, the skill offers to add them for real — it probes what is already on the machine, puts every exact command in a table and waits for `all` / `pick` / `none`, then runs the `claude mcp add` ones once each and prints everything else for you to run yourself. Consent is per-string and the strings are never edited, not even to rescue a failure; point the skill at any existing `*.workflow.json` and ask to install its resources to run the same stage later.
 
