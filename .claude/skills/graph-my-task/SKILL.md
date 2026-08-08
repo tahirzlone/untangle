@@ -19,19 +19,50 @@ Turn the user's task description into a **vanilla workflow graph**: an honest fl
 
 ## ROOT
 
-This skill has two homes: a checkout of its own repository (invoked `/graph-my-task`), and the installed `untangle` plugin (invoked `/untangle:graph-my-task`), where these files live in the plugin's install directory while the working directory is the user's own project. One derivation covers both: **ROOT is the directory three levels up from this SKILL.md** — SKILL.md → `graph-my-task/` → `skills/` → `.claude/` → ROOT. The harness names this SKILL.md's directory when it loads the skill; derive ROOT from that path, never from where the session happens to be. In a checkout that lands on the repo root; installed as the plugin it lands on a versioned install directory (e.g. `…/cache/untangle/untangle/1.0.0/`). Wherever `<ROOT>` appears below, write out that absolute path. `schema/`, `scripts/`, and `kb/` always resolve from ROOT and never from the working directory — the working directory gets the output file and tier 2's deleted-after scratch, nothing more.
+This skill has two homes: a checkout of its own repository (invoked `/graph-my-task`), and the installed `untangle` plugin (invoked `/untangle:graph-my-task`), where these files live in the plugin's install directory while the working directory is the user's own project. One derivation covers both: **ROOT is the directory three levels up from this SKILL.md** — SKILL.md → `graph-my-task/` → `skills/` → `.claude/` → ROOT. The harness names this SKILL.md's directory when it loads the skill; derive ROOT from that path, never from where the session happens to be. In a checkout that lands on the repo root; installed as the plugin it lands on a versioned install directory (e.g. `…/cache/untangle/untangle/1.0.0/`). Wherever `<ROOT>` appears below, write out that absolute path. `schema/`, `scripts/`, and `kb/` always resolve from ROOT and never from the working directory — the working directory gets the output file and tier 2's deleted-after scratch, nothing more. And one honest caveat: some harnesses install this SKILL.md alone — no `schema/`, `scripts/`, or `kb/` beside it — which is survivable: when the ROOT files are missing, the validation ladder and KB tier 2.7 below cover every dependency, and nothing else in this skill needs ROOT.
 
 ## Output
 
 Write to `out/<slug>.workflow.json` — under the **current working directory**, the project the user is running in — where `<slug>` is a kebab-case slug of the title. The alternative `gallery/<slug>.workflow.json` (when the user says it's a gallery/showcase piece) only makes sense in a checkout of this repo: `gallery/` lives at ROOT.
 
-Document shape:
+### Document shape
 
-- `meta`: `task` (the user's words), `title` (your concise name), `generatedAt` (ISO 8601 UTC), `model` (your model id), `kbSource` (`"airtable"` or `"none"` — the knowledge-base stage below decides which), `promptIntro` (optional — see "The optimized prompt" below)
-- `nodes`, `edges` per the rules above
-- `suggestions`: filled by the knowledge-base stage below; `[]` when no knowledge base is linked or nothing matched
+This reference mirrors `<ROOT>/schema/workflow.schema.json`, which stays authoritative whenever it exists — read it before authoring. When it does not (some harnesses install this SKILL.md alone), author from this reference: every cap, enum, and pattern below is transcribed from that schema, not summarized. Two facts hold everywhere: the schema sets `additionalProperties: false` at every level, so an unknown key anywhere is a rejection; and "non-empty" below means `minLength: 1`, so an empty string is one too.
 
-Field names and constraints for nodes, edges, and suggestions (required properties, label length caps, enums, the `airtableRecordId` pattern): see `<ROOT>/schema/workflow.schema.json` — read it before authoring.
+The document is an object with exactly four keys, all required:
+
+- **`meta`** — required: `task`, `title`, `generatedAt`, `model`, `kbSource`.
+  - `task` — the user's words; non-empty string
+  - `title` — your concise name; non-empty string
+  - `generatedAt` — ISO 8601 UTC date-time string (the schema's `format: date-time`)
+  - `model` — your model id; non-empty string
+  - `kbSource` — exactly `"airtable"` or `"none"` (the knowledge-base stage below decides which)
+  - `promptIntro` — optional; non-empty when present (see "The optimized prompt" below)
+- **`nodes`** — array of node objects, **at least 3**. A node — required: `id`, `label`, `kind`, `description`, `painLevel`.
+  - `id` — kebab-case: `^[a-z0-9][a-z0-9-]*$`
+  - `label` — string, 1–60 characters
+  - `kind` — `input` | `process` | `decision` | `loop` | `review` | `output`
+  - `description` — non-empty string
+  - `painLevel` — integer, 1 to 5 (the rubric above)
+  - `lane` — optional string
+- **`edges`** — array of edge objects, **at least 2**. An edge — required: `from`, `to`, `kind`.
+  - `from`, `to` — node ids, same kebab pattern (the schema checks only the pattern; the validator's integrity pass — rung 1's bundle, or you on rungs 2–3 — checks they name real nodes)
+  - `kind` — `sequence` | `branch` | `retry`
+  - `label` — optional string, at most 60 characters
+- **`suggestions`** — array, filled by the knowledge-base stage below; `[]` when no knowledge base is linked or nothing matched. A suggestion — required: `nodeId`, `airtableRecordId`, `name`, `url`, `category`, `claim`, `effect`.
+  - `nodeId` — a node id, same kebab pattern (and it must exist in `nodes`)
+  - `airtableRecordId` — `^rec[A-Za-z0-9]{14}$`
+  - `name` — non-empty string
+  - `url` — string matching `^https?://`
+  - `category` — `Claude Skill` | `Claude Plugin` | `MCP Server` | `Connector` | `Other`
+  - `claim` — non-empty string
+  - `install` — optional string (the one string the schema gives no length floor; step 5 still says omit the key when blank)
+  - `promptFragment` — optional; non-empty when present
+  - `effect` — required object; required inside it: `removeNodes`, `mergeNodes`, `newEdges`, `metrics`.
+    - `removeNodes`, `mergeNodes` — arrays of node ids; each may be empty
+    - `replaceWith` — optional; one full node, all five required node fields, same caps and enums
+    - `newEdges` — array of edges, may be empty; same shape as `edges` items
+    - `metrics` — all four fields required, each an integer ≥ 0: `stepsSaved`, `estTimeSavedMin`, `estTokensSaved`, `manualInterventionsRemoved`
 
 ## Knowledge base (suggestions)
 
@@ -45,18 +76,19 @@ This stage attaches real, existing helpers — Claude skills, plugins, and MCP s
 
 A resource you know about from training, from another repo, from your own memory of this session, or from a web search is **not** eligible. If it is not in the response you fetched, it does not exist for this graph. (The reverse is fine: one node may carry several suggestions, as long as each comes from a different row.)
 
-### 1. Which knowledge base? Four tiers, in order
+### 1. Which knowledge base? Five tiers, in order
 
-There are four ways this stage can end up with rows. Try them strictly in order and stop at the first one that hands you rows — you never climb back up a tier.
+There are five ways this stage can end up with rows. Try them strictly in order and stop at the first one that hands you rows — you never climb back up a tier.
 
 | Tier | Condition | Source | `meta.kbSource` |
 | --- | --- | --- | --- |
 | 1 | `AIRTABLE_API_KEY` is set | Airtable REST, straight from the base (step 2 · tier 1) | `"airtable"` |
 | 2 | tier 1 handed you no rows (no key set, **or** the key path failed) | the public feed — no token, no setup (step 2 · tier 2) | `"airtable"` |
 | 2.5 | tier 2 handed you no rows (feed unreachable, non-200, or empty) | the bundled snapshot — `<ROOT>/kb/kb.json` (step 2 · tier 2.5) | `"airtable"` |
+| 2.7 | tier 2.5 handed you no rows (no snapshot on disk, unparseable, or empty) | that same snapshot, fetched from the repo — GitHub raw (step 2 · tier 2.7) | `"airtable"` |
 | 3 | no source returned rows | nothing — the vanilla graph | `"none"` |
 
-Tiers 1, 2, and 2.5 are the same table read three ways — live, mirrored, and mirrored to disk — so all three are `"airtable"`.
+Tiers 1, 2, 2.5, and 2.7 are the same table read four ways — live, mirrored, mirrored to disk, and that disk copy fetched from its repo — so all four are `"airtable"`. And in a session behind an egress proxy, a `403` / `host_not_allowed` on any of these hosts is a normal tier exit, not an error to fight: move down a tier and say so in one line.
 
 Start by checking the `AIRTABLE_API_KEY` environment variable. Probe it, don't assume — and print only whether it is there, never the key itself:
 
@@ -73,11 +105,12 @@ echo ${AIRTABLE_API_KEY:+set}
 - **Set → tier 1**, fetch from Airtable (step 2 · tier 1). If that fetch fails (401, 404, network error) or returns zero rows, do not retry more than once and do not fabricate anything: drop to tier 2 and **say so in the report**. Tier 2 serves the *public* feed, not the base the key pointed at, so the mandated one-line failure report must name the substitution — `Airtable fetch failed (401); used the public feed instead`. Someone running their own base has to know the suggestions came from the default knowledge base rather than from their rows.
 - **Unset or empty → tier 2**, fetch the public feed (step 2 · tier 2). A missing key does **not** end this stage and does **not** mean a vanilla graph — the feed needs no key at all.
 - **Tier 2 unusable too → tier 2.5**, read the bundled snapshot (step 2 · tier 2.5) — a daily CI mirror of that same feed, committed to this repo, so it is on disk even when the network is not. Rows from it carry one extra duty: the report must state the snapshot's age (step 2 · tier 2.5 says how).
-- **No snapshot either — missing, unparseable, or empty → tier 3.** Skip the rest of this stage: set `meta.kbSource: "none"`, leave `suggestions: []`, and tell the user "KB not linked" in the report. This is normal, not a failure: the vanilla graph is the deliverable.
+- **No snapshot on disk — missing, unparseable, or empty → tier 2.7**, fetch that same snapshot from the repo it is committed to (step 2 · tier 2.7). Some harnesses install this SKILL.md alone, with no `kb/` beside it — the raw GitHub copy is the same file from a different host, which may also be the one host a proxy still allows. Its rows carry tier 2.5's age duty unchanged.
+- **Tier 2.7 empty-handed too — non-200, unparseable, or empty → tier 3.** Skip the rest of this stage: set `meta.kbSource: "none"`, leave `suggestions: []`, and tell the user "KB not linked" in the report. This is normal, not a failure: the vanilla graph is the deliverable.
 
 ### 2. Fetch every row
 
-Three sources, one job: end up holding every row of the knowledge-base table. Read only the tier step 1 sent you to.
+Four sources, one job: end up holding every row of the knowledge-base table. Read only the tier step 1 sent you to.
 
 #### Tier 1 — straight from Airtable (`AIRTABLE_API_KEY` is set)
 
@@ -259,7 +292,27 @@ node -e "const s=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));
 
 Present, parseable, and `records` non-empty → those records **are** the rows: the same flat camelCase shape as tier 2, so the key-translation table above and steps 3–5 apply unchanged, and `meta.kbSource` is `"airtable"` (step 7). One extra duty comes with them: these rows are a mirror, not the live feed, so the report's knowledge-base line (`## Report`, item 4) must carry the staleness note — `KB snapshot — last mirrored <date>`, the date read from `fetchedAt`. (A hand-rolled snapshot might lack that field; then the file's last commit date stands in: `git -C "<ROOT>" log -1 --format=%cs -- kb/kb.json`.)
 
-Missing, unparseable, or `records: []` → tier 3. Do not fetch anything to repair the file — the network already had its turn in tier 2.
+Missing, unparseable, or `records: []` → tier 2.7: the snapshot is a committed file, so the repo it lives in can serve it when the disk cannot — a different host than tier 2's feed, and its own turn at the network.
+
+#### Tier 2.7 — the snapshot from its repo (no snapshot on disk)
+
+The same `kb/kb.json` tier 2.5 just looked for, fetched from the repository it is committed to — for the harnesses that ship this SKILL.md with no `kb/` beside it. Plain `GET`, no auth, one URL: `https://raw.githubusercontent.com/tahirzlone/untangle/main/kb/kb.json`
+
+**curl (bash / Git Bash)** — tier 2's scratch discipline, unchanged: body to the same scratch file, status to the terminal, read only on `HTTP 200`, delete once the suggestions are authored:
+
+```bash
+curl -sS -o untangle-kb-scratch.json -w 'HTTP %{http_code}\n' https://raw.githubusercontent.com/tahirzlone/untangle/main/kb/kb.json
+```
+
+**PowerShell** (a throw means non-200 — that throw is your signal to go to tier 3):
+
+```powershell
+$snap = Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/tahirzlone/untangle/main/kb/kb.json'
+"mirrored $($snap.fetchedAt) — $($snap.records.Count) records"
+$snap.records | ConvertTo-Json -Depth 6
+```
+
+What comes back is tier 2.5's file, byte for byte: the tier-2 envelope plus `fetchedAt`. Everything tier 2.5 says applies unchanged — the flat camelCase records, the key-translation table and steps 3–5, `meta.kbSource: "airtable"` (step 7), and the report's staleness duty: `KB snapshot — last mirrored <date>`, the date read from `fetchedAt`. Non-200, a network error, an unparseable body, or `records: []` → tier 3.
 
 ### 3. Candidate filter
 
@@ -338,7 +391,7 @@ If two suggestions target overlapping nodes, that is allowed but understand the 
 
 ### 7. Set `meta.kbSource`
 
-- `"airtable"` — you fetched the knowledge base, whatever the match count (including zero). Tiers 1, 2, and 2.5 all count: the public feed is Airtable data too, and the snapshot is that feed on disk.
+- `"airtable"` — you fetched the knowledge base, whatever the match count (including zero). Tiers 1, 2, 2.5, and 2.7 all count: the public feed is Airtable data too, and the snapshot is that feed on disk — or fetched back off its repo.
 - `"none"` — tier 3: no source returned rows. Then `suggestions` must be `[]`.
 
 ### 8. Self-check before validating
@@ -406,18 +459,22 @@ Grounded in a row named `example/rss-mcp`, claim *"Fetches and filters feeds in 
 
 ## Validation loop (mandatory)
 
-1. Run: `node "<ROOT>/scripts/validate.bundle.mjs" <path-you-wrote>` (e.g. `out/<slug>.workflow.json` or `gallery/<slug>.workflow.json`) — from wherever you are. The bundle is dependency-free and resolves its schema relative to itself, so there is no npm-install step and no repo-root cwd to arrange.
-2. If `REJECTED`, fix the listed errors and re-run. If it still fails after one fix attempt, STOP and show the user the errors instead of looping.
-3. Only report success after seeing `OK:`.
+Validation is a ladder: three rungs, in order, and the first rung the environment can offer is the one that runs. Every run validates on some rung and says which, in one status line — never skip validation silently, and never claim the official validator passed when a lower rung did the checking.
+
+1. **Rung 1 — the bundled validator.** `<ROOT>/scripts/validate.bundle.mjs` exists → run: `node "<ROOT>/scripts/validate.bundle.mjs" <path-you-wrote>` (e.g. `out/<slug>.workflow.json` or `gallery/<slug>.workflow.json`) — from wherever you are. The bundle is dependency-free and resolves its schema relative to itself, so there is no npm-install step and no repo-root cwd to arrange. Only report success after seeing `OK:` — that line is this rung's status line.
+2. **Rung 2 — the fetched schema.** No validator on disk → fetch `https://raw.githubusercontent.com/tahirzlone/untangle/main/schema/workflow.schema.json` (curl, or whatever fetch the environment offers) and check the document against it clause by clause — every required list, cap, enum, and pattern — plus the integrity checks the bundle would have run: no duplicate node ids; every `edges[].from`/`to`, `suggestions[].nodeId`, and effect node id names a real node (`newEdges` endpoints may also be that effect's `replaceWith.id`). Status line: `checked against the fetched schema; the official validator isn't available here.`
+3. **Rung 3 — this skill's own reference.** No validator and no fetch either → run the same clause-by-clause check from the "Document shape" reference above plus the authoring checklists (the decomposition rules, KB step 8). Status line: `structurally checked from this skill's own reference; schema and validator unavailable here.`
+
+Whichever rung ran, the loop is the same: a failed check means fix the listed errors and re-run the same rung. If it still fails after one fix attempt, STOP and show the user the errors instead of looping. On rungs 2 and 3 you are the validator, so name failing clauses as concretely as the bundle would (`edges[3].to "review" is not a node id`) — and a pass there is a pass on that rung, never a claim that the official validator ran.
 
 ## Report
 
-After `OK:`, tell the user:
+After validation succeeds — on whichever rung it ran — tell the user:
 
 1. the file path and node count;
 2. the top 2–3 pain hotspots (highest `painLevel` nodes) — one sentence each;
 3. one line per suggestion, in this shape: `<node label> → <resource name> (<category>) — <claim>`;
-4. the knowledge-base state in one line: `KB not linked` when no source returned rows (tier 3), the failure if a fetch broke — and when a broken tier 1 sent the run to tier 2, that line must name the substitution (`Airtable fetch failed (401); used the public feed instead`) so nobody mistakes the public rows for their own base — or `KB read, no load-bearing matches` when it was fetched and nothing matched. When the rows came from the bundled snapshot (tier 2.5), the line also carries the mirror's age — `KB snapshot — last mirrored <date>` — so nobody mistakes a stale mirror for the live feed.
+4. the knowledge-base state in one line: `KB not linked` when no source returned rows (tier 3), the failure if a fetch broke — and when a broken tier 1 sent the run to tier 2, that line must name the substitution (`Airtable fetch failed (401); used the public feed instead`) so nobody mistakes the public rows for their own base — or `KB read, no load-bearing matches` when it was fetched and nothing matched. When the rows came from the snapshot (tier 2.5's disk read, or tier 2.7's fetch of it), the line also carries the mirror's age — `KB snapshot — last mirrored <date>` — so nobody mistakes a stale mirror for the live feed.
 5. when at least one suggestion carries an `install`, one more line: offer to set the suggested resources up — the `## Setup (offer installs)` stage below is the procedure. Ask once, wait for the answer, and never start installing unasked.
 
 ## Setup (offer installs)
@@ -535,3 +592,22 @@ Walk the list; every miss here is a consent or honesty bug, not a formatting one
 - [ ] the re-probe covered only what actually ran
 - [ ] link-only rows were never probed and never guessed at — `MANUAL — <url>` and nothing more
 - [ ] no probe modified anything, and no output printed a secret
+
+## Hand over the graph
+
+The final stage of every run that validated — every environment, every KB tier, every validation rung. Deliver it with the report, in the same message: `## Report` item 5 may leave the install question standing, and the link never waits on the answer (a Setup pass that follows takes nothing back). The file is the artifact, but a file still leaves the user work; the link does not. Print two things:
+
+1. **The file's path** — the `out/<slug>.workflow.json` (or `gallery/…`) you wrote.
+2. **The link** — generated by this one-liner. Bash and PowerShell forms below; the command is identical in both, nothing in it needs shell-specific quoting:
+
+```bash
+node -e "const z=require('zlib'),f=require('fs');console.log('https://tahirzlone.github.io/untangle/#g='+z.gzipSync(f.readFileSync(process.argv[1]),{level:9}).toString('base64url'))" <path-to-the-file>
+```
+
+```powershell
+node -e "const z=require('zlib'),f=require('fs');console.log('https://tahirzlone.github.io/untangle/#g='+z.gzipSync(f.readFileSync(process.argv[1]),{level:9}).toString('base64url'))" <path-to-the-file>
+```
+
+Hand the URL over with one sentence saying what it is: the interactive graph — open it to apply the suggested upgrades, run OPTIMIZE, and leave with the task rewritten as a prompt.
+
+No `node` on the machine → print `https://tahirzlone.github.io/untangle/` instead and tell the user to drop the workflow file onto that page — the same graph, one drag. One of the two, the generated link or the drop-page line, ends every validated run; this stage never silently ends one without either. (A run the validation loop stopped at REJECTED has nothing to hand over — there, the honest error report is the ending.)
