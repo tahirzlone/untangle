@@ -186,6 +186,37 @@ it('forgets the link when a dropped file is rejected over the graph it carried',
   expect(window.location.hash).toBe('');
 });
 
+// The third way a dropped file can end: not read at all. jsdom's own FileReader
+// never fails, so the branch is reachable only through a reader that does — and
+// it spends the link exactly as the other two do, because the panel is what is
+// on screen.
+it('forgets the link when a dropped file cannot be read at all', async () => {
+  arriveAt(linkTo(payments));
+  render(<App />);
+  await waitFor(() => expect(screen.getByTestId('canvas')).toBeInTheDocument());
+
+  class FailingReader {
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    error = new Error('the drive went away');
+    result: string | null = null;
+    readAsText() {
+      setTimeout(() => this.onerror?.(), 0);
+    }
+  }
+  vi.stubGlobal('FileReader', FailingReader);
+  try {
+    const gone = new File(['{}'], 'gone.workflow.json', { type: 'application/json' });
+    fireEvent.drop(document.body, { dataTransfer: { files: [gone] } });
+
+    await waitFor(() => expect(screen.getByTestId('rejected-panel')).toBeInTheDocument());
+    expect(screen.getByText('file: could not be read (the drive went away)')).toBeInTheDocument();
+    expect(window.location.hash).toBe('');
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
 // A hash the app did not write is none of its business — it neither opens it nor
 // rewrites it.
 it('leaves a URL that carries no graph exactly as it found it', async () => {

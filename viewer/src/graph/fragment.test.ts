@@ -1,6 +1,6 @@
 import { gzipSync } from 'node:zlib';
 import payments from '../../../gallery/ship-a-payments-feature.workflow.json';
-import { decodeFragment, graphPayload, withoutBom } from './fragment';
+import { MAX_DECODED_BYTES, decodeFragment, graphPayload, withoutBom } from './fragment';
 
 /**
  * A link the way the skill's closing stage writes one: the document gzipped,
@@ -115,6 +115,32 @@ it('takes an unpadded payload', async () => {
   // it got past the base64, which is the whole point of the padding
   expect(res.errors[0]).not.toMatch(/base64/);
   expect(res.errors[0]).not.toMatch(/\(\)$/);
+});
+
+// The bytes come from whoever wrote the link, and gzip does not declare what it
+// becomes: a fragment small enough to mail can ask the page for hundreds of
+// megabytes, three times over — unzipped, parsed, then walked by the validator.
+// Built here rather than committed: a payload this size is one line of repeats.
+it('refuses a link that unzips past the cap', async () => {
+  const overCap = 'a'.repeat(MAX_DECODED_BYTES + 1024);
+  const hash = link(overCap);
+  // small enough that nothing between the writer and the page would blink at it
+  expect(hash.length).toBeLessThan(4096);
+
+  const res = await decodeFragment(hash);
+
+  expect(res?.ok).toBe(false);
+  if (res?.ok !== false) throw new Error('an oversized link decoded');
+  expect(res.errors).toEqual(['link: unzips past 2MB, which no workflow graph does']);
+});
+
+// A real graph is thousands of times under the cap; the bound is not in its way.
+it('opens a graph that is nowhere near the cap', async () => {
+  expect(JSON.stringify(payments).length).toBeLessThan(MAX_DECODED_BYTES / 100);
+
+  const res = await decodeFragment(link(JSON.stringify(payments)));
+
+  expect(res?.ok).toBe(true);
 });
 
 it('says so when the zipped text is not JSON', async () => {

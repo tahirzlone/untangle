@@ -57,7 +57,23 @@ function bytesOf(payload: string): Uint8Array {
 }
 
 /**
- * The bytes unzipped, as text. Rejects on anything that is not a gzip stream.
+ * The most a link is allowed to unzip to.
+ *
+ * gzip is not a size a URL declares: a 159KB fragment can carry 120MB of
+ * perfectly valid JSON, and unzipping it, parsing it and validating it are three
+ * allocations of it. The richest graph anyone has written is 9KB, so this is
+ * roughly two hundred times the real ceiling and still a bound — which is the
+ * point, because the bytes come from whoever wrote the link and the page they
+ * open is public.
+ */
+export const MAX_DECODED_BYTES = 2 * 1024 * 1024;
+
+/** A link that unzips past the cap. Its own error, because it is not corruption. */
+class Oversized extends Error {}
+
+/**
+ * The bytes unzipped, as text, or a rejection — for a stream that is not gzip at
+ * all, or one whose output runs past `MAX_DECODED_BYTES`.
  *
  * Fed from a stream written here rather than from `new Blob([bytes]).stream()`:
  * jsdom's Blob (26.x) implements neither `stream` nor `text`, and the drop path
@@ -73,9 +89,20 @@ async function gunzip(bytes: Uint8Array): Promise<string> {
   const reader = source.pipeThrough(new DecompressionStream('gzip')).getReader();
   const decoder = new TextDecoder();
   let text = '';
+  let decoded = 0;
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
+    // Counted chunk by chunk as it arrives, and the stream is dropped the moment
+    // it goes over: a cap measured on the finished string is a string that was
+    // allocated anyway.
+    decoded += value.byteLength;
+    if (decoded > MAX_DECODED_BYTES) {
+      await reader.cancel();
+      throw new Oversized(
+        `unzips past ${MAX_DECODED_BYTES / (1024 * 1024)}MB, which no workflow graph does`,
+      );
+    }
     text += decoder.decode(value, { stream: true });
   }
   // whatever is left of a character split across the last two chunks
@@ -129,7 +156,10 @@ export async function decodeFragment(hash: string): Promise<LoadResult | null> {
   try {
     text = await gunzip(bytes);
   } catch (err) {
-    return { ok: false, errors: [`link: not a gzipped graph${detail(err)}`] };
+    // A link over the cap is well-formed gzip; saying it is not would be untrue
+    // and would send the reader looking for a corrupted copy.
+    const why = err instanceof Oversized ? err.message : `not a gzipped graph${detail(err)}`;
+    return { ok: false, errors: [`link: ${why}`] };
   }
 
   let raw: unknown;
