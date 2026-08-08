@@ -21,7 +21,7 @@ claude plugin marketplace add tahirzlone/untangle
 claude plugin install untangle@untangle
 ```
 
-From inside a session, the same two moves are `/plugin marketplace add tahirzlone/untangle` and `/plugin install untangle@untangle`. Then run `/untangle:graph-my-task "your task"` from any project at all: the graph lands in that project's `out/`, and the validation the skill runs needs nothing installed — the repo ships a dependency-free validator bundle. Every run ends with a link that opens the finished graph in the [hosted viewer](https://tahirzlone.github.io/untangle/) — no file to handle, no drop needed. Third-party marketplaces do not auto-update by default, so a newer skill waits until you ask for it:
+From inside a session, the same two moves are `/plugin marketplace add tahirzlone/untangle` and `/plugin install untangle@untangle`. Then run `/untangle:graph-my-task "your task"` from any project at all: the graph lands in that project's `out/`, and the validation the skill runs needs nothing installed — the repo ships a dependency-free validator bundle. Every run ends with a short link — `tahirlone.com/g/…` — that opens the finished graph in the [hosted viewer](https://tahirzlone.github.io/untangle/): no file to handle, no drop needed, nothing for a terminal copy to clip. Third-party marketplaces do not auto-update by default, so a newer skill waits until you ask for it:
 
 ```sh
 claude plugin marketplace update untangle
@@ -72,7 +72,7 @@ The skill answers to two names for the same thing: `/graph-my-task "your task he
 | 2.7 | no snapshot on disk, unparseable, or empty | that same snapshot, fetched from the repo — GitHub raw | nothing |
 | 3 | no source returned rows | nothing: the vanilla graph, `suggestions: []` | — |
 
-Tiers 1, 2, 2.5, and 2.7 are the same table read four ways — live, mirrored, mirrored to disk, and that disk copy fetched from its repo — so all four report `kbSource: "airtable"`, and every run reports the knowledge-base state in one line. Tier 3 is not a failure: the honest flowchart is the deliverable either way. And however locked-down the environment, the skill degrades gracefully — and still ends the run with the link.
+Tiers 1, 2, 2.5, and 2.7 are the same table read four ways — live, mirrored, mirrored to disk, and that disk copy fetched from its repo — so all four report `kbSource: "airtable"`, and every run reports the knowledge-base state in one line. Tier 3 is not a failure: the honest flowchart is the deliverable either way. And however locked-down the environment, the skill degrades gracefully — and still ends the run with the short link, falling back to the full-length `#g=` link, the graph carried in the URL itself, when the short one can't be minted.
 
 **Set the helpers up.** When the suggestions carry install commands, the skill offers to add them for real — it probes what is already on the machine, puts every exact command in a table and waits for `all` / `pick` / `none`, then runs the `claude mcp add` ones once each and prints everything else for you to run yourself. Consent is per-string and the strings are never edited, not even to rescue a failure; point the skill at any existing `*.workflow.json` and ask to install its resources to run the same stage later.
 
