@@ -70,6 +70,9 @@ jobs:
       # machine with no node_modules to build it from. Same gate as the
       # validator bundle in the contract job: rebuild it and insist the tree
       # stays clean, so a viewer edited without a rebuild cannot ship a stale
-      # dist to every plugin install.
-      - run: git diff --exit-code viewer/dist
+      # dist to every plugin install. `git add -A` first so the assertion also
+      # catches a brand-new untracked asset (a hash chain that lands in
+      # index.html while its own file was never committed) — `git diff` alone
+      # sees only modified tracked files.
+      - run: git add -A viewer/dist && git diff --cached --exit-code viewer/dist
         working-directory: .
