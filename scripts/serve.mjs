@@ -358,7 +358,10 @@ const CLIPBOARDS = [
 /** The tool that took the copy, or null when this machine has none. */
 function copyToClipboard(text) {
   for (const [command, args] of CLIPBOARDS) {
-    const res = spawnSync(command, args, { input: text, windowsHide: true });
+    // Timed for the same reason the browser launch is: the link is already
+    // printed, and a clipboard tool that sits there holding a selection must
+    // not be what keeps the command from ending.
+    const res = spawnSync(command, args, { input: text, timeout: 3000, windowsHide: true });
     if (!res.error && res.status === 0) return command;
   }
   return null;
