@@ -19,7 +19,7 @@ Turn the user's task description into a **vanilla workflow graph**: an honest fl
 
 ## ROOT
 
-This skill has two homes: a checkout of its own repository (invoked `/graph-my-task`), and the installed `untangle` plugin (invoked `/untangle:graph-my-task`), where these files live in the plugin's install directory while the working directory is the user's own project. One derivation covers both: **ROOT is the directory three levels up from this SKILL.md** — SKILL.md → `graph-my-task/` → `skills/` → `.claude/` → ROOT. The harness names this SKILL.md's directory when it loads the skill; derive ROOT from that path, never from where the session happens to be. In a checkout that lands on the repo root; installed as the plugin it lands on a versioned install directory (e.g. `…/cache/untangle/untangle/1.0.0/`). Wherever `<ROOT>` appears below, write out that absolute path. `schema/`, `scripts/`, and `kb/` always resolve from ROOT and never from the working directory — the working directory gets the output file and tier 2's deleted-after scratch, nothing more. And one honest caveat: some harnesses install this SKILL.md alone — no `schema/`, `scripts/`, or `kb/` beside it — which is survivable: when the ROOT files are missing, the validation ladder and KB tier 2.7 below cover every dependency, and nothing else in this skill needs ROOT.
+This skill has two homes: a checkout of its own repository (invoked `/graph-my-task`), and the installed `untangle` plugin (invoked `/untangle:graph-my-task`), where these files live in the plugin's install directory while the working directory is the user's own project. One derivation covers both: **ROOT is the directory three levels up from this SKILL.md** — SKILL.md → `graph-my-task/` → `skills/` → `.claude/` → ROOT. The harness names this SKILL.md's directory when it loads the skill; derive ROOT from that path, never from where the session happens to be. In a checkout that lands on the repo root; installed as the plugin it lands on a versioned install directory (e.g. `…/cache/untangle/untangle/1.0.0/`). Wherever `<ROOT>` appears below, write out that absolute path. `schema/`, `scripts/`, and `kb/` always resolve from ROOT and never from the working directory — the working directory gets the output file and tier 2's deleted-after scratch, nothing more. And one honest caveat: some harnesses install this SKILL.md alone — no `schema/`, `scripts/`, or `kb/` beside it — which is survivable: when the ROOT files are missing, the validation ladder, KB tier 2.7, and the hand-over's drop-page fallback below cover every dependency, and nothing else in this skill needs ROOT.
 
 ## Output
 
@@ -598,11 +598,25 @@ Walk the list; every miss here is a consent or honesty bug, not a formatting one
 The final stage of every run that validated — every environment, every KB tier, every validation rung. Deliver it with the report, in the same message: `## Report` item 5 may leave the install question standing, and the link never waits on the answer (a Setup pass that follows takes nothing back). The file is the artifact, but a file still leaves the user work; the link does not. Print two things:
 
 1. **The file's path** — the `out/<slug>.workflow.json` (or `gallery/…`) you wrote.
-2. **The link** — produced by a ladder of its own: two rungs, in order, and the first rung that hands you a link is the one the run ends on. Every run says which, in one status line — the same discipline as the validation loop.
+2. **The link** — local, always, and minted by one command:
 
-One rule binds both rungs: **the command that mints the link writes it to `out/<slug>.link.txt`** (`gallery/<slug>.link.txt` for a gallery graph) **in the same flow that prints it — the link is never typed twice.** A terminal clips and wraps where a file does not, the next session finds the link sitting beside the graph it opens, and everything downstream — the clipboard below — reads that file, never your prose: retyping a four-thousand-character link is how one arrives missing the colon after `https`. Each command is guarded so a failed rung leaves **no** link file; a `.link.txt` that exists holds a link this run minted, nothing else.
+```bash
+node "<ROOT>/scripts/serve.mjs" <path-to-the-file>
+```
 
-**Rung 1 — the short link.** POST the validated file's raw bytes to `https://tahirlone.com/api/untangle/share`. A **201** answers `{ "url": "https://tahirlone.com/g/<id>", "id": "…" }`, and that `url` is the link — a handful of characters where the long form runs to thousands, so it survives a terminal copy whole; opening it lands on the same hosted viewer. Anything else is rung 2's cue: an unreachable host, any non-201 answer (the endpoint says 413 to a body past its 128KB cap, 400 to bytes that are not JSON, 422 to JSON that is not a workflow), or a body without a `url`. The printed `url` is this rung's status line — seeing it is the only success.
+Identical in both shells. It serves the viewer build this repo ships (`<ROOT>/viewer/dist` — committed, so there is nothing to install and nothing to build) on `127.0.0.1`, on the first free port from 4173 to 4199, and prints exactly one stdout line: `http://localhost:<port>/#g=<fragment>` — the graph gzipped into the address of a viewer that is already running. Every status line goes to stderr, so in bash `url=$(node "<ROOT>/scripts/serve.mjs" <path-to-the-file>)` captures the link and nothing else. That printed link is this stage's status line — the same discipline as the validation loop.
+
+And by the time the command returns, it has already done the conveniences: written the link to `<slug>.link.txt` beside the graph, offered it to the clipboard, and attempted to open the browser — each guarded so that none of them can fail a run that already printed its link. **Re-do none of that by hand.** No inline gzip one-liner, no clipboard probe, no `start` / `open` — the script owns those steps; your whole job is the one command, then relaying what its stderr said happened: which port, whether a copy landed, whether a browser launch was attempted. "Attempted" is the honest verb — never promise the tab is open.
+
+Hand the link over with one sentence saying what it is: the interactive graph — open it to apply the suggested upgrades, run OPTIMIZE, and leave with the task rewritten as a prompt.
+
+Server facts, once: the server binds `127.0.0.1` only, so the link works on this machine and nowhere else — a working link, never a shareable or durable one. A repeated run REUSES the running server (same version, same checkout) instead of stacking a second; `node "<ROOT>/scripts/serve.mjs" --stop` ends it. And the link lives exactly as long as the server does: the `<slug>.link.txt` beside the graph is how a later session picks the thread back up — re-run the same command, and the script overwrites that file with a fresh link on a live port.
+
+### Share — when the user asks
+
+The local link cannot leave the machine, so a link for someone else is a different mint, and an on-request one: both commands below carry the graph's bytes off this machine, which makes them the user's call — **never run either unasked.** The shared link is the durable, shareable one; the local link above stays the working one. Two rungs, in order, and the first that hands you a link is the one to give; say which, in one status line. One rule binds both: **the command that mints the link writes it to `out/<slug>.link.txt`** (`gallery/<slug>.link.txt` for a gallery graph) **in the same flow that prints it — the link is never typed twice.** A terminal clips and wraps where a file does not: retyping a four-thousand-character link is how one arrives missing the colon after `https`. Each command is guarded so a failed rung writes nothing — and a success overwrites the local link serve.mjs put in that file, which is the right outcome: the durable link is the one worth keeping on disk.
+
+**Rung 1 — the short link.** POST the validated file's raw bytes to `https://tahirlone.com/api/untangle/share`. A **201** answers `{ "url": "https://tahirlone.com/g/<id>", "id": "…" }`, and that `url` is the link — a handful of characters where the long form runs to thousands, so it survives a terminal copy whole; opening it lands on the hosted viewer, no server of the user's involved. Anything else is rung 2's cue: an unreachable host, any non-201 answer (the endpoint says 413 to a body past its 128KB cap, 400 to bytes that are not JSON, 422 to JSON that is not a workflow), or a body without a `url`. The printed `url` is this rung's status line — seeing it is the only success.
 
 **bash / Git Bash** (curl POSTs, node reads the `url` back out — jq is never assumed; anything that is not a 201 body leaves the capture exiting non-zero, and that exit is your signal — the `&&` short-circuits, so `tee` never opens the file. On failure it prints the answer's first 200 characters only — a failing route can answer with a whole HTML error page, and tier 2's rule holds here too: never dump one into the session):
 
@@ -632,22 +646,8 @@ if ($url) { Set-Content -Path out/<slug>.link.txt -Value $url; $url }
 
 Status line: `long link; the share API wasn't reachable from here.` — naming the exit rung 1 actually took (the status it answered with, or the tool that was missing).
 
-One aside for a checkout of this repo: with `npm run dev:viewer` running, the same link works with the host swapped — `http://localhost:5173/#g=<payload>` — because the fragment decoder is host-agnostic. The hosted link remains the one to share.
+Hand the minted link over — whichever rung produced it — named for what it is: the durable link, the one that can leave the machine; the localhost link stays the working copy.
 
-Hand the URL over — whichever rung minted it — with one sentence saying what it is: the interactive graph — open it to apply the suggested upgrades, run OPTIMIZE, and leave with the task rewritten as a prompt.
+### Fallback — the drop page
 
-**Then offer it to the clipboard — read from `out/<slug>.link.txt`, never from prose.** This may not fail the run: the link is already delivered and on disk, and a copy is a convenience, not a gate. Probe, don't assume — in order: `clip` (Windows), `pbcopy` (macOS), `xclip` / `wl-copy` (Linux). The first one present reads the file; say so in one line. None of them → skip silently: the `.link.txt` already holds the link, and a missing clipboard tool is worth no apology.
-
-```bash
-for t in clip pbcopy xclip wl-copy; do
-  command -v "$t" >/dev/null 2>&1 || continue
-  if [ "$t" = xclip ]; then xclip -selection clipboard < out/<slug>.link.txt; else "$t" < out/<slug>.link.txt; fi
-  echo "copied ($t)"; break
-done
-```
-
-```powershell
-if (Get-Command Set-Clipboard -ErrorAction SilentlyContinue) { Get-Content out/<slug>.link.txt | Set-Clipboard; 'copied (Set-Clipboard)' }
-```
-
-No `node` on the machine → print `https://tahirzlone.github.io/untangle/` instead and tell the user to drop the workflow file onto that page — the same graph, one drag. That path minted no link, so it writes no `.link.txt` and offers no clipboard — and if an earlier run left an `out/<slug>.link.txt` beside the file, delete it: the file must never claim a link this run didn't mint. One of the two, the generated link or the drop-page line, ends every validated run; this stage never silently ends one without either. (A run the validation loop stopped at REJECTED has nothing to hand over — there, the honest error report is the ending.)
+No `node` on the machine, no `scripts/serve.mjs` under ROOT (some harnesses install this SKILL.md alone), a deleted viewer build (the command exits 1 naming the path it expected), or the command denied → print `https://tahirzlone.github.io/untangle/` instead and tell the user to drop the workflow file onto that page — the same graph, one drag. That is the hosted demo's one remaining role in the default flow. This path minted no link, so it writes no `.link.txt` — and if an earlier run left a `<slug>.link.txt` beside the file, delete it: serve.mjs overwrites that file on every run precisely so it never outlives its link, and a path that minted nothing must not leave one standing to claim otherwise. One of the two — the served local link or the drop-page line — ends every validated run; this stage never silently ends one without either. (A run the validation loop stopped at REJECTED has nothing to hand over — there, the honest error report is the ending.)

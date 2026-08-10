@@ -8,7 +8,7 @@ Map your Claude workflows. Describe a task → see the flowchart of how Claude w
 
 ## Try the demo
 
-**[tahirzlone.github.io/untangle](https://tahirzlone.github.io/untangle/)** — the gallery, hosted. No account, no key, nothing to install: open **Ship a Payments Feature End-to-End**, press **OPTIMIZE** and watch the flow collapse step by step, then **VS ORIGINAL** to drag the seam between where it started and where it ended, and **VIEW RESULTS** for the thing you leave with.
+**[tahirzlone.github.io/untangle](https://tahirzlone.github.io/untangle/)** — the gallery, hosted: the try-it-before-you-install-anything page. No account, no key: open **Ship a Payments Feature End-to-End**, press **OPTIMIZE** and watch the flow collapse step by step, then **VS ORIGINAL** to drag the seam between where it started and where it ended, and **VIEW RESULTS** for the thing you leave with. Once the skill is installed, your own runs serve this same viewer from your machine; this page stays the demo — and the drop target for a machine with no `node` at all.
 
 ## Install the skill
 
@@ -21,7 +21,7 @@ claude plugin marketplace add tahirzlone/untangle
 claude plugin install untangle@untangle
 ```
 
-From inside a session, the same two moves are `/plugin marketplace add tahirzlone/untangle` and `/plugin install untangle@untangle`. Then run `/untangle:graph-my-task "your task"` from any project at all: the graph lands in that project's `out/`, and the validation the skill runs needs nothing installed — the repo ships a dependency-free validator bundle. Every run ends with a short link — `tahirlone.com/g/…` — that opens the finished graph in the [hosted viewer](https://tahirzlone.github.io/untangle/): no file to handle, no drop needed, nothing for a terminal copy to clip. Third-party marketplaces do not auto-update by default, so a newer skill waits until you ask for it:
+From inside a session, the same two moves are `/plugin marketplace add tahirzlone/untangle` and `/plugin install untangle@untangle`. Then run `/untangle:graph-my-task "your task"` from any project at all: the graph lands in that project's `out/`, and the validation the skill runs needs nothing installed — the repo ships a dependency-free validator bundle. Every run ends with a viewer running on your own machine and a `localhost` link to the finished graph — one command serves it, nothing built and nothing npm-installed — and when you want a link someone else can open, ask: share links are minted on request. Third-party marketplaces do not auto-update by default, so a newer skill waits until you ask for it:
 
 ```sh
 claude plugin marketplace update untangle
@@ -36,13 +36,21 @@ cd untangle
 claude
 ```
 
-Then `/graph-my-task "your task"`. No npm install is needed to generate and validate graphs; `npm install` at the root and `npm --prefix viewer install` are for the local viewer, the test suites, and development — the next section.
+Then `/graph-my-task "your task"`. No npm install is needed to generate, validate, or view graphs; `npm install` at the root and `npm --prefix viewer install` are for the test suites and viewer development — the next section.
 
 ## Run it yourself
 
-Node 20+ (CI runs 22). First time: `npm install` at the root **and** `npm --prefix viewer install`. The root install is not optional here — the shared validator in `scripts/` resolves its `ajv` from the root `node_modules`, and it is what the viewer, the dev validator (`scripts/validate.mjs`), and the test suites run on, so a viewer-only install leaves the viewer unable to validate the graph it loads. The one thing that no longer waits on it is the skill: its validation loop runs on the committed dependency-free bundle, so a fresh clone can generate and validate graphs before any install. Then `npm run dev:viewer`, and open the printed URL. The graph index lists every graph in `gallery/`; drop any `*.workflow.json` (including files from `out/`) onto the page to open it on the canvas — and a `#g=` share link against the local address works too. Then, on the canvas:
+Most days there is nothing to set up: the viewer ships already built — `viewer/dist` is committed, and CI rebuilds it on every push to prove the bytes still match the source — and one command serves it:
 
-- **A link can arrive holding a graph.** The viewer opens `#g=` share links directly — the link every skill run ends with — so the graph is on the canvas the moment the page is, no file in hand.
+```sh
+node scripts/serve.mjs out/your-graph.workflow.json
+```
+
+That starts a local viewer on `127.0.0.1` (repeated runs reuse it rather than stacking a second), prints a `localhost` link to that graph, writes the link to a `.link.txt` beside the file, and attempts your clipboard and browser on the way out — attempts: the link is printed either way. The link is local and lives as long as the server; `node scripts/serve.mjs --stop` ends it, and a link that travels is a share link, minted when you ask the skill for one. Run the command with no file for the bare viewer: the graph index lists every graph in `gallery/`, drop any `*.workflow.json` (including files from `out/`) onto the page to open it on the canvas — and a `#g=` link against the local address works too.
+
+**Development is the path that needs installs.** Node 20+ (CI runs 22): `npm install` at the root **and** `npm --prefix viewer install`. The root install is not optional here — the shared validator in `scripts/` resolves its `ajv` from the root `node_modules`, and it is what the viewer, the dev validator (`scripts/validate.mjs`), and the test suites run on, so a viewer-only install leaves the dev viewer unable to validate the graph it loads. Then `npm run dev:viewer` for the live-reload dev server, and open the printed URL; after viewer changes, `npm run build:viewer` regenerates the committed build CI holds you to. Then, on the canvas:
+
+- **A link can arrive holding a graph.** The viewer opens `#g=` links directly — the shape of the local link every skill run ends with, and of the long share link too — so the graph is on the canvas the moment the page is, no file in hand.
 - **Both ends are marked.** The first step wears START and takes a chevron into its left port; the last wears END and runs out of its right port to a terminal dot — so which way the work flows reads at a glance, at any zoom, and comes with the graph into an export.
 - **Rest on a badged card** and its best match rises beside it — the name, what it claims, what it saves — without opening anything. Move off and it goes. Once the detail panel is open the peek stays down; the panel is already saying more than it could.
 - **Click a node** for its detail panel — the whole step, unclamped, plus the resources the knowledge base matched to it. Badge pips on the cards show which steps have matches.
@@ -60,7 +68,7 @@ Node 20+ (CI runs 22). First time: `npm install` at the root **and** `npm --pref
 
 ## The skill: `/graph-my-task`
 
-The skill answers to two names for the same thing: `/graph-my-task "your task here"` in a checkout of this repo, `/untangle:graph-my-task "your task here"` when it is installed as the plugin. Run either and the skill decomposes the task into 6–16 honest steps — the manual gathering, the format wrangling, the retry loops, the human review gates — and writes them as a validated graph in `out/`: the checkout's own from a clone, the current project's when it runs as the plugin. Before it validates, it reads a curated knowledge base of real Claude skills, plugins, and MCP servers and attaches the ones that would collapse a step, each with what it claims, what it saves, and the command that installs it, when there is one. It runs on your own Claude subscription, in your own project, and it never invents a helper: a resource that is not in the rows it fetched does not exist for that graph.
+The skill answers to two names for the same thing: `/graph-my-task "your task here"` in a checkout of this repo, `/untangle:graph-my-task "your task here"` when it is installed as the plugin. Run either and the skill decomposes the task into 6–16 honest steps — the manual gathering, the format wrangling, the retry loops, the human review gates — and writes them as a validated graph in `out/`: the checkout's own from a clone, the current project's when it runs as the plugin. Before it validates, it reads a curated knowledge base of real Claude skills, plugins, and MCP servers and attaches the ones that would collapse a step, each with what it claims, what it saves, and the command that installs it, when there is one. It runs on your own Claude subscription, in your own project, and it never invents a helper: a resource that is not in the rows it fetched does not exist for that graph. And the run ends where you work: a viewer serving on your machine — the repo ships the built viewer, so nothing installs first — with a `localhost` link to the finished graph; the hosted demo stays the try-before-you-install page, and a share link exists the moment you ask for one.
 
 **Suggestions need no setup.** The knowledge base resolves in five tiers, tried strictly in order, stopping at the first that hands over rows — it never climbs back up:
 
@@ -72,7 +80,7 @@ The skill answers to two names for the same thing: `/graph-my-task "your task he
 | 2.7 | no snapshot on disk, unparseable, or empty | that same snapshot, fetched from the repo — GitHub raw | nothing |
 | 3 | no source returned rows | nothing: the vanilla graph, `suggestions: []` | — |
 
-Tiers 1, 2, 2.5, and 2.7 are the same table read four ways — live, mirrored, mirrored to disk, and that disk copy fetched from its repo — so all four report `kbSource: "airtable"`, and every run reports the knowledge-base state in one line. Tier 3 is not a failure: the honest flowchart is the deliverable either way. And however locked-down the environment, the skill degrades gracefully — and still ends the run with the short link, falling back to the full-length `#g=` link, the graph carried in the URL itself, when the short one can't be minted.
+Tiers 1, 2, 2.5, and 2.7 are the same table read four ways — live, mirrored, mirrored to disk, and that disk copy fetched from its repo — so all four report `kbSource: "airtable"`, and every run reports the knowledge-base state in one line. Tier 3 is not a failure: the honest flowchart is the deliverable either way. And however locked-down the environment, the skill degrades gracefully — the run still ends with the local viewer link, or with the hosted drop page named when even `node` is missing — and a durable share link is minted only when you ask.
 
 **Set the helpers up.** When the suggestions carry install commands, the skill offers to add them for real — it probes what is already on the machine, puts every exact command in a table and waits for `all` / `pick` / `none`, then runs the `claude mcp add` ones once each and prints everything else for you to run yourself. Consent is per-string and the strings are never edited, not even to rescue a failure; point the skill at any existing `*.workflow.json` and ask to install its resources to run the same stage later.
 
