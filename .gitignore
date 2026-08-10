@@ -5,5 +5,7 @@ out/*
 .superpowers/
 docs/superpowers/
 docs/specs/
-viewer/dist/
+# viewer/dist is deliberately NOT ignored: scripts/serve.mjs serves that build
+# where no node_modules exists and nothing can run vite. CI rebuilds it and
+# insists the tree stays clean, so the committed copy is never stale.
 *.tsbuildinfo

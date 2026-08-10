@@ -66,3 +66,10 @@ jobs:
       # Same command and same output directory the Pages workflow publishes
       # (viewer/dist), so a green build here is a publishable artifact there.
       - run: npm run build
+      # viewer/dist lives in git, because scripts/serve.mjs serves it on a
+      # machine with no node_modules to build it from. Same gate as the
+      # validator bundle in the contract job: rebuild it and insist the tree
+      # stays clean, so a viewer edited without a rebuild cannot ship a stale
+      # dist to every plugin install.
+      - run: git diff --exit-code viewer/dist
+        working-directory: .
