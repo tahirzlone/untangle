@@ -19,8 +19,11 @@
 // `url=$(node scripts/serve.mjs graph.workflow.json)` is the link and nothing
 // else, while a human reading the terminal still sees the whole story.
 //
-// A run with no file and no flags leaves a server behind on purpose: the next
-// graph reuses it instead of starting a second one. `--stop` ends it.
+// A run leaves a server behind on purpose: the next graph reuses it instead of
+// starting a second one — but only a server of this version, out of this
+// checkout, because nothing times these daemons out and the version you just
+// upgraded away from is otherwise still listening. `--stop` is the wider net,
+// and ends any untangle viewer it finds.
 //
 // UNTANGLE_NO_OPEN=1 suppresses both conveniences — no clipboard copy, no
 // browser launch. The suite sets it: a test run must not seize the clipboard or
@@ -106,6 +109,20 @@ function pluginVersion() {
 }
 
 /**
+ * What the ping says, and what a client compares itself against before reusing
+ * a server: this build, from this checkout.
+ *
+ * `untangle` alone marks a listener as one of ours. It is not enough to reuse.
+ * Nothing times these daemons out, so the ordinary state of affairs after a
+ * plugin update is the previous version still listening on 4173 — and a 1.2.1
+ * client that reused it would hand the user a link that opens the build they
+ * just replaced. Version and root both have to match: version catches a
+ * checkout updated in place, root catches two checkouts (or two plugin-cache
+ * installs) racing for the same port.
+ */
+const IDENTITY = { untangle: true, version: pluginVersion(), root: ROOT };
+
+/**
  * A build has to exist before any of this means anything. Defensive rather than
  * expected: viewer/dist is committed, so a checkout that lacks it has had it
  * deleted, and the honest thing is to name the path we looked in.
@@ -172,16 +189,30 @@ function serveStatic(rawPath, method, res) {
 }
 
 function createViewerServer() {
-  const version = pluginVersion();
   const server = createServer((req, res) => {
-    const url = new URL(req.url ?? '/', 'http://127.0.0.1');
     const method = req.method ?? 'GET';
+
+    // A request target is not a URL, and treating it as one relative to a base
+    // is how this process dies. `//anything` parses as protocol-relative, which
+    // makes the rest of it a HOST — and a forbidden code point in a host throws
+    // ERR_INVALID_URL right here, inside the request listener, where nothing
+    // catches it: `GET //..%2f..%2fpackage.json` killed the server outright,
+    // and with a detached daemon's stdio thrown away it died silently. Any page
+    // the user browses can send that (`<img src="http://localhost:4173//%2f">`
+    // needs no JS and no CORS). Concatenated onto the origin the target can
+    // never be read as a host, and the catch covers targets that are not paths.
+    let url;
+    try {
+      url = new URL(`http://127.0.0.1${req.url ?? '/'}`);
+    } catch {
+      return send(res, 400, TEXT, 'bad request', method);
+    }
 
     // How every other invocation recognises this process as one of ours rather
     // than as whatever else happens to be listening on a dev port.
     if (url.pathname === PING) {
       if (method !== 'GET' && method !== 'HEAD') return send(res, 405, TEXT, 'method not allowed');
-      return send(res, 200, JSON_TYPE, JSON.stringify({ untangle: true, version }), method);
+      return send(res, 200, JSON_TYPE, JSON.stringify(IDENTITY), method);
     }
 
     if (url.pathname === STOP) {
@@ -274,10 +305,24 @@ function ping(port, timeout = 500) {
   });
 }
 
-/** The first port in the list already answering as an untangle viewer. */
-async function findServer(ports) {
+/** A server this run may mint links against: our build, out of our checkout. */
+const ours = (answer) => answer.version === IDENTITY.version && answer.root === IDENTITY.root;
+
+/**
+ * Any untangle viewer at all. `--stop` takes this wider view on purpose: a
+ * stranger in the range is precisely the daemon reuse now steps over, and if
+ * nothing could stop it, an upgraded checkout would leave one squatting for
+ * good.
+ */
+const anyUntangle = () => true;
+
+/** The first port in the list answering, and acceptable to the caller. */
+async function findServer(ports, accept) {
   for (const port of ports) {
-    if (await ping(port)) return port;
+    const answer = await ping(port);
+    // A responder we do not accept is stepped over, not waited on: the scan
+    // simply carries on to the next port, and failing that we start our own.
+    if (answer && accept(answer)) return port;
   }
   return null;
 }
@@ -304,7 +349,7 @@ function spawnDaemon(port) {
 /** A running viewer: the one already up, or a new detached one. */
 async function ensureServer(opts) {
   const ports = opts.port === null ? SCAN : [opts.port];
-  const running = await findServer(ports);
+  const running = await findServer(ports, ours);
   if (running !== null) return { port: running, started: false };
 
   // Nothing can report the port an ephemeral listener landed on once its stdio
@@ -315,7 +360,7 @@ async function ensureServer(opts) {
   const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
     await delay(150);
-    const port = await findServer(ports);
+    const port = await findServer(ports, ours);
     if (port !== null) return { port, started: true };
   }
   return fail(`the viewer did not come up on ${ports.length === 1 ? ports[0] : `${PORT_MIN}–${PORT_MAX}`}`);
@@ -443,7 +488,7 @@ const opts = parseArgs(process.argv.slice(2));
 
 if (opts.stop) {
   const ports = opts.port === null ? SCAN : [opts.port];
-  const running = await findServer(ports);
+  const running = await findServer(ports, anyUntangle);
   if (running === null) {
     process.stdout.write(`no untangle viewer running on ${PORT_MIN}–${PORT_MAX}\n`);
   } else if (await requestStop(running)) {

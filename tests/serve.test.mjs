@@ -8,7 +8,11 @@ import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
 
 const serve = fileURLToPath(new URL('../scripts/serve.mjs', import.meta.url));
+const repoRoot = fileURLToPath(new URL('../', import.meta.url));
 const distDir = fileURLToPath(new URL('../viewer/dist/', import.meta.url));
+const version = JSON.parse(
+  readFileSync(join(repoRoot, '.claude-plugin', 'plugin.json'), 'utf8')
+).version;
 const gallery = fileURLToPath(
   new URL('../gallery/ship-a-payments-feature.workflow.json', import.meta.url)
 );
@@ -58,16 +62,9 @@ async function responders() {
 
 const delay = (ms) => new Promise((ok) => setTimeout(ok, ms));
 
-/**
- * A server in this process's care: spawned with --foreground so the test owns
- * its lifetime and can kill it, and never detached — a suite that leaves a
- * daemon behind has changed the machine it ran on.
- */
-function startForeground(...args) {
+/** A child that prints its own address, once it has printed it. */
+function addressOf(child) {
   return new Promise((ok, no) => {
-    const child = spawn(process.execPath, [serve, '--foreground', ...args], {
-      env: { ...process.env, UNTANGLE_NO_OPEN: '1' },
-    });
     let out = '';
     const timer = setTimeout(() => {
       child.kill();
@@ -87,6 +84,63 @@ function startForeground(...args) {
     });
   });
 }
+
+/**
+ * A server in this process's care: spawned with --foreground so the test owns
+ * its lifetime and can kill it, and never detached — a suite that leaves a
+ * daemon behind has changed the machine it ran on.
+ */
+const startForeground = (...args) =>
+  addressOf(
+    spawn(process.execPath, [serve, '--foreground', ...args], {
+      env: { ...process.env, UNTANGLE_NO_OPEN: '1' },
+    })
+  );
+
+/**
+ * A listener that answers the ping like an untangle viewer from somewhere else
+ * — another version, out of another checkout. That is the shape a plugin update
+ * leaves behind, since nothing times a daemon out, and it is exactly what reuse
+ * used to accept. It takes the lowest free port in the range, so a scan meets
+ * it before it meets anything of ours.
+ *
+ * In its own process, and that is not incidental: `run` below is spawnSync,
+ * which blocks this process's event loop for its whole duration. An impostor
+ * served from here could not answer a ping while the run under test was making
+ * one — it would look like silence, the run would step over it for the wrong
+ * reason, and the test would pass without ever exercising the identity check.
+ */
+const startImpostor = () =>
+  addressOf(
+    spawn(process.execPath, [
+      '-e',
+      `
+const { createServer } = require('http');
+const body = JSON.stringify({ untangle: true, version: '0.0.0-impostor', root: '/somewhere/else/' });
+const server = createServer((req, res) => {
+  if (req.url !== '/__untangle_ping') return res.writeHead(404).end();
+  res.writeHead(200, { 'content-type': 'application/json', 'content-length': body.length });
+  return res.end(body);
+});
+const attempt = (port) => {
+  if (port > ${PORTS[PORTS.length - 1]}) { console.error('no free port'); process.exit(1); }
+  const onError = (err) => {
+    server.removeListener('listening', onListening);
+    if (err.code !== 'EADDRINUSE') { console.error(err.message); process.exit(1); }
+    attempt(port + 1);
+  };
+  const onListening = () => {
+    server.removeListener('error', onError);
+    console.log('http://localhost:' + port + '/');
+  };
+  server.once('error', onError);
+  server.once('listening', onListening);
+  server.listen(port, '127.0.0.1');
+};
+attempt(${PORTS[0]});
+`,
+    ])
+  );
 
 // Run from outside the repo, as the skill runs it: every path this script needs
 // comes from its own location, never from where the shell stands. And with the
@@ -157,6 +211,23 @@ describe('the viewer serve.mjs serves', () => {
 
   it('lists no directories', async () => {
     expect((await request(server.port, '/assets')).status).toBe(404);
+  });
+
+  // A request target is not a URL. Parsed relative to a base, `//anything`
+  // is protocol-relative and the rest becomes a HOST — and a forbidden code
+  // point in a host throws inside the request listener, where an uncaught
+  // throw is the whole process. This shape killed the server outright, so the
+  // assertion that matters is the second one: it is still there afterwards.
+  it('survives a request target that parses as a host', async () => {
+    expect((await request(server.port, '//..%2f..%2fpackage.json')).status).toBe(404);
+    // `//%2f` decodes to `//`, which names the root of dist and gets what the
+    // root has always got. Harmless — the point is which of these two lines
+    // used to be unreachable, and it is the one below.
+    const root = await request(server.port, '//%2f');
+    expect(root.status).toBe(200);
+    expect(root.type).toContain('text/html');
+    // The assertion the finding is actually about: it is still here to answer.
+    expect((await request(server.port, '/__untangle_ping')).status).toBe(200);
   });
 });
 
@@ -232,6 +303,55 @@ describe('a second run reuses the first run’s server', () => {
     expect(port).toBe(before[0]);
     expect(res.stderr).toContain('reusing the viewer');
     expect(await responders()).toEqual(before);
+  });
+});
+
+describe('reuse knows which build is answering', () => {
+  let impostor;
+  let server;
+
+  beforeAll(async () => {
+    // In this order: the stranger takes the lowest free port, ours takes the
+    // next, so a scan that reused the first responder it found would reuse the
+    // wrong one — which is what happened before.
+    impostor = await startImpostor();
+    server = await startForeground();
+  });
+
+  afterAll(() => {
+    server?.child.kill();
+    impostor?.child.kill();
+  });
+
+  it('steps over another version on a lower port', async () => {
+    expect(impostor.port).toBeLessThan(server.port);
+
+    const res = run();
+    expect(res.status).toBe(0);
+    const port = Number(res.stdout.trim().match(/http:\/\/localhost:(\d+)\//)[1]);
+    expect(port).not.toBe(impostor.port);
+
+    // Whatever port it settled on, the server there is this checkout's, at this
+    // version. Stated as the invariant rather than as a port equality, so a
+    // viewer someone else left running cannot make this pass by accident.
+    const answer = JSON.parse((await request(port, '/__untangle_ping')).body.toString());
+    expect(answer.version).toBe(version);
+    expect(answer.root).toBe(repoRoot);
+
+    // Stepped over, not shut down: the stranger is somebody else's business.
+    expect(await pinged(impostor.port)).toBe(true);
+  });
+
+  it('lets --stop reach the stranger reuse steps over', () => {
+    // --stop takes the wider view on purpose: a stranger in the range is
+    // exactly the daemon reuse now walks past, and if --stop could not see it
+    // either, an upgraded checkout would leave one squatting for good. This
+    // impostor is a bare ping responder with no stop route, so it is found and
+    // then honestly reported as unstoppable — being found is the assertion.
+    const stopped = run('--stop', '--port', String(impostor.port));
+    expect(stopped.stdout).not.toContain('no untangle viewer running');
+    expect(stopped.stderr).toContain(`found a viewer on port ${impostor.port}`);
+    expect(stopped.status).toBe(1);
   });
 });
 
