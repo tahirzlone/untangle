@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!--
+    The signal mark, at tab size. Raw hex on purpose: a favicon is fetched as its
+    own document with no stylesheet behind it, so there is nothing here for a
+    custom property to resolve against. The two values are the bg-deep (#06080D)
+    and accent (#A3E635) tokens from src/tokens.css — keep them in step. (Their
+    names are written bare here: a double hyphen inside an XML comment is a parse
+    error, and an SVG that fails to parse is a favicon that never draws.)
+
+    Three shapes and no more: the U of Untangle drawn as a run — down, round the
+    turn, back up — ending on a node. Anything finer than this is a smudge at 16px.
+  -->
+  <rect width="32" height="32" rx="7" fill="#06080D"/>
+  <path d="M9 8 L9 17 Q9 23 16 23 Q23 23 23 17 L23 8" fill="none" stroke="#A3E635" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="23" cy="8" r="3.5" fill="#A3E635"/>
+</svg>

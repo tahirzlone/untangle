@@ -82,6 +82,8 @@ describe('what a plugin-cache copy must ship', () => {
     'scripts/validate.bundle.mjs',
     'kb/kb.json',
     '.claude/skills/graph-my-task/SKILL.md',
+    'scripts/serve.mjs',
+    'viewer/dist/index.html',
   ];
 
   const lsFiles = (rel) =>
@@ -96,4 +98,16 @@ describe('what a plugin-cache copy must ship', () => {
       expect(lsFiles(rel).status).toBe(0);
     });
   }
+
+  // index.html alone is a page that loads nothing: the build it names lives in
+  // assets/, and those are the files a .gitignore line used to swallow whole.
+  // Named by pattern rather than by hash, which changes with every build.
+  it('tracks the viewer build assets index.html points at', () => {
+    const listed = spawnSync('git', ['ls-files', '--', 'viewer/dist/assets'], {
+      encoding: 'utf8',
+      cwd: repoRoot,
+    });
+    expect(listed.status).toBe(0);
+    expect(listed.stdout.trim()).not.toBe('');
+  });
 });

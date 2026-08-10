@@ -5,5 +5,10 @@ out/*
 .superpowers/
 docs/superpowers/
 docs/specs/
-viewer/dist/
+# scripts/serve.mjs writes <slug>.link.txt beside a graphed file; out/ is already
+# ignored, this covers a run against gallery/ or anywhere else in the tree.
+*.link.txt
+# viewer/dist is deliberately NOT ignored: scripts/serve.mjs serves that build
+# where no node_modules exists and nothing can run vite. CI rebuilds it and
+# insists the tree stays clean, so the committed copy is never stale.
 *.tsbuildinfo
