@@ -95,17 +95,6 @@ Fork the repo, then two gates, once each: the **Actions** tab, where GitHub park
 - **The snapshot workflow sleeps in a quiet fork.** GitHub suspends scheduled runs on inactive forks, so `kb-snapshot.yml` stops mirroring on its own; Actions → KB snapshot → **Run workflow** revives it whenever you want a fresh one.
 - **The demo redeploys on real pushes only.** A snapshot commit is pushed by the Actions bot, and a `GITHUB_TOKEN` push does not trigger workflows — which is the right outcome here: the hosted demo is the precomputed gallery, not a live read of the knowledge base.
 
-## First publish (maintainer, once)
-
-`configure-pages` cannot see a private repository, so a `main` push before the flip fails the deploy. The order:
-
-1. Flip the repo public.
-2. Settings → Pages → Source: **GitHub Actions**.
-3. Merge `feat/launch` to `main` (or push `main`).
-4. Watch the `pages.yml` run.
-
-If the order slips, Actions → Deploy Pages → **Run workflow** re-runs it once the first two are done.
-
 ## Credits
 
 Built by Tahir Lone — [tahirlone.com](https://tahirlone.com). The knowledge base is his own curated Airtable of Claude skills, plugins, and MCP servers, served to every keyless run through the public feed. MIT licensed; see [`LICENSE`](LICENSE).
