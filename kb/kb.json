@@ -1,8 +1,26 @@
 {
-  "fetchedAt": "2026-08-06T01:05:21.707Z",
-  "updatedAt": "2026-08-06T01:00:33.740Z",
-  "recordCount": 59,
+  "fetchedAt": "2026-08-11T05:32:36.141Z",
+  "updatedAt": "2026-08-11T01:35:29.287Z",
+  "recordCount": 68,
   "records": [
+    {
+      "id": "rec01yqHvgetnrvGn",
+      "capabilityTags": [
+        "image-generation"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-08-10",
+      "description": "Open-weight 2K video generation model with native synchronized stereo audio - one unified model covers text/image/video/audio inputs to audio-video output. The open-source answer to Veo/Sora-class generation with sound built in.",
+      "improvementClaim": "Collapses the video + soundtrack pipeline into one open model - synchronized audio-video generation without stitching two systems together.",
+      "install": "ComfyUI workflows or HF diffusers: MiniMaxH3ModularPipeline (no one-line install; GPU required)",
+      "language": "Python",
+      "name": "MiniMaxAI/MiniMax-H3 (Hailuo 3.0)",
+      "stepArchetypes": [
+        "research",
+        "document"
+      ],
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3"
+    },
     {
       "id": "rec1lQlBJLCMjsivF",
       "capabilityTags": [
@@ -122,6 +140,26 @@
       "url": "https://github.com/DeusData/codebase-memory-mcp"
     },
     {
+      "id": "rec7P5H5nyOuUqGu0",
+      "capabilityTags": [
+        "research",
+        "api-integration"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-08-10",
+      "description": "Vercel's open agent-skills ecosystem: the skills.sh registry, the `npx skills` CLI (package manager for agent skills), and the find-skills skill - the #1 most-installed skill on the registry at ~3M installs - which lets an agent discover and install new skills for whatever task it's given.",
+      "improvementClaim": "Lets agents install their own missing capabilities on demand - skill discovery becomes part of the agent loop, not a human chore.",
+      "install": "npx skills add vercel-labs/skills",
+      "language": "TypeScript",
+      "name": "vercel-labs/skills (find-skills)",
+      "stars": 28300,
+      "stepArchetypes": [
+        "research",
+        "scaffold"
+      ],
+      "url": "https://github.com/vercel-labs/skills"
+    },
+    {
       "id": "rec7UTBxToaujN1sg",
       "capabilityTags": [
         "code-generation",
@@ -238,6 +276,45 @@
       "url": "https://github.com/different-ai/openwork"
     },
     {
+      "id": "recA2J2JPfbtJZ8IN",
+      "capabilityTags": [
+        "code-generation",
+        "deployment"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-08-10",
+      "description": "AI IDE for hardware development supporting Arduino, MicroPython, ESP32, STM32, RP2040, and Nrf5x boards. Combines visual block-based programming with AI-assisted code generation so both pros and beginners can build embedded projects.",
+      "improvementClaim": "Cuts embedded firmware iteration from an hour-long compile to about a minute, with AI writing the block logic.",
+      "install": "Download desktop app from GitHub releases (docs: aily.pro/doc)",
+      "language": "TypeScript",
+      "name": "ailyProject/aily-blockly",
+      "stars": 2100,
+      "stepArchetypes": [
+        "code",
+        "deploy",
+        "scaffold"
+      ],
+      "url": "https://github.com/ailyProject/aily-blockly"
+    },
+    {
+      "id": "recC2k5UfNyR7pHI6",
+      "capabilityTags": [
+        "research"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-08-10",
+      "description": "Research blog post empirically probing what Claude and GPT models actually know versus their stated knowledge cutoffs, reconstructing pre-training timelines from model behavior. Finds effective cutoffs trail official dates.",
+      "improvementClaim": "Replaces guesswork about model knowledge cutoffs with measured, per-model effective dates.",
+      "install": "Browse the post - no install",
+      "language": "N/A (blog post)",
+      "name": "sshh.io: Exploring Claude/GPT Knowledge Cutoffs",
+      "stepArchetypes": [
+        "research",
+        "document"
+      ],
+      "url": "https://blog.sshh.io/p/exploring-claudegpt-knowledge-cutoffs"
+    },
+    {
       "id": "recDIOmiHYqY0YuEW",
       "capabilityTags": [
         "research",
@@ -311,6 +388,50 @@
         "research"
       ],
       "url": "https://github.com/quemsah/awesome-claude-plugins"
+    },
+    {
+      "id": "recENZZBPulkpNCld",
+      "capabilityTags": [
+        "review",
+        "testing",
+        "documentation"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-08-10",
+      "description": "Matt Pocock's 'Skills for Real Engineers' - the hottest skill pack on the skills.sh registry. Includes /grill-me (interview-style project planning), /grill-with-docs, /tdd (red-green-refactor), /improve-codebase-architecture, /code-review, and /diagnosing-bugs.",
+      "improvementClaim": "Turns Claude Code into a senior engineer that grills your plan before you write code - planning discipline as an installable skill.",
+      "install": "npx skills@latest add mattpocock/skills",
+      "language": "Markdown",
+      "name": "mattpocock/skills",
+      "stars": 209800,
+      "stepArchetypes": [
+        "review",
+        "test",
+        "document"
+      ],
+      "url": "https://github.com/mattpocock/skills"
+    },
+    {
+      "id": "recEu9MmTRYaa3qqx",
+      "capabilityTags": [
+        "orchestration",
+        "review",
+        "research"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-08-10",
+      "description": "'A complete AI agency at your fingertips': 150+ specialized AI agent personas spanning engineering (45+), marketing (30+), design, sales, QA, and security. Each agent ships with an identity, workflows, deliverables with code examples, and success metrics.",
+      "improvementClaim": "Gives a solo dev a 150-person virtual agency - specialist personas on tap instead of writing every system prompt from scratch.",
+      "install": "brew install --cask msitarzewski/agency-agents/agency-agents",
+      "language": "Markdown",
+      "name": "msitarzewski/agency-agents",
+      "stars": 140000,
+      "stepArchetypes": [
+        "orchestrate",
+        "code",
+        "review"
+      ],
+      "url": "https://github.com/msitarzewski/agency-agents"
     },
     {
       "id": "recFftxXAG4p89zjh",
@@ -656,6 +777,24 @@
       "url": "https://github.com/actions/checkout"
     },
     {
+      "id": "recXeFHjPGoOViNOG",
+      "capabilityTags": [
+        "orchestration",
+        "security"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-08-10",
+      "description": "Newly granted US patent to Mistral covering 'code implemented tool calls' - executing LLM tool calls as generated code rather than structured JSON dispatch. The HN thread argues this pattern underpins much of the current open-source agent stack (code-execution agents, CodeAct-style frameworks).",
+      "improvementClaim": "One patent that could reshape how every agent framework legally implements tool calling.",
+      "install": "No install - patent document",
+      "language": "N/A (patent document)",
+      "name": "Mistral patent: US12670045 'Code implemented tool calls'",
+      "stepArchetypes": [
+        "research"
+      ],
+      "url": "https://patentsgazette.uspto.gov/week26/OG/html/1547-5/US12670045-20260630.html"
+    },
+    {
       "id": "recXkFXeYmcTgHbC6",
       "capabilityTags": [
         "api-integration"
@@ -963,6 +1102,28 @@
       "url": "https://github.com/alirezarezvani/claude-skills"
     },
     {
+      "id": "recqjdi7lDsQgCPa4",
+      "capabilityTags": [
+        "data-etl",
+        "memory",
+        "research"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-08-10",
+      "description": "Graph-native infrastructure for context and accountable AI systems - a deterministic reasoning and provenance layer that sits beneath LLMs and agent frameworks, building queryable knowledge graphs from fragmented enterprise data. Community pitches it as an open-source Palantir alternative for agents.",
+      "improvementClaim": "Makes agent decisions 100x more auditable - every inference gets a causal chain you can hand to a regulator.",
+      "install": "pip install semantica",
+      "language": "Python",
+      "name": "semantica-agi/semantica",
+      "stars": 3900,
+      "stepArchetypes": [
+        "data-etl",
+        "research",
+        "document"
+      ],
+      "url": "https://github.com/semantica-agi/semantica"
+    },
+    {
       "id": "recrNgFnmEK4hsJwC",
       "capabilityTags": [
         "orchestration"
@@ -1110,6 +1271,28 @@
         "review"
       ],
       "url": "https://github.com/zhaoxuya520/reverse-skill"
+    },
+    {
+      "id": "reczOdYL7EdqmweqC",
+      "capabilityTags": [
+        "orchestration",
+        "code-generation",
+        "memory"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-08-10",
+      "description": "Open-source self-improving coding agent from Prime Intellect built on the Recursive Language Model (RLM) idea. It handles long-running autonomous coding and research tasks and refines its own prompts, memories, and skills over time via evidence-backed /refine commands.",
+      "improvementClaim": "Makes long-running autonomous coding sessions 10x more durable - the agent survives disconnects and improves its own skills between tasks.",
+      "install": "curl -fsSL https://app.primeintellect.ai/prime-agent/install.sh | sh",
+      "language": "TypeScript",
+      "name": "PrimeIntellect-ai/prime-agent",
+      "stars": 9300,
+      "stepArchetypes": [
+        "code",
+        "orchestrate",
+        "research"
+      ],
+      "url": "https://github.com/PrimeIntellect-ai/prime-agent"
     },
     {
       "id": "reczVlRQbKErbOT8d",
