@@ -15,7 +15,11 @@ import {
 import { GraphCanvas } from './GraphCanvas';
 import { FLIP_MS, GHOST_MS, MOTION_VARS } from './motion';
 
-const wf = fixture(gallery, 'gallery');
+/** A graph with no KB behind it: the gallery graph, suggestions stripped. */
+const wf = fixture(
+  { ...gallery, meta: { ...gallery.meta, kbSource: 'none' }, suggestions: [] },
+  'gallery',
+);
 /** The KB-matched graph: two suggestions on one node, one patch the reducer refuses. */
 const enriched = fixture(enrichedDoc, 'enriched');
 
@@ -250,7 +254,7 @@ it('replans the back-edge floors from live positions when a node moves', async (
   const before = backPaths();
   expect(before.length).toBeGreaterThan(0);
 
-  const card = cardFor(wf.nodes.find((n) => n.id === 'debug-flaky')!.label, all);
+  const card = cardFor(wf.nodes.find((n) => n.id === 'tune-selectors-waits')!.label, all);
   fireEvent.click(card);
   for (let i = 0; i < 40; i++) {
     fireEvent.keyDown(card, { key: 'ArrowDown', shiftKey: true });

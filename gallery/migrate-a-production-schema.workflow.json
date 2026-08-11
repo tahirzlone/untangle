@@ -2,14 +2,16 @@
   "meta": {
     "task": "Split the orders table into orders and order_items and move production onto the new schema without downtime or data loss",
     "title": "Migrate a Production Schema Safely",
-    "generatedAt": "2026-08-05T13:50:00Z",
+    "generatedAt": "2026-08-11T16:30:00Z",
     "model": "claude-fable-5",
     "kbSource": "airtable",
     "promptIntro": "Split the orders table into orders and order_items and move production onto the new schema without downtime or data loss. Plan it outward from the callers: a rehearsed migration, a verified backfill, a cutover the team signs off on, and a rollback path that stays open until the old shape is finally dropped."
   },
   "nodes": [
     { "id": "gather-migration-scope", "label": "Gather the schema, the traffic, and the rules", "kind": "input", "description": "Collect the current schema and row counts, the peak-traffic windows, how much downtime is acceptable, and what rollback has to look like if the cutover goes wrong.", "painLevel": 2 },
-    { "id": "map-callers", "label": "Find every reader and writer of the table", "kind": "process", "description": "Grep the monolith and every service for the table name, then chase ORM models, raw SQL in background jobs, analytics queries, and one-off scripts nobody owns. The caller you miss is the outage.", "painLevel": 5 },
+    { "id": "grep-table-name", "label": "Grep every repo for the table name", "kind": "process", "description": "Search the monolith and every service for the string 'orders' and wade through the hits, one repo at a time.", "painLevel": 4 },
+    { "id": "chase-orm-callers", "label": "Chase the ORM models and raw SQL", "kind": "process", "description": "Follow the models, scopes, and hand-written SQL in background jobs to find which code actually reads and writes the columns.", "painLevel": 4 },
+    { "id": "hunt-oddball-callers", "label": "Hunt the callers nobody owns", "kind": "process", "description": "Track down the analytics queries, cron scripts, and one-off jobs that touch the table outside the app — the caller you miss is the outage.", "painLevel": 5 },
     { "id": "design-target-schema", "label": "Design the target schema", "kind": "process", "description": "Decide the new tables, keys, indexes and constraints, and exactly how every row of the old shape maps onto them.", "painLevel": 3 },
     { "id": "write-migration", "label": "Write forward and rollback migrations", "kind": "process", "description": "Write the DDL both ways, in steps small enough that neither direction holds a lock for long.", "painLevel": 3 },
     { "id": "dry-run-copy", "label": "Dry-run on a production-sized copy", "kind": "process", "description": "Restore a recent dump, run the migration against it, time every statement, and watch what takes locks and for how long.", "painLevel": 4 },
@@ -24,8 +26,10 @@
     { "id": "migration-done", "label": "Schema migrated", "kind": "output", "description": "Production runs on the new schema, the backfill is verified, and the rollback path is documented for as long as it was needed.", "painLevel": 1 }
   ],
   "edges": [
-    { "from": "gather-migration-scope", "to": "map-callers", "kind": "sequence" },
-    { "from": "map-callers", "to": "design-target-schema", "kind": "sequence" },
+    { "from": "gather-migration-scope", "to": "grep-table-name", "kind": "sequence" },
+    { "from": "grep-table-name", "to": "chase-orm-callers", "kind": "sequence" },
+    { "from": "chase-orm-callers", "to": "hunt-oddball-callers", "kind": "sequence" },
+    { "from": "hunt-oddball-callers", "to": "design-target-schema", "kind": "sequence" },
     { "from": "design-target-schema", "to": "write-migration", "kind": "sequence" },
     { "from": "write-migration", "to": "dry-run-copy", "kind": "sequence" },
     { "from": "dry-run-copy", "to": "timing-acceptable", "kind": "sequence" },
@@ -44,23 +48,23 @@
   ],
   "suggestions": [
     {
-      "nodeId": "map-callers",
+      "nodeId": "hunt-oddball-callers",
       "airtableRecordId": "rec6ENkJdbb6RmDdj",
       "name": "DeusData/codebase-memory-mcp",
       "url": "https://github.com/DeusData/codebase-memory-mcp",
       "category": "MCP Server",
       "claim": "Sub-millisecond architectural queries over a whole codebase — up to 99% fewer tokens.",
       "install": "curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash",
-      "promptFragment": "Before you design anything, ask DeusData/codebase-memory-mcp who reads and writes the orders table, instead of grepping the monolith and every service for its name. Query it for the models, queries and jobs that touch those columns and treat that answer as the migration's blast radius.",
+      "promptFragment": "Before you design anything, ask DeusData/codebase-memory-mcp who reads and writes the orders table, instead of grepping the monolith and every service for its name and chasing the ORM models, jobs, and one-off scripts by hand. Query it for the models, queries and jobs that touch those columns and treat that answer as the migration's blast radius.",
       "effect": {
         "removeNodes": [],
-        "mergeNodes": ["map-callers"],
-        "replaceWith": { "id": "query-table-callers", "label": "Query the graph for every caller", "kind": "process", "description": "One structural query returns the readers and writers of the table, including the jobs and scripts a grep for the table name would miss.", "painLevel": 1 },
+        "mergeNodes": ["grep-table-name", "chase-orm-callers", "hunt-oddball-callers"],
+        "replaceWith": { "id": "query-table-callers", "label": "Query the graph for every caller", "kind": "process", "description": "One structural query returns the readers and writers of the table — the models, the jobs, and the scripts a grep for the table name would miss.", "painLevel": 1 },
         "newEdges": [
           { "from": "gather-migration-scope", "to": "query-table-callers", "kind": "sequence" },
           { "from": "query-table-callers", "to": "design-target-schema", "kind": "sequence" }
         ],
-        "metrics": { "stepsSaved": 0, "estTimeSavedMin": 60, "estTokensSaved": 8000, "manualInterventionsRemoved": 0 }
+        "metrics": { "stepsSaved": 2, "estTimeSavedMin": 60, "estTokensSaved": 8000, "manualInterventionsRemoved": 0 }
       }
     }
   ]

@@ -14,8 +14,11 @@ import {
 } from '../test/harness';
 import { GraphCanvas } from './GraphCanvas';
 
-/** A graph with no KB behind it: nothing to optimize. */
-const plain = fixture(gallery, 'gallery');
+/** A graph with no KB behind it: the gallery graph, suggestions stripped — nothing to optimize. */
+const plain = fixture(
+  { ...gallery, meta: { ...gallery.meta, kbSource: 'none' }, suggestions: [] },
+  'gallery',
+);
 /** The KB-matched graph: two siblings on one step, one patch the reducer refuses. */
 const enriched = fixture(enrichedDoc, 'enriched');
 /** Two cards carrying one Airtable row — the reducer opens no session at all. */
