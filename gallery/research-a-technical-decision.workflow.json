@@ -2,7 +2,7 @@
   "meta": {
     "task": "Work out whether we should self-host an open-weight model instead of paying per token, and write it up with citations for the team",
     "title": "Research a Technical Decision and Write It Up",
-    "generatedAt": "2026-08-05T13:35:00Z",
+    "generatedAt": "2026-08-11T16:30:00Z",
     "model": "claude-fable-5",
     "kbSource": "airtable",
     "promptIntro": "Work out whether we should self-host an open-weight model instead of paying per token, and write it up with citations for the team. Take it all the way through: the sources, your own numbers for each candidate, and a reviewed write-up whose every claim points back at where it came from."
@@ -10,9 +10,12 @@
   "nodes": [
     { "id": "frame-question", "label": "Frame the question and the constraints", "kind": "input", "description": "Collect the workloads in scope, the budget the current bill sits against, the hardware already on hand, the deadline, and who has to be convinced.", "painLevel": 2 },
     { "id": "sweep-sources", "label": "Sweep the sources by hand", "kind": "process", "description": "Search, open thirty tabs, skim vendor docs, papers, benchmark posts and forum threads, and keep a list of what looked useful before the tabs are lost.", "painLevel": 4 },
-    { "id": "read-long-form", "label": "Read the long-form references end to end", "kind": "loop", "description": "Work through the books, spec PDFs and whitepapers page by page for the handful of paragraphs that answer the question, taking notes you will spend the afternoon re-finding.", "painLevel": 5 },
+    { "id": "read-page-by-page", "label": "Read the long-form sources page by page", "kind": "loop", "description": "Work through the books, spec PDFs and whitepapers page by page for the handful of paragraphs that actually answer the question.", "painLevel": 5 },
+    { "id": "keep-scattered-notes", "label": "Keep notes on what mattered where", "kind": "process", "description": "Write down which claim lived in which chapter and page, in whatever file happened to be open at the time.", "painLevel": 3 },
+    { "id": "refind-passages", "label": "Re-find the passages the notes point at", "kind": "process", "description": "Spend the afternoon re-locating half-remembered paragraphs because the notes say 'somewhere in chapter 9'.", "painLevel": 4 },
     { "id": "extract-claims", "label": "Extract every claim with its citation", "kind": "process", "description": "Copy each number out with its source, page or section, and date — then chase the ones whose links have already moved.", "painLevel": 4 },
-    { "id": "benchmark-candidates", "label": "Benchmark each candidate yourself", "kind": "loop", "description": "Stand each option up, push the real workload through it, record throughput, latency and cost, and sit with the runs for hours while they finish. Published numbers do not answer for your traffic.", "painLevel": 5 },
+    { "id": "stand-up-candidates", "label": "Stand each candidate up and run the workload", "kind": "loop", "description": "Deploy each option, push the real traffic shape through it, and record throughput, latency and cost. Published numbers do not answer for your traffic.", "painLevel": 4 },
+    { "id": "sit-with-runs", "label": "Sit with the runs for hours", "kind": "process", "description": "Watch each benchmark run to the end, noting the stalls and reruns — the runs will not watch themselves.", "painLevel": 5 },
     { "id": "numbers-hold", "label": "Numbers reproduce?", "kind": "decision", "description": "Does the second run agree with the first, or did a warm cache flatter one of the candidates?", "painLevel": 2 },
     { "id": "build-comparison", "label": "Normalize the numbers into one table", "kind": "process", "description": "Put every option on the same basis: cost per token, cost per month, amortized hardware, and the assumptions each figure rests on.", "painLevel": 3 },
     { "id": "draft-report", "label": "Draft the report and the recommendation", "kind": "process", "description": "Write the structure, the argument, the trade-offs, and the recommendation the team asked for.", "painLevel": 3 },
@@ -23,11 +26,14 @@
   ],
   "edges": [
     { "from": "frame-question", "to": "sweep-sources", "kind": "sequence" },
-    { "from": "sweep-sources", "to": "read-long-form", "kind": "sequence" },
-    { "from": "read-long-form", "to": "extract-claims", "kind": "sequence" },
-    { "from": "extract-claims", "to": "benchmark-candidates", "kind": "sequence" },
-    { "from": "benchmark-candidates", "to": "numbers-hold", "kind": "sequence" },
-    { "from": "numbers-hold", "to": "benchmark-candidates", "kind": "retry", "label": "run didn't reproduce — rerun" },
+    { "from": "sweep-sources", "to": "read-page-by-page", "kind": "sequence" },
+    { "from": "read-page-by-page", "to": "keep-scattered-notes", "kind": "sequence" },
+    { "from": "keep-scattered-notes", "to": "refind-passages", "kind": "sequence" },
+    { "from": "refind-passages", "to": "extract-claims", "kind": "sequence" },
+    { "from": "extract-claims", "to": "stand-up-candidates", "kind": "sequence" },
+    { "from": "stand-up-candidates", "to": "sit-with-runs", "kind": "sequence" },
+    { "from": "sit-with-runs", "to": "numbers-hold", "kind": "sequence" },
+    { "from": "numbers-hold", "to": "stand-up-candidates", "kind": "retry", "label": "run didn't reproduce — rerun" },
     { "from": "numbers-hold", "to": "build-comparison", "kind": "branch", "label": "numbers hold" },
     { "from": "build-comparison", "to": "draft-report", "kind": "sequence" },
     { "from": "draft-report", "to": "check-citations", "kind": "sequence" },
@@ -39,43 +45,43 @@
   ],
   "suggestions": [
     {
-      "nodeId": "read-long-form",
+      "nodeId": "read-page-by-page",
       "airtableRecordId": "recDfet3ZseWb0Vpi",
       "name": "virgiliojr94/book-to-skill",
       "url": "https://github.com/virgiliojr94/book-to-skill",
       "category": "Claude Skill",
       "claim": "Turns any technical book into an on-demand agent skill at 24-51x fewer tokens.",
       "install": "pip install \"book-to-skill[pdf,epub,docx]\"",
-      "promptFragment": "Before you start reading, run the books, spec PDFs and whitepapers through virgiliojr94/book-to-skill and query the skill it produces, instead of working through them page by page for the few paragraphs that matter. Pull the frameworks and decision rules you need on demand as the argument takes shape, and keep the per-chapter files for the citations.",
+      "promptFragment": "Before you start reading, run the books, spec PDFs and whitepapers through virgiliojr94/book-to-skill and query the skill it produces, instead of working through them page by page, keeping notes, and re-finding the passages the notes half-remember. Pull the frameworks and decision rules you need on demand as the argument takes shape, and keep the per-chapter files for the citations.",
       "effect": {
         "removeNodes": [],
-        "mergeNodes": ["read-long-form"],
-        "replaceWith": { "id": "query-source-skill", "label": "Query the references as a skill", "kind": "process", "description": "The long-form sources become an on-demand skill: ask for the passage you need instead of reading the whole book to find it.", "painLevel": 1 },
+        "mergeNodes": ["read-page-by-page", "keep-scattered-notes", "refind-passages"],
+        "replaceWith": { "id": "query-source-skill", "label": "Query the references as a skill", "kind": "process", "description": "The long-form sources become an on-demand skill: ask for the passage you need instead of reading the whole book, noting where it was, and finding it again.", "painLevel": 1 },
         "newEdges": [
           { "from": "sweep-sources", "to": "query-source-skill", "kind": "sequence" },
           { "from": "query-source-skill", "to": "extract-claims", "kind": "sequence" }
         ],
-        "metrics": { "stepsSaved": 0, "estTimeSavedMin": 150, "estTokensSaved": 20000, "manualInterventionsRemoved": 0 }
+        "metrics": { "stepsSaved": 2, "estTimeSavedMin": 150, "estTokensSaved": 20000, "manualInterventionsRemoved": 0 }
       }
     },
     {
-      "nodeId": "benchmark-candidates",
+      "nodeId": "sit-with-runs",
       "airtableRecordId": "recjGQzcyhAe6tiQT",
       "name": "wanshuiyin/Auto-claude-code-research-in-sleep",
       "url": "https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep",
       "category": "Claude Skill",
       "claim": "Overnight autonomous research loops with cross-model review — wake up to finished experiments.",
-      "promptFragment": "Once the candidates and the workload are settled, hand the benchmark runs to wanshuiyin/Auto-claude-code-research-in-sleep and let them run overnight under its cross-model review, instead of sitting with each run for hours as it finishes. Read the finished results in the morning and take those numbers into the comparison.",
+      "promptFragment": "Once the candidates and the workload are settled, hand the benchmark runs to wanshuiyin/Auto-claude-code-research-in-sleep and let them run overnight under its cross-model review, instead of standing each option up in person and sitting with the runs for hours. Read the finished results in the morning and take those numbers into the comparison.",
       "effect": {
         "removeNodes": [],
-        "mergeNodes": ["benchmark-candidates"],
+        "mergeNodes": ["stand-up-candidates", "sit-with-runs"],
         "replaceWith": { "id": "overnight-benchmarks", "label": "Run the benchmarks overnight", "kind": "process", "description": "The candidates run unattended overnight with cross-model review; the results are waiting in the morning.", "painLevel": 2 },
         "newEdges": [
           { "from": "extract-claims", "to": "overnight-benchmarks", "kind": "sequence" },
           { "from": "overnight-benchmarks", "to": "numbers-hold", "kind": "sequence" },
           { "from": "numbers-hold", "to": "overnight-benchmarks", "kind": "retry", "label": "run didn't reproduce — rerun" }
         ],
-        "metrics": { "stepsSaved": 0, "estTimeSavedMin": 180, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
+        "metrics": { "stepsSaved": 1, "estTimeSavedMin": 180, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
       }
     },
     {

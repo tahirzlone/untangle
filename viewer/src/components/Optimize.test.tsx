@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { createEvent, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import gallery from '../../../gallery/add-e2e-tests.workflow.json';
 import enrichedDoc from '../test/fixtures/enriched.workflow.json';
 import {
@@ -14,8 +14,11 @@ import {
 } from '../test/harness';
 import { GraphCanvas } from './GraphCanvas';
 
-/** A graph with no KB behind it: nothing to optimize. */
-const plain = fixture(gallery, 'gallery');
+/** A graph with no KB behind it: the gallery graph, suggestions stripped — nothing to optimize. */
+const plain = fixture(
+  { ...gallery, meta: { ...gallery.meta, kbSource: 'none' }, suggestions: [] },
+  'gallery',
+);
 /** The KB-matched graph: two siblings on one step, one patch the reducer refuses. */
 const enriched = fixture(enrichedDoc, 'enriched');
 /** Two cards carrying one Airtable row — the reducer opens no session at all. */
@@ -579,6 +582,83 @@ it('pulses once on arrival, and not at all under reduced motion', () => {
   expect(pulse![1]).toMatch(/animation:\s*sg-results-pulse [^;]*\b1\b/);
   expect(css).toMatch(
     /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.sg-view-results \{ animation: none; \}/,
+  );
+});
+
+// ---------------------------------------------------------------------------
+// The first-open cue on OPTIMIZE
+// ---------------------------------------------------------------------------
+
+// A newcomer gets no other signal that OPTIMIZE is where the story starts, so a
+// graph that opens with something to apply rings the button once.
+it('cues OPTIMIZE with a single ring on a fresh open, spent at animationend', async () => {
+  render(<GraphCanvas workflow={enriched} />);
+  await cardsOf(enriched);
+  expect(optimizeBtn()).toHaveClass('sg-optimize--pulse');
+
+  // The ring's own iteration ending is one of the two things that spend the
+  // cue. jsdom builds animationend on the base Event and drops the name from
+  // the init, so it rides the way harness.mouse carries `view`: defined on the
+  // instance.
+  const end = createEvent.animationEnd(optimizeBtn());
+  Object.defineProperty(end, 'animationName', { value: 'sg-optimize-pulse' });
+  fireEvent(optimizeBtn(), end);
+  expect(optimizeBtn()).not.toHaveClass('sg-optimize--pulse');
+});
+
+it('grants no cue where there is nothing to apply', async () => {
+  render(<GraphCanvas workflow={plain} />);
+  await cardsOf(plain);
+  // no OPTIMIZE at all is the strongest form of "no cue" — and nothing else on
+  // the canvas borrows the class either
+  expect(screen.queryByTestId('optimize-btn')).not.toBeInTheDocument();
+  expect(document.querySelector('.sg-optimize--pulse')).toBeNull();
+});
+
+it(
+  'retires the cue at the first press, for good',
+  async () => {
+    render(<GraphCanvas workflow={enriched} />);
+    await cardsOf(enriched);
+    expect(optimizeBtn()).toHaveClass('sg-optimize--pulse');
+
+    // the press is the interaction the ring was asking for — CANCEL never wears it
+    fireEvent.click(optimizeBtn());
+    await waitFor(() => expect(optimizeBtn()).toHaveTextContent('CANCEL'));
+    expect(optimizeBtn()).not.toHaveClass('sg-optimize--pulse');
+
+    // and when CANCEL hands the slot back, the cue does not come back with it
+    fireEvent.click(optimizeBtn());
+    await waitFor(() => expect(optimizeBtn()).toHaveTextContent('OPTIMIZE'), LAYOUT_WAIT);
+    expect(optimizeBtn()).not.toHaveClass('sg-optimize--pulse');
+  },
+  TOUR_BUDGET,
+);
+
+it('grants no cue at all when motion is not wanted', async () => {
+  const restore = reduceMotion();
+  try {
+    render(<GraphCanvas workflow={enriched} />);
+    await cardsOf(enriched);
+    // stated by the TSX, not only by the stylesheet: the class never lands, so
+    // no suppressed animation is left waiting on an animationend that cannot come
+    expect(optimizeBtn()).toBeInTheDocument();
+    expect(optimizeBtn()).not.toHaveClass('sg-optimize--pulse');
+  } finally {
+    restore();
+  }
+});
+
+// The same reading the VIEW RESULTS pulse gets above: jsdom loads no CSS, so the
+// one-iteration contract and the reduced-motion stand-down are read off the
+// stylesheet itself.
+it('rings once in CSS, and not at all under reduced motion', () => {
+  const css = readFileSync('src/components/canvas.css', 'utf8');
+  const pulse = css.match(/\.sg-optimize--pulse\s*\{([^}]*)\}/);
+  expect(pulse).not.toBeNull();
+  expect(pulse![1]).toMatch(/animation:\s*sg-optimize-pulse [^;]*\b1\b/);
+  expect(css).toMatch(
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.sg-optimize--pulse \{ animation: none; \}/,
   );
 });
 

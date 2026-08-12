@@ -2,7 +2,7 @@
   "meta": {
     "task": "Standardize how our team uses Claude Code on this repo — agent instructions, the skills and MCP servers worth adopting, and a review step — so everyone works the same way",
     "title": "Standardize a Team's Claude Code Setup",
-    "generatedAt": "2026-08-05T14:40:00Z",
+    "generatedAt": "2026-08-11T16:30:00Z",
     "model": "claude-fable-5",
     "kbSource": "airtable",
     "promptIntro": "Standardize how our team uses Claude Code on this repo: agent instructions, the skills and MCP servers worth adopting, and a review step, so everyone works the same way. Prove the setup on a real task before the team commits to it, and leave it documented for whoever joins next."
@@ -10,8 +10,11 @@
   "nodes": [
     { "id": "gather-team-needs", "label": "Gather the team's needs and what exists", "kind": "input", "description": "Ask what people already do by hand, what is already installed on whose machine, what may not leave the network, and what 'standardized' has to mean by when.", "painLevel": 2 },
     { "id": "audit-repo", "label": "Audit the repo and how it is built", "kind": "process", "description": "Read the build, the test commands, the conventions, and the parts newcomers get wrong — otherwise the instructions end up saying nothing specific.", "painLevel": 3 },
-    { "id": "hunt-skills", "label": "Trawl for skills and plugins worth adopting", "kind": "process", "description": "Search GitHub, read READMEs and blog posts, and try to work out which of a thousand look-alike repos is current, maintained, and actually relevant to this stack.", "painLevel": 4 },
+    { "id": "search-for-candidates", "label": "Search GitHub & the blogs for candidates", "kind": "process", "description": "Search GitHub, blog posts, and awesome-lists for skills and plugins that might fit this stack, collecting a long list of maybes.", "painLevel": 3 },
+    { "id": "read-readmes", "label": "Read READMEs repo by repo", "kind": "loop", "description": "Open each candidate and read its README and issues to work out what it actually does and whether it still works.", "painLevel": 4 },
+    { "id": "judge-lookalikes", "label": "Judge which look-alike is the real one", "kind": "process", "description": "Separate the maintained original from a thousand renamed forks and abandoned copies claiming the same feature list.", "painLevel": 4 },
     { "id": "evaluate-candidates", "label": "Try each candidate on a real task", "kind": "loop", "description": "Install one, run it against real work, judge whether it helped, uninstall it, and repeat — the only honest way to tell, and it costs a day.", "painLevel": 4 },
+    { "id": "gap-remains", "label": "Shortlist covers everything?", "kind": "decision", "description": "After trying the candidates, is a capability the team needs still missing, or did the shortlist cover the lot?", "painLevel": 2 },
     { "id": "write-missing-skill", "label": "Write the missing capability yourself", "kind": "process", "description": "Author a skill from scratch for the thing you could not find: the instructions, the examples, the edge cases, and the rewrites after it misfires on real work.", "painLevel": 5 },
     { "id": "wire-mcp", "label": "Wire up the MCP servers and configs", "kind": "process", "description": "Add the servers, decide project versus user scope, sort out transports and credentials, and get the same setup onto everyone's machine.", "painLevel": 3 },
     { "id": "write-agent-docs", "label": "Write CLAUDE.md / AGENTS.md by hand", "kind": "process", "description": "Write the conventions, the commands and the do-nots into agent instructions — then keep rewriting them every time the repo moves, because a stale instruction file is worse than none.", "painLevel": 4 },
@@ -24,9 +27,13 @@
   ],
   "edges": [
     { "from": "gather-team-needs", "to": "audit-repo", "kind": "sequence" },
-    { "from": "audit-repo", "to": "hunt-skills", "kind": "sequence" },
-    { "from": "hunt-skills", "to": "evaluate-candidates", "kind": "sequence" },
-    { "from": "evaluate-candidates", "to": "write-missing-skill", "kind": "sequence" },
+    { "from": "audit-repo", "to": "search-for-candidates", "kind": "sequence" },
+    { "from": "search-for-candidates", "to": "read-readmes", "kind": "sequence" },
+    { "from": "read-readmes", "to": "judge-lookalikes", "kind": "sequence" },
+    { "from": "judge-lookalikes", "to": "evaluate-candidates", "kind": "sequence" },
+    { "from": "evaluate-candidates", "to": "gap-remains", "kind": "sequence" },
+    { "from": "gap-remains", "to": "write-missing-skill", "kind": "branch", "label": "gap remains" },
+    { "from": "gap-remains", "to": "wire-mcp", "kind": "branch", "label": "all covered" },
     { "from": "write-missing-skill", "to": "wire-mcp", "kind": "sequence" },
     { "from": "wire-mcp", "to": "write-agent-docs", "kind": "sequence" },
     { "from": "write-agent-docs", "to": "pilot-on-task", "kind": "sequence" },
@@ -40,22 +47,22 @@
   ],
   "suggestions": [
     {
-      "nodeId": "hunt-skills",
+      "nodeId": "read-readmes",
       "airtableRecordId": "reciqTJt4oVGwVPHy",
       "name": "K-Dense-AI/claude-skills-mcp",
       "url": "https://github.com/K-Dense-AI/claude-skills-mcp",
       "category": "MCP Server",
       "claim": "Vector-search over skill libraries so the right skill loads itself at the right moment.",
-      "promptFragment": "Find the candidates with K-Dense-AI/claude-skills-mcp rather than trawling GitHub and guessing which look-alike repo is the real one: search the skill libraries by what the team actually needs, and let the matching skill load itself when that work comes up. Do this before anything is tried on a real task, so the shortlist arrives already narrowed.",
+      "promptFragment": "Find the candidates with K-Dense-AI/claude-skills-mcp rather than trawling GitHub, reading README after README, and guessing which look-alike repo is the real one: search the skill libraries by what the team actually needs, and let the matching skill load itself when that work comes up. Do this before anything is tried on a real task, so the shortlist arrives already narrowed.",
       "effect": {
         "removeNodes": [],
-        "mergeNodes": ["hunt-skills"],
-        "replaceWith": { "id": "search-skill-index", "label": "Search the skill libraries", "kind": "process", "description": "Vector search over the skill libraries returns the candidates worth trying, instead of a GitHub trawl through look-alike repos.", "painLevel": 1 },
+        "mergeNodes": ["search-for-candidates", "read-readmes", "judge-lookalikes"],
+        "replaceWith": { "id": "search-skill-index", "label": "Search the skill libraries", "kind": "process", "description": "Vector search over the skill libraries returns the candidates worth trying — no GitHub trawl, no README-by-README read, no fork-or-original guesswork.", "painLevel": 1 },
         "newEdges": [
           { "from": "audit-repo", "to": "search-skill-index", "kind": "sequence" },
           { "from": "search-skill-index", "to": "evaluate-candidates", "kind": "sequence" }
         ],
-        "metrics": { "stepsSaved": 0, "estTimeSavedMin": 90, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
+        "metrics": { "stepsSaved": 2, "estTimeSavedMin": 90, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
       }
     },
     {
@@ -65,14 +72,16 @@
       "url": "https://github.com/VoltAgent/awesome-agent-skills",
       "category": "Claude Skill",
       "claim": "1,000+ ready-made skills — check here before building any capability from scratch.",
-      "promptFragment": "Before authoring any capability yourself, check VoltAgent/awesome-agent-skills for one that already exists — over a thousand ready-made skills, so the gap the shortlist left is usually already filled by someone's dev team. Adopt what you find there and go straight on to wiring the servers up.",
+      "promptFragment": "Before authoring any capability yourself, check VoltAgent/awesome-agent-skills for one that already exists — over a thousand ready-made skills, so the gap the shortlist left is usually already filled. Adopt the match when there is one, and hand-write only the capability none of them covers.",
       "effect": {
-        "removeNodes": ["write-missing-skill"],
-        "mergeNodes": [],
+        "removeNodes": [],
+        "mergeNodes": ["write-missing-skill"],
+        "replaceWith": { "id": "adopt-or-author", "label": "Adopt from the list — author only true gaps", "kind": "process", "description": "Pull the missing capability from the curated list's thousand-plus ready-made skills; authoring from scratch remains only for the rare capability none of them covers.", "painLevel": 2 },
         "newEdges": [
-          { "from": "evaluate-candidates", "to": "wire-mcp", "kind": "sequence" }
+          { "from": "gap-remains", "to": "adopt-or-author", "kind": "branch", "label": "gap remains" },
+          { "from": "adopt-or-author", "to": "wire-mcp", "kind": "sequence" }
         ],
-        "metrics": { "stepsSaved": 1, "estTimeSavedMin": 90, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
+        "metrics": { "stepsSaved": 0, "estTimeSavedMin": 60, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
       }
     },
     {
