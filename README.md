@@ -8,7 +8,7 @@ Map your Claude workflows. Describe a task → see the flowchart of how Claude w
 
 ## Try the demo
 
-**[tahirzlone.github.io/untangle](https://tahirzlone.github.io/untangle/)** — the gallery, hosted: the try-it-before-you-install-anything page. No account, no key: open **Ship a Payments Feature End-to-End**, press **OPTIMIZE** and watch the flow collapse step by step, then **VS ORIGINAL** to drag the seam between where it started and where it ended, and **VIEW RESULTS** for the thing you leave with. Once the skill is installed, your own runs serve this same viewer from your machine; this page stays the demo — and the drop target for a machine with no `node` at all.
+**[tahirzlone.github.io/untangle](https://tahirzlone.github.io/untangle/)** — the gallery, hosted: the try-it-before-you-install-anything page. No account, no key: open **Ship a Payments Feature End-to-End**, press **OPTIMIZE** and watch the flow collapse step by step into something visibly simpler — sixteen steps stand down to twelve — then **VS ORIGINAL** to drag the seam between where it started and where it ended, and **VIEW RESULTS** for the thing you leave with. Once the skill is installed, your own runs serve this same viewer from your machine; this page stays the demo — and the drop target for a machine with no `node` at all.
 
 ## Install the skill
 
@@ -69,6 +69,14 @@ That starts a local viewer on `127.0.0.1` (repeated runs reuse it rather than st
 ## The skill: `/graph-my-task`
 
 The skill answers to two names for the same thing: `/graph-my-task "your task here"` in a checkout of this repo, `/untangle:graph-my-task "your task here"` when it is installed as the plugin. Run either and the skill decomposes the task into 6–16 honest steps — the manual gathering, the format wrangling, the retry loops, the human review gates — and writes them as a validated graph in `out/`: the checkout's own from a clone, the current project's when it runs as the plugin. Before it validates, it reads a curated knowledge base of real Claude skills, plugins, and MCP servers and attaches the ones that would collapse a step, each with what it claims, what it saves, and the command that installs it, when there is one. It runs on your own Claude subscription, in your own project, and it never invents a helper: a resource that is not in the rows it fetched does not exist for that graph. And the run ends where you work: a viewer serving on your machine — the repo ships the built viewer, so nothing installs first — with a `localhost` link to the finished graph; the hosted demo stays the try-before-you-install page, and a share link exists the moment you ask for one.
+
+**Try it with** one of the gallery's own tasks. Each of these is the exact ask behind a graph on the hosted demo — run one, and the gallery already holds a finished take on the very same task to set yours against:
+
+```
+/untangle:graph-my-task "Add a payments feature to my web app — build it, test it, verify it in the browser, review it, and ship"
+/untangle:graph-my-task "An API endpoint started throwing 500s after last night's deploy — take the bug report, find the cause, fix it, and get the fix out safely"
+/untangle:graph-my-task "Pull the pricing pages of our six closest competitors and build a comparison we can take into the pricing meeting"
+```
 
 **Suggestions need no setup.** The knowledge base resolves in five tiers, tried strictly in order, stopping at the first that hands over rows — it never climbs back up:
 
