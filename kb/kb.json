@@ -1,7 +1,7 @@
 {
-  "fetchedAt": "2026-08-11T05:32:36.141Z",
-  "updatedAt": "2026-08-11T01:35:29.287Z",
-  "recordCount": 68,
+  "fetchedAt": "2026-09-02T08:52:00.671Z",
+  "updatedAt": "2026-09-02T08:52:00.602Z",
+  "recordCount": 78,
   "records": [
     {
       "id": "rec01yqHvgetnrvGn",
@@ -470,6 +470,28 @@
       "url": "https://github.com/rommapp/romm"
     },
     {
+      "id": "recHeSs0ViVXirKtD",
+      "capabilityTags": [
+        "browser-automation",
+        "research",
+        "documentation"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-08-31",
+      "description": "Open-source AI job search system that runs inside your coding CLI (Claude Code, Codex, OpenCode, Antigravity): scans job portals, scores listings with a structured A-H rubric into a 1-5 score, tailors an ATS-optimized CV per listing, and tracks applications locally.",
+      "improvementClaim": "Compresses job hunting from hours per listing to a scored report plus tailored CV in minutes",
+      "install": "npx @santifer/career-ops init",
+      "language": "JavaScript",
+      "name": "santifer/career-ops",
+      "stars": 69100,
+      "stepArchetypes": [
+        "research",
+        "browser-verify",
+        "document"
+      ],
+      "url": "https://github.com/santifer/career-ops"
+    },
+    {
       "id": "recImj3ZK9O4OUn7j",
       "capabilityTags": [
         "research"
@@ -526,6 +548,24 @@
         "document"
       ],
       "url": "https://github.com/DrCatHicks/learning-opportunities"
+    },
+    {
+      "id": "recKPDcHJSljOGSAz",
+      "capabilityTags": [
+        "documentation",
+        "research"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-08-31",
+      "description": "A self-documented inventory of everything a ChatGPT Work (Codex) session can touch: 232 tool interfaces and 44 skill definitions across 24 categories, from runtime and file tools to GitHub, Gmail, analytics, and image generation. Snapshot dated Aug 31, 2026.",
+      "improvementClaim": "Maps all 232 tools and 44 skills of a ChatGPT Work session in one browsable page",
+      "install": "Browse the site - no install",
+      "name": "ChatGPT Work Tool and Skill Reference (simonw)",
+      "stepArchetypes": [
+        "document",
+        "research"
+      ],
+      "url": "https://codex-tool-reference.simonw.chatgpt.site/"
     },
     {
       "id": "recL7wcKy5eajUO37",
@@ -720,6 +760,25 @@
       "url": "https://github.com/obra/superpowers"
     },
     {
+      "id": "recRlbAv440pxNgQ6",
+      "capabilityTags": [
+        "image-generation",
+        "orchestration"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-08-31",
+      "description": "One-click AI short-video factory: give it a topic or keyword and it generates the script, matches stock footage, adds subtitles, voiceover, and background music, and renders a finished HD short video.",
+      "improvementClaim": "One keyword to a finished HD short video - script, footage, subtitles, and voiceover automated",
+      "install": "Docker compose up (or Windows one-click package)",
+      "language": "Python",
+      "name": "harry0703/MoneyPrinterTurbo",
+      "stars": 110000,
+      "stepArchetypes": [
+        "orchestrate"
+      ],
+      "url": "https://github.com/harry0703/MoneyPrinterTurbo"
+    },
+    {
       "id": "recVutiAhKgL5stU1",
       "capabilityTags": [
         "documentation",
@@ -810,6 +869,28 @@
         "deploy"
       ],
       "url": "https://news.ycombinator.com/item?id=48968606"
+    },
+    {
+      "id": "recYEE8aRB2Hjk43C",
+      "capabilityTags": [
+        "orchestration",
+        "memory",
+        "research"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-08-31",
+      "description": "Open source 'AI CEO': a virtual executive team presenting one coherent senior-advisor persona backed by 8 specialist Claude agents (CSO, CFO, CHRO, General Counsel, COO, CMO, CPO, Board Comms). Built as the developers' riposte to a CEO who fired engineers to make room for AI.",
+      "improvementClaim": "Gives any team an on-demand C-suite advisory bench for the price of API calls",
+      "install": "git clone https://github.com/SenteLabsAI/OpenExecutive && make dev",
+      "language": "Python",
+      "name": "SenteLabsAI/OpenExecutive",
+      "stars": 2700,
+      "stepArchetypes": [
+        "orchestrate",
+        "research",
+        "document"
+      ],
+      "url": "https://github.com/SenteLabsAI/OpenExecutive"
     },
     {
       "id": "recbu2btPkusxYo6w",
@@ -943,6 +1024,46 @@
       "url": "https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep"
     },
     {
+      "id": "recjxD1131wz66syB",
+      "capabilityTags": [
+        "memory",
+        "code-search"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-08-31",
+      "description": "Persistent long-term memory for agent coding CLIs with cross-vendor handoff: quit Claude Code mid-task, open Codex in the same directory, and continue without re-explaining the architecture. By Brazilian dev celebrity Fabio Akita.",
+      "improvementClaim": "Lets you swap between Claude Code and Codex mid-task without re-explaining the codebase",
+      "install": "docker run akitaonrails/ai-memory && ai-memory install-mcp --client claude-code --apply",
+      "language": "Rust",
+      "name": "akitaonrails/ai-memory",
+      "stars": 3900,
+      "stepArchetypes": [
+        "orchestrate",
+        "document"
+      ],
+      "url": "https://github.com/akitaonrails/ai-memory"
+    },
+    {
+      "id": "reckm4a1qOWpKIaej",
+      "capabilityTags": [
+        "api-integration",
+        "deployment"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-08-31",
+      "description": "LLM inference server for Apple Silicon with continuous batching and tiered RAM/SSD KV caching, managed from a native macOS menu bar app. Exposes OpenAI- and Anthropic-compatible APIs for local models.",
+      "improvementClaim": "Makes a Mac serve batched multi-model LLM inference as easily as opening a menu bar app",
+      "install": "brew install jundot/omlx/omlx",
+      "language": "Python",
+      "name": "jundot/omlx",
+      "stars": 20800,
+      "stepArchetypes": [
+        "deploy",
+        "code"
+      ],
+      "url": "https://github.com/jundot/omlx"
+    },
+    {
       "id": "reckyeEM72ykBCPQ4",
       "capabilityTags": [
         "orchestration",
@@ -962,6 +1083,26 @@
         "data-etl"
       ],
       "url": "https://github.com/HKUDS/Vibe-Trading"
+    },
+    {
+      "id": "reclAT4zkjFQbq34E",
+      "capabilityTags": [
+        "orchestration",
+        "memory"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-08-31",
+      "description": "Local multi-agent harness (The Office-themed) that wraps your terminal AI agents - Claude Code, Codex, Grok, Gemini CLI, Copilot - into a self-coordinating team, each rendered as an avatar on a shared office floor with a 'Michael' GOD agent distributing work.",
+      "improvementClaim": "Turns a pile of single-agent CLIs into one coordinated, visible team you supervise",
+      "install": "git clone https://github.com/chaitanyagiri/munder-difflin && npm install && npm run dev",
+      "language": "TypeScript",
+      "name": "chaitanyagiri/munder-difflin",
+      "stars": 5500,
+      "stepArchetypes": [
+        "orchestrate",
+        "code"
+      ],
+      "url": "https://github.com/chaitanyagiri/munder-difflin"
     },
     {
       "id": "reclNQa2qRarMjCbw",
@@ -999,6 +1140,26 @@
         "code"
       ],
       "url": "https://github.com/facebook/astryx"
+    },
+    {
+      "id": "recm3gyUCNZK4sJ5U",
+      "capabilityTags": [
+        "memory",
+        "data-etl"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-08-31",
+      "description": "Self-evolving context database for AI agents that unifies memory, knowledge RAG, and skills management. Organizes agent context as a virtual filesystem (viking:// URIs) instead of flat vector storage, so agents retrieve exactly the context tier they need.",
+      "improvementClaim": "Cuts agent context token use ~10x while unifying memory, RAG, and skills in one store",
+      "install": "pip install openviking",
+      "language": "Python",
+      "name": "volcengine/OpenViking",
+      "stars": 26900,
+      "stepArchetypes": [
+        "data-etl",
+        "orchestrate"
+      ],
+      "url": "https://github.com/volcengine/OpenViking"
     },
     {
       "id": "recmN4mxhvTNvmRY6",
@@ -1102,6 +1263,23 @@
       "url": "https://github.com/alirezarezvani/claude-skills"
     },
     {
+      "id": "recqS3nN4gCU7ubL6",
+      "capabilityTags": [
+        "security"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-08-31",
+      "description": "Security research by wunderwuzzi23 demonstrating reliable remote code execution against Claude Code Opus 5 running in Auto Mode, starting from an innocent 'summarize this website' request.",
+      "improvementClaim": "Makes the case for sandboxing auto-mode agents with a 60-80% reliable RCE chain from one page fetch",
+      "install": "Read the post - no install",
+      "name": "Embrace The Red: Breaking Claude Code Opus 5 Auto Mode",
+      "stepArchetypes": [
+        "research",
+        "review"
+      ],
+      "url": "https://embracethered.com/blog/posts/2026/breaking-claude-code-opus-5-and-automode/"
+    },
+    {
       "id": "recqjdi7lDsQgCPa4",
       "capabilityTags": [
         "data-etl",
@@ -1195,6 +1373,28 @@
         "code"
       ],
       "url": "https://github.blog/changelog/2026-07-30-stacked-pull-requests-are-now-in-public-preview/"
+    },
+    {
+      "id": "recwyOjHlBFW1UoZg",
+      "capabilityTags": [
+        "security",
+        "review",
+        "documentation"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-08-31",
+      "description": "817 structured cybersecurity skills for AI agents across 29 security domains, mapped to six frameworks (MITRE ATT&CK, NIST CSF 2.0, MITRE ATLAS, D3FEND, NIST AI RMF, MITRE F3). Works with Claude Code, Copilot, Codex CLI, Cursor, Gemini CLI, and 20+ platforms.",
+      "improvementClaim": "Turns any coding agent into a framework-mapped security analyst without writing playbooks",
+      "install": "npx skills add mukul975/Anthropic-Cybersecurity-Skills",
+      "language": "Python",
+      "name": "mukul975/Anthropic-Cybersecurity-Skills",
+      "stars": 28000,
+      "stepArchetypes": [
+        "research",
+        "review",
+        "document"
+      ],
+      "url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills"
     },
     {
       "id": "recxjoSkuhuyYKL2J",
