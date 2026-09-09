@@ -1,7 +1,7 @@
 {
-  "fetchedAt": "2026-09-02T08:52:00.671Z",
-  "updatedAt": "2026-09-02T08:52:00.602Z",
-  "recordCount": 78,
+  "fetchedAt": "2026-09-09T09:02:04.400Z",
+  "updatedAt": "2026-09-09T09:02:04.378Z",
+  "recordCount": 111,
   "records": [
     {
       "id": "rec01yqHvgetnrvGn",
@@ -22,6 +22,44 @@
       "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3"
     },
     {
+      "id": "rec0LEP4SJVJgxc4R",
+      "capabilityTags": [
+        "orchestration",
+        "api-integration",
+        "research"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-07",
+      "description": "An autonomous agent-based 'hedge fund' that runs algorithmic trading with minimal human oversight — market analysis, risk management, and live trade execution via swarm intelligence.",
+      "improvementClaim": "Compresses a multi-person quant workflow (strategy, analysis, risk, execution) into one pip-installable agent swarm.",
+      "install": "pip install -U autohedge",
+      "language": "Python",
+      "name": "The-Swarm-Corporation/AutoHedge",
+      "stars": 4300,
+      "stepArchetypes": [
+        "orchestrate",
+        "research"
+      ],
+      "url": "https://github.com/The-Swarm-Corporation/AutoHedge"
+    },
+    {
+      "id": "rec1Ba0AXojMx6pxI",
+      "capabilityTags": [
+        "data-etl"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-08",
+      "description": "Classifies PDFs as text-based, scanned, image-based, or mixed in 10-50ms and extracts position-aware Markdown without OCR.",
+      "improvementClaim": "Routes each PDF to the cheapest correct extraction path in milliseconds.",
+      "install": "Install per README (library)",
+      "name": "firecrawl/pdf-inspector",
+      "stars": 9000,
+      "stepArchetypes": [
+        "data-etl"
+      ],
+      "url": "https://github.com/firecrawl/pdf-inspector"
+    },
+    {
       "id": "rec1lQlBJLCMjsivF",
       "capabilityTags": [
         "api-integration",
@@ -38,6 +76,24 @@
         "document"
       ],
       "url": "https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/"
+    },
+    {
+      "id": "rec1uHdOmrQYlrXDG",
+      "capabilityTags": [
+        "documentation",
+        "research"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-09-07",
+      "description": "Front-page HN discussion (270 points, ~249 comments) on how developers organize, version, and share agent skills files — a sign that skills hygiene has become a mainstream engineering problem.",
+      "improvementClaim": "Distills the community's working playbook for keeping dozens of agent skills organized and shareable.",
+      "install": "Browse the thread — no install",
+      "name": "Ask HN: How do you manage skills files?",
+      "stepArchetypes": [
+        "document",
+        "research"
+      ],
+      "url": "https://news.ycombinator.com/item?id=49589914"
     },
     {
       "id": "rec2Er3aCZODcbNL6",
@@ -80,6 +136,25 @@
         "orchestrate"
       ],
       "url": "https://github.com/rohitg00/awesome-claude-code-toolkit"
+    },
+    {
+      "id": "rec40X8RsDDCxskgJ",
+      "capabilityTags": [
+        "data-etl",
+        "documentation"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-08",
+      "description": "Converts Word, PowerPoint, Excel, OpenDocument, RTF, EPUB, CSV, and PDF files into clean Markdown — one parser for every format agents need to ingest.",
+      "improvementClaim": "One parser replaces a zoo of per-format converters in agent ingestion pipelines.",
+      "install": "npm/pip/cargo install per README",
+      "language": "Rust",
+      "name": "firecrawl/anydoc",
+      "stars": 20000,
+      "stepArchetypes": [
+        "data-etl"
+      ],
+      "url": "https://github.com/firecrawl/anydoc"
     },
     {
       "id": "rec4s5VYabLmKjvnA",
@@ -218,6 +293,66 @@
       "url": "https://github.com/ChromeDevTools/chrome-devtools-mcp"
     },
     {
+      "id": "rec8Y41Kx6fwTVZVZ",
+      "capabilityTags": [
+        "api-integration",
+        "research"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-08",
+      "description": "Self-hosted SEO dashboard with pay-per-request pricing and MCP integration, so both humans and agents can run keyword, rank, and crawl analysis.",
+      "improvementClaim": "Ahrefs-class SEO visibility at pay-per-request prices, queryable by your agents.",
+      "install": "git clone && follow README; connect via MCP",
+      "language": "TypeScript",
+      "name": "every-app/open-seo",
+      "stars": 16600,
+      "stepArchetypes": [
+        "research",
+        "data-etl"
+      ],
+      "url": "https://github.com/every-app/open-seo"
+    },
+    {
+      "id": "rec92yVflOEvnkaan",
+      "capabilityTags": [
+        "ui-design",
+        "documentation"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-07",
+      "description": "Free, open source desktop screen recorder and editor for polished demo videos without editing skills: drag-and-drop timeline, zooms, speed regions, rendered cursor with smoothing and motion blur, reactive webcam bubbles, wallpaper/gradient styling, MP4/GIF export.",
+      "improvementClaim": "Makes studio-quality product demo videos achievable with zero editing skills and zero subscription.",
+      "install": "Download release from github.com/webadderallorg/Recordly/releases",
+      "language": "TypeScript",
+      "name": "webadderallorg/Recordly",
+      "stars": 24600,
+      "stepArchetypes": [
+        "document"
+      ],
+      "url": "https://github.com/webadderallorg/Recordly"
+    },
+    {
+      "id": "rec9E6E99mQcFI1f5",
+      "capabilityTags": [
+        "api-integration",
+        "memory",
+        "research"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-08",
+      "description": "Open source, agentic-first CRM: agents research contacts, enrich company data, schedule follow-ups, and maintain relationship notes automatically.",
+      "improvementClaim": "CRM upkeep goes from a daily chore to zero-touch.",
+      "install": "bun install && docker compose up -d && bun run dev",
+      "language": "TypeScript",
+      "name": "trycompai/crm",
+      "stars": 9700,
+      "stepArchetypes": [
+        "data-etl",
+        "orchestrate"
+      ],
+      "url": "https://github.com/trycompai/crm"
+    },
+    {
       "id": "rec9WCKMascIoC9Dx",
       "capabilityTags": [
         "code-search",
@@ -297,6 +432,47 @@
       "url": "https://github.com/ailyProject/aily-blockly"
     },
     {
+      "id": "recBciFc70ZIz4Wso",
+      "capabilityTags": [
+        "browser-automation",
+        "testing"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-08",
+      "description": "Lets your agent control a real iPhone or Android: screen interaction, tapping, typing, and app verification — mobile QA and automations without APIs.",
+      "improvementClaim": "Mobile QA and phone automations that previously required APIs or a human hand.",
+      "install": "git clone && run install script; phone-harness --doctor",
+      "language": "Python",
+      "name": "ShawnPana/phone-harness",
+      "stars": 2400,
+      "stepArchetypes": [
+        "test",
+        "browser-verify"
+      ],
+      "url": "https://github.com/ShawnPana/phone-harness"
+    },
+    {
+      "id": "recC0Ru8AZlf7ZsWC",
+      "capabilityTags": [
+        "data-etl",
+        "memory",
+        "research"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-07",
+      "description": "Local-first system that turns your WeChat chat history into searchable, actionable personal intelligence: daily briefings, follow-up tracking, business-opportunity detection, and contact history — with nothing sent to WeChat or external services.",
+      "improvementClaim": "Turns years of dormant chat history into a queryable personal-intelligence system without any cloud upload.",
+      "install": "git clone && ./scripts/install.sh --with-sqlcipher",
+      "language": "Python",
+      "name": "Rion-Wu-tech/wechat-intelligence-hub",
+      "stars": 52,
+      "stepArchetypes": [
+        "data-etl",
+        "research"
+      ],
+      "url": "https://github.com/Rion-Wu-tech/wechat-intelligence-hub"
+    },
+    {
       "id": "recC2k5UfNyR7pHI6",
       "capabilityTags": [
         "research"
@@ -313,6 +489,26 @@
         "document"
       ],
       "url": "https://blog.sshh.io/p/exploring-claudegpt-knowledge-cutoffs"
+    },
+    {
+      "id": "recCw4nQYDnbiBy3b",
+      "capabilityTags": [
+        "code-generation",
+        "review"
+      ],
+      "category": "Claude Plugin",
+      "dateFirstSeen": "2026-09-07",
+      "description": "An agent skill that makes coding agents 'think like lazy senior developers': before writing code they climb a 7-rung laziness ladder — is it needed, does it already exist, is it in stdlib, is a one-liner possible — and only then write minimal code.",
+      "improvementClaim": "Cuts agent-generated code volume roughly in half while making runs cheaper and faster.",
+      "install": "/plugin marketplace add DietrichGebert/ponytail",
+      "language": "JavaScript",
+      "name": "DietrichGebert/ponytail",
+      "stars": 130500,
+      "stepArchetypes": [
+        "code",
+        "review"
+      ],
+      "url": "https://github.com/DietrichGebert/ponytail"
     },
     {
       "id": "recDIOmiHYqY0YuEW",
@@ -412,6 +608,26 @@
       "url": "https://github.com/mattpocock/skills"
     },
     {
+      "id": "recEXlPQYXPMZtaT9",
+      "capabilityTags": [
+        "code-generation",
+        "review"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-09-08",
+      "description": "JetBrains agent skill that prevents coding agents from writing outdated Go patterns by enforcing modern language features at generation time.",
+      "improvementClaim": "Eliminates a whole class of stale-idiom Go bugs from agent-generated code.",
+      "install": "Add as skill/rules file per README",
+      "language": "Go",
+      "name": "JetBrains/go-modern-guidelines",
+      "stars": 3100,
+      "stepArchetypes": [
+        "code",
+        "review"
+      ],
+      "url": "https://github.com/JetBrains/go-modern-guidelines"
+    },
+    {
       "id": "recEu9MmTRYaa3qqx",
       "capabilityTags": [
         "orchestration",
@@ -432,6 +648,43 @@
         "review"
       ],
       "url": "https://github.com/msitarzewski/agency-agents"
+    },
+    {
+      "id": "recEwB156w0XAyRxv",
+      "capabilityTags": [
+        "memory",
+        "data-etl"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-08",
+      "description": "Team-level memory hub that converts conversations, documents, and code into reusable assets: Chat Memory, Skills, LLM-Wiki, and Code-Graph.",
+      "improvementClaim": "Team knowledge stops evaporating between agent sessions.",
+      "install": "git clone && deploy per README",
+      "name": "TencentCloud/TencentDB-Agent-Memory",
+      "stars": 26000,
+      "stepArchetypes": [
+        "data-etl",
+        "orchestrate"
+      ],
+      "url": "https://github.com/TencentCloud/TencentDB-Agent-Memory"
+    },
+    {
+      "id": "recFQfINWMCq8cWw3",
+      "capabilityTags": [
+        "data-etl"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-07",
+      "description": "A better, faster spiritual successor to bzip2: a general-purpose compressor that particularly excels on text and source code, with companion tools (bz3cat, bz3grep, bz3less).",
+      "improvementClaim": "Squeezes text and source-code archives ~40% smaller than LZMA at competitive speed.",
+      "install": "brew install bzip3",
+      "language": "C",
+      "name": "iczelia/bzip3",
+      "stars": 1200,
+      "stepArchetypes": [
+        "data-etl"
+      ],
+      "url": "https://github.com/iczelia/bzip3"
     },
     {
       "id": "recFftxXAG4p89zjh",
@@ -492,6 +745,86 @@
       "url": "https://github.com/santifer/career-ops"
     },
     {
+      "id": "recI1IhU1DxngLYKC",
+      "capabilityTags": [
+        "orchestration",
+        "deployment"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-08",
+      "description": "An opinionated Linux setup that ships with eleven AI coding agents pre-integrated at boot — a fully agent-equipped dev machine from first login.",
+      "improvementClaim": "A fully agent-equipped development machine in one install instead of a day of setup.",
+      "install": "Install from ISO/script per setup guide",
+      "language": "Shell",
+      "name": "omacom/omarchy",
+      "stars": 37700,
+      "stepArchetypes": [
+        "deploy",
+        "orchestrate"
+      ],
+      "url": "https://github.com/omacom/omarchy"
+    },
+    {
+      "id": "recISit9faFxcfiTo",
+      "capabilityTags": [
+        "documentation",
+        "ui-design"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-09-07",
+      "description": "Agent skill that turns a chat description of a system into beautiful, interactive architecture, workflow, sequence, data-flow, and lifecycle diagrams — self-contained HTML with motion and crisp export.",
+      "improvementClaim": "Turns hours of manual diagramming into a one-prompt, verifiable HTML artifact.",
+      "install": "npx skills add tt-a1i/archify -g",
+      "language": "JavaScript",
+      "name": "tt-a1i/archify",
+      "stars": 52500,
+      "stepArchetypes": [
+        "document"
+      ],
+      "url": "https://github.com/tt-a1i/archify"
+    },
+    {
+      "id": "recIWH3T2Z9R1pWD2",
+      "capabilityTags": [
+        "orchestration",
+        "api-integration"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-08",
+      "description": "Agent toolkit bundling a unified LLM API, agent loop, terminal UI, and coding agent CLI — an emerging ecosystem standard with Pi-specific extensions shipping across projects.",
+      "improvementClaim": "One toolkit replaces four glue layers for agent builders.",
+      "install": "npm install per README",
+      "name": "earendil-works/pi",
+      "stars": 101000,
+      "stepArchetypes": [
+        "orchestrate",
+        "code"
+      ],
+      "url": "https://github.com/earendil-works/pi"
+    },
+    {
+      "id": "recIi51qUkUO3JcHQ",
+      "capabilityTags": [
+        "orchestration",
+        "memory",
+        "security"
+      ],
+      "category": "Claude Plugin",
+      "dateFirstSeen": "2026-09-07",
+      "description": "'The agent harness operating system' — a mega-bundle giving Claude Code (and Codex, Cursor, Kimi Code, OpenCode) a coordinated engineering workflow: plan, test, implement, review, verify, remember, improve.",
+      "improvementClaim": "Turns a bare coding agent into a full engineering org with planning, review, verification, and persistent memory.",
+      "install": "npx ecc-universal setup",
+      "language": "TypeScript",
+      "name": "affaan-m/ECC",
+      "stars": 253000,
+      "stepArchetypes": [
+        "orchestrate",
+        "review",
+        "test"
+      ],
+      "url": "https://github.com/affaan-m/ECC"
+    },
+    {
       "id": "recImj3ZK9O4OUn7j",
       "capabilityTags": [
         "research"
@@ -550,6 +883,24 @@
       "url": "https://github.com/DrCatHicks/learning-opportunities"
     },
     {
+      "id": "recJusfsnWblXfXbi",
+      "capabilityTags": [
+        "research",
+        "code-generation"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-09-07",
+      "description": "A PianoDisc Prodigy player-piano owner ran GPT-6 Astra and Claude Fable against each other in a critique loop for about an hour until they reverse-engineered the proprietary performance-file format and generated new Satie-style files for the physical piano.",
+      "improvementClaim": "Shows two AIs in a critique loop reverse-engineering a proprietary hardware format in an hour — work that once took a specialist weeks.",
+      "install": "Browse the thread — no install",
+      "name": "Ask HN: Fable hacked my piano, can I release the results?",
+      "stepArchetypes": [
+        "research",
+        "code"
+      ],
+      "url": "https://news.ycombinator.com/item?id=49577129"
+    },
+    {
       "id": "recKPDcHJSljOGSAz",
       "capabilityTags": [
         "documentation",
@@ -566,6 +917,44 @@
         "research"
       ],
       "url": "https://codex-tool-reference.simonw.chatgpt.site/"
+    },
+    {
+      "id": "recKbE9G0ODQQakKC",
+      "capabilityTags": [
+        "ui-design",
+        "documentation"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-09-08",
+      "description": "Agent skill providing 38 editorial diagram types for Claude Code, Codex, and Pi — 'no shadows, no Mermaid slop.'",
+      "improvementClaim": "Publication-grade diagrams from agents instead of default Mermaid output.",
+      "install": "npx skills add cathrynlavery/diagram-design",
+      "name": "cathrynlavery/diagram-design",
+      "stars": 29000,
+      "stepArchetypes": [
+        "document"
+      ],
+      "url": "https://github.com/cathrynlavery/diagram-design"
+    },
+    {
+      "id": "recL36P7q1dgFs2Hu",
+      "capabilityTags": [
+        "research",
+        "data-etl"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-09-08",
+      "description": "163 skills that let agents perform genomics, chemistry, and research tasks autonomously — a science toolbelt for coding agents.",
+      "improvementClaim": "Turns a general coding agent into a working lab assistant across 163 scientific tasks.",
+      "install": "npx skills add K-Dense-AI/scientific-agent-skills",
+      "language": "Python",
+      "name": "K-Dense-AI/scientific-agent-skills",
+      "stars": 42400,
+      "stepArchetypes": [
+        "research",
+        "data-etl"
+      ],
+      "url": "https://github.com/K-Dense-AI/scientific-agent-skills"
     },
     {
       "id": "recL7wcKy5eajUO37",
@@ -605,6 +994,24 @@
       "url": "https://www.anthropic.com/news/claude-opus-5"
     },
     {
+      "id": "recLSFzt9HVzneOxB",
+      "capabilityTags": [
+        "code-generation"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-08",
+      "description": "OpenAI's lightweight coding agent for the terminal — the reference point most other coding agents get benchmarked against.",
+      "improvementClaim": "The benchmark reference point for terminal coding agents.",
+      "install": "npm i -g @openai/codex",
+      "language": "Rust",
+      "name": "openai/codex",
+      "stars": 121000,
+      "stepArchetypes": [
+        "code"
+      ],
+      "url": "https://github.com/openai/codex"
+    },
+    {
       "id": "recLxJTLOVLM8t6lS",
       "capabilityTags": [
         "deployment"
@@ -621,6 +1028,26 @@
         "deploy"
       ],
       "url": "https://github.com/ansible/ansible"
+    },
+    {
+      "id": "recM2iJ0NdfXFl4Pv",
+      "capabilityTags": [
+        "orchestration",
+        "documentation"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-08",
+      "description": "Generates complete online courses — with an AI instructor and AI classmates — from a topic or your own documents. Tsinghua's open 'AI university' pipeline.",
+      "improvementClaim": "Course production goes from weeks of instructional design to minutes.",
+      "install": "git clone && follow README",
+      "language": "TypeScript",
+      "name": "THU-MAIC/OpenMAIC",
+      "stars": 31000,
+      "stepArchetypes": [
+        "orchestrate",
+        "document"
+      ],
+      "url": "https://github.com/THU-MAIC/OpenMAIC"
     },
     {
       "id": "recM4HQukpqF1UOua",
@@ -695,6 +1122,26 @@
         "research"
       ],
       "url": "https://github.com/twalichiewicz/HNewhere"
+    },
+    {
+      "id": "recNNCaXCzqjXux9M",
+      "capabilityTags": [
+        "orchestration",
+        "data-etl"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-09-08",
+      "description": "Edit videos with Claude Code: remove filler, cut dead space, add subtitles, color grade, and render — 100% open source, from the browser-use team.",
+      "improvementClaim": "Rough-cut video editing goes from hours in a timeline to a prompt.",
+      "install": "git clone && ln -s to ~/.claude/skills && uv sync",
+      "language": "Python",
+      "name": "browser-use/video-use",
+      "stars": 24200,
+      "stepArchetypes": [
+        "code",
+        "orchestrate"
+      ],
+      "url": "https://github.com/browser-use/video-use"
     },
     {
       "id": "recO72FwsZUTTTkOr",
@@ -779,6 +1226,26 @@
       "url": "https://github.com/harry0703/MoneyPrinterTurbo"
     },
     {
+      "id": "recTk7T1p4eGCK6na",
+      "capabilityTags": [
+        "documentation",
+        "review"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-09-08",
+      "description": "An editor skill that removes 20+ patterns that make writing 'smell like AI' while preserving the author's actual voice.",
+      "improvementClaim": "Makes AI-drafted copy read human again in one pass.",
+      "install": "npx skills add petergyang/no-ai-slop --global",
+      "language": "Python",
+      "name": "petergyang/no-ai-slop",
+      "stars": 4500,
+      "stepArchetypes": [
+        "document",
+        "review"
+      ],
+      "url": "https://github.com/petergyang/no-ai-slop"
+    },
+    {
       "id": "recVutiAhKgL5stU1",
       "capabilityTags": [
         "documentation",
@@ -836,6 +1303,24 @@
       "url": "https://github.com/actions/checkout"
     },
     {
+      "id": "recXGT9LKVhF87p64",
+      "capabilityTags": [
+        "code-generation",
+        "research"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-09-07",
+      "description": "Anthropic's newest frontier models, announced Sept 1. Fable 5.1 is generally available; Mythos 5.1 is the identical model with relaxed safeguards, gated to vetted cyberdefenders and life scientists. Big gains in agentic coding, long-context reasoning, and scientific research including protein design.",
+      "improvementClaim": "Makes long-horizon agentic coding and scientific research tasks materially cheaper and more reliable (up to 45% cost cut on agentic workloads).",
+      "install": "No install — pick claude-fable-5-1 in Claude.ai or the API",
+      "name": "Anthropic Claude Fable 5.1 & Mythos 5.1",
+      "stepArchetypes": [
+        "code",
+        "research"
+      ],
+      "url": "https://www.anthropic.com/claude-fable-and-mythos-5-1"
+    },
+    {
       "id": "recXeFHjPGoOViNOG",
       "capabilityTags": [
         "orchestration",
@@ -891,6 +1376,26 @@
         "document"
       ],
       "url": "https://github.com/SenteLabsAI/OpenExecutive"
+    },
+    {
+      "id": "recbgbTdM93fdrZS8",
+      "capabilityTags": [
+        "code-generation",
+        "orchestration"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-08",
+      "description": "The Claude Code workflow adapted to run on OpenAI, Gemini, DeepSeek, and local models — Claude Code ergonomics without the Claude dependency.",
+      "improvementClaim": "Brings the Claude Code workflow to any model, ending single-vendor lock-in.",
+      "install": "git clone && npm install",
+      "language": "TypeScript",
+      "name": "Gitlawb/openclaude",
+      "stars": 32300,
+      "stepArchetypes": [
+        "code",
+        "orchestrate"
+      ],
+      "url": "https://github.com/Gitlawb/openclaude"
     },
     {
       "id": "recbu2btPkusxYo6w",
@@ -951,6 +1456,26 @@
       "url": "https://github.com/agentskills/agentskills"
     },
     {
+      "id": "recdSLG29fR0OYHyT",
+      "capabilityTags": [
+        "orchestration",
+        "code-generation"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-08",
+      "description": "DeepSeek's open-source agent harness with an everything-is-a-plugin architecture (powered by Cordis). Developer preview with breaking changes expected.",
+      "improvementClaim": "A frontier-lab-quality agent harness, open source and free.",
+      "install": "npx @deepseek-ai/dsh web",
+      "language": "TypeScript",
+      "name": "deepseek-ai/deepseek-harness",
+      "stars": 204000,
+      "stepArchetypes": [
+        "orchestrate",
+        "code"
+      ],
+      "url": "https://github.com/deepseek-ai/deepseek-harness"
+    },
+    {
       "id": "recgyXRI8suR1CnVm",
       "capabilityTags": [
         "ui-design",
@@ -985,6 +1510,25 @@
         "research"
       ],
       "url": "https://f-droid.org/2026/07/01/adv-malware.html"
+    },
+    {
+      "id": "rechW5XP3i98ajL7R",
+      "capabilityTags": [
+        "security",
+        "review"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-08",
+      "description": "NVIDIA's security scanner for AI agent skills: detects prompt injection, data exfiltration, supply-chain risks, and hidden instructions in Claude Code, Codex, and MCP skills before you install them.",
+      "improvementClaim": "Security screening for agent skills before they run, not after they leak.",
+      "install": "uv tool install git+https://github.com/NVIDIA/skillspector.git",
+      "language": "Python",
+      "name": "NVIDIA/SkillSpector",
+      "stars": 16200,
+      "stepArchetypes": [
+        "review"
+      ],
+      "url": "https://github.com/NVIDIA/SkillSpector"
     },
     {
       "id": "reciqTJt4oVGwVPHy",
@@ -1123,6 +1667,26 @@
       "url": "https://github.com/drumih/turbo-fieldfare"
     },
     {
+      "id": "recldF8VmMSjNdm5C",
+      "capabilityTags": [
+        "research",
+        "data-etl"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-08",
+      "description": "Google's zero-shot time-series forecasting foundation model — forecasts unseen series with no per-dataset training.",
+      "improvementClaim": "Forecasting without building and training a model per dataset.",
+      "install": "pip install timesfm",
+      "language": "Python",
+      "name": "google-research/timesfm",
+      "stars": 30700,
+      "stepArchetypes": [
+        "research",
+        "data-etl"
+      ],
+      "url": "https://github.com/google-research/timesfm"
+    },
+    {
       "id": "reclnFXDmmViI106r",
       "capabilityTags": [
         "ui-design"
@@ -1223,6 +1787,25 @@
       "url": "https://github.com/modelcontextprotocol/servers"
     },
     {
+      "id": "recnCAMDjGIb6M8Up",
+      "capabilityTags": [
+        "data-etl",
+        "api-integration"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-07",
+      "description": "Free tool that converts any YouTube video (or local file) into ranked viral short clips: it finds the most engaging moments, auto-crops to vertical, and can add AI-generated hooks, subtitles, and translation.",
+      "improvementClaim": "Replaces a paid clip-editing SaaS subscription with one local command per video.",
+      "install": "pip install -r requirements.txt && python main.py <url>",
+      "language": "Python",
+      "name": "pierrenade/short-video-generator-AI",
+      "stars": 506,
+      "stepArchetypes": [
+        "data-etl"
+      ],
+      "url": "https://github.com/pierrenade/short-video-generator-AI"
+    },
+    {
       "id": "recoleHCOUVf1h1X3",
       "capabilityTags": [
         "review",
@@ -1241,6 +1824,26 @@
         "orchestrate"
       ],
       "url": "https://github.com/openai/codex-plugin-cc"
+    },
+    {
+      "id": "recoxoIqg6ICzjwgm",
+      "capabilityTags": [
+        "code-generation",
+        "research"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-08",
+      "description": "A complete recipe for training a 64M-parameter language model from scratch in PyTorch — tokenizer, pretraining, SFT, and DPO on consumer hardware.",
+      "improvementClaim": "Demystifies LLM training — from 'impossible without a lab' to a weekend project.",
+      "install": "git clone && pip install -r requirements.txt",
+      "language": "Python",
+      "name": "jingyaogong/minimind",
+      "stars": 58200,
+      "stepArchetypes": [
+        "code",
+        "research"
+      ],
+      "url": "https://github.com/jingyaogong/minimind"
     },
     {
       "id": "recppAWCHmCP8XmyT",
@@ -1320,6 +1923,24 @@
       "url": "https://github.com/ogulcancelik/herdr"
     },
     {
+      "id": "recrQG8DWUDk7N9Ki",
+      "capabilityTags": [
+        "api-integration",
+        "orchestration"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-09-07",
+      "description": "Claude Code release (Sept 2) letting organizations centrally push HTTP and SSE MCP servers to every user via a managedMcpServers setting, plus a --permission-prompts none flag for unattended/headless hosts.",
+      "improvementClaim": "Lets one admin roll MCP servers out to an entire org instead of every developer hand-editing local config.",
+      "install": "npm i -g @anthropic-ai/claude-code",
+      "name": "Claude Code v2.1.259 — Managed MCP Servers",
+      "stepArchetypes": [
+        "deploy",
+        "orchestrate"
+      ],
+      "url": "https://ccleaks.com/news/claude-code-2-1-259-managed-mcp-servers-sep-2026"
+    },
+    {
       "id": "recssajLEV4aWIWWJ",
       "capabilityTags": [
         "research",
@@ -1395,6 +2016,26 @@
         "document"
       ],
       "url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills"
+    },
+    {
+      "id": "recx8lyHzdGMQCDxz",
+      "capabilityTags": [
+        "research",
+        "ui-design"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-08",
+      "description": "Real-time 3D Earth globe that tracks planes, ships, satellites, and wildfires live. A single interactive view of everything moving around the planet.",
+      "improvementClaim": "One screen replaces a dozen separate flight/ship/satellite tracking sites.",
+      "install": "git clone && serve — web app",
+      "language": "JavaScript",
+      "name": "bilawalsidhu/gods-eye-view",
+      "stars": 16900,
+      "stepArchetypes": [
+        "research",
+        "document"
+      ],
+      "url": "https://github.com/bilawalsidhu/gods-eye-view"
     },
     {
       "id": "recxjoSkuhuyYKL2J",
