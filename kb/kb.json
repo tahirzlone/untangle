@@ -1,7 +1,7 @@
 {
-  "fetchedAt": "2026-09-09T09:02:04.400Z",
-  "updatedAt": "2026-09-09T09:02:04.378Z",
-  "recordCount": 111,
+  "fetchedAt": "2026-09-23T09:23:35.588Z",
+  "updatedAt": "2026-09-23T09:23:35.525Z",
+  "recordCount": 125,
   "records": [
     {
       "id": "rec01yqHvgetnrvGn",
@@ -60,6 +60,24 @@
       "url": "https://github.com/firecrawl/pdf-inspector"
     },
     {
+      "id": "rec1Gu3CzfhVK1SZ6",
+      "capabilityTags": [
+        "api-integration"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-09-21",
+      "description": "Native macOS controls for Meta's Neural Band: reverse-engineers the EMG wristband so muscle gestures swipe desktops, trigger Mission Control, and control media/brightness on a Mac.",
+      "improvementClaim": "Makes neural-interface input 10x more accessible - a $199 consumer wearable becomes an open Mac controller",
+      "install": "Download release DMG (macOS 14+, Meta Neural Band required)",
+      "language": "Swift",
+      "name": "callbacked/kinesis",
+      "stars": 28,
+      "stepArchetypes": [
+        "research"
+      ],
+      "url": "https://github.com/callbacked/kinesis"
+    },
+    {
       "id": "rec1lQlBJLCMjsivF",
       "capabilityTags": [
         "api-integration",
@@ -96,6 +114,25 @@
       "url": "https://news.ycombinator.com/item?id=49589914"
     },
     {
+      "id": "rec29T3iGV0vGRrzX",
+      "capabilityTags": [
+        "review",
+        "code-generation"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-21",
+      "description": "Alibaba's open-sourced AI code review tool, battle-tested at Alibaba scale. Reads git diffs and produces precise line-level review comments with a built-in multi-language ruleset (NPE, thread-safety, XSS, SQL injection). Works with OpenAI- and Anthropic-compatible models.",
+      "improvementClaim": "Makes automated PR review 10x more precise - line-level comments backed by deterministic rules instead of raw LLM guesses",
+      "install": "npm i -g @alibaba-group/open-code-review",
+      "language": "Go",
+      "name": "alibaba/open-code-review",
+      "stars": 38900,
+      "stepArchetypes": [
+        "review"
+      ],
+      "url": "https://github.com/alibaba/open-code-review"
+    },
+    {
       "id": "rec2Er3aCZODcbNL6",
       "capabilityTags": [
         "documentation",
@@ -114,6 +151,24 @@
         "document"
       ],
       "url": "https://github.com/harvard-edge/cs249r_book"
+    },
+    {
+      "id": "rec2IIi3K5unk8xLa",
+      "capabilityTags": [
+        "api-integration"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-21",
+      "description": "The open-source AI voice studio: clone voices, dictate anywhere, and generate speech - fully local and private. Combines TTS output and Whisper speech input in one desktop app, with an MCP server so agents can speak and transcribe.",
+      "improvementClaim": "Makes voice cloning and dictation 10x more private - studio-grade voice AI entirely on-device, free",
+      "install": "Download DMG/MSI from GitHub releases",
+      "language": "TypeScript",
+      "name": "jamiepine/voicebox",
+      "stars": 55300,
+      "stepArchetypes": [
+        "document"
+      ],
+      "url": "https://github.com/jamiepine/voicebox"
     },
     {
       "id": "rec3Aj0ofOdFCQ2c7",
@@ -194,6 +249,46 @@
       "url": "https://github.com/openai/codex-security"
     },
     {
+      "id": "rec5EJi36XkGgCwlh",
+      "capabilityTags": [
+        "ui-design"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-21",
+      "description": "A tiny, fully native macOS launcher with hotkeys and clipboard history - a Raycast alternative in pure Swift that runs under 100 MB of RAM with zero third-party dependencies.",
+      "improvementClaim": "Makes the launcher category 10x lighter - full Raycast-style workflow in a dependency-free native app",
+      "install": "brew install --cask tinycast (after brew tap abue-ammar/tinycast)",
+      "language": "Swift",
+      "name": "abue-ammar/tinycast",
+      "stars": 6800,
+      "stepArchetypes": [
+        "orchestrate"
+      ],
+      "url": "https://github.com/abue-ammar/tinycast"
+    },
+    {
+      "id": "rec692kKWIyMZK7Ds",
+      "capabilityTags": [
+        "code-generation",
+        "testing",
+        "review"
+      ],
+      "category": "Claude Plugin",
+      "dateFirstSeen": "2026-09-21",
+      "description": "Addy Osmani's pack of 25 production-grade engineering skills for AI coding agents, encoding the workflows, quality gates, and best practices senior engineers use across the full development lifecycle (define, plan, build, verify, review, ship).",
+      "improvementClaim": "Makes agent code output 10x closer to senior-engineer practice by enforcing lifecycle workflows and quality gates",
+      "install": "/plugin install agent-skills@addy-agent-skills (after /plugin marketplace add addyosmani/agent-skills)",
+      "language": "Markdown",
+      "name": "addyosmani/agent-skills",
+      "stars": 92400,
+      "stepArchetypes": [
+        "code",
+        "test",
+        "review"
+      ],
+      "url": "https://github.com/addyosmani/agent-skills"
+    },
+    {
       "id": "rec6ENkJdbb6RmDdj",
       "capabilityTags": [
         "code-search",
@@ -213,6 +308,24 @@
         "review"
       ],
       "url": "https://github.com/DeusData/codebase-memory-mcp"
+    },
+    {
+      "id": "rec73uXCtq01rCM65",
+      "capabilityTags": [
+        "code-generation",
+        "ui-design"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-09-21",
+      "description": "Interactive satire: you ask 'Claude' to change an Add to Cart button to blue and watch a simulated agentic coding session spiral - spawning subagents, refactoring, and burning tokens without ever changing the button.",
+      "improvementClaim": "Makes the failure modes of agentic coding 10x more visible - by letting you feel the doom-loop in 60 seconds",
+      "install": "Visit opusfived.dev - no install",
+      "language": "JavaScript",
+      "name": "Opusfived (opusfived.dev)",
+      "stepArchetypes": [
+        "code"
+      ],
+      "url": "https://opusfived.dev/"
     },
     {
       "id": "rec7P5H5nyOuUqGu0",
@@ -311,6 +424,24 @@
         "data-etl"
       ],
       "url": "https://github.com/every-app/open-seo"
+    },
+    {
+      "id": "rec90eCYl3n4YKBH1",
+      "capabilityTags": [
+        "browser-automation"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-21",
+      "description": "Tencent's CLI + browser extension that lets AI agents use your real, logged-in browser without interrupting your work. Any shell-capable agent (Claude Code, Cursor, Codex) can drive authenticated web sessions.",
+      "improvementClaim": "Makes agent browser automation 10x more practical by reusing your real logged-in sessions instead of fresh headless profiles",
+      "install": "curl install.sh + browser extension, then `bsk install-skill`",
+      "language": "Rust",
+      "name": "Tencent/BrowserSkill",
+      "stars": 5700,
+      "stepArchetypes": [
+        "browser-verify"
+      ],
+      "url": "https://github.com/Tencent/BrowserSkill"
     },
     {
       "id": "rec92yVflOEvnkaan",
@@ -703,6 +834,23 @@
         "code"
       ],
       "url": "https://github.com/hamzarehmandeveloper/claude-account"
+    },
+    {
+      "id": "recFuhSuqeNqnmEkI",
+      "capabilityTags": [
+        "research"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-09-21",
+      "description": "A community site for sharing and browsing real AI setups - which models, agents, editors, MCP servers, and skills people actually run - so you can learn from working configurations instead of hype threads.",
+      "improvementClaim": "Makes discovering working AI configurations 10x faster - real setups from real users, not listicles",
+      "install": "Browse mysetup.ai - no install",
+      "name": "mysetup.ai",
+      "stepArchetypes": [
+        "research",
+        "document"
+      ],
+      "url": "https://mysetup.ai/"
     },
     {
       "id": "recHcziXDVk1VCjB8",
@@ -1105,6 +1253,26 @@
       "url": "https://github.com/aplavin/blackhole.plav.in"
     },
     {
+      "id": "recMYwcfrJV1XtQNd",
+      "capabilityTags": [
+        "security",
+        "review"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-09-21",
+      "description": "Cloudflare's coding-agent skill for multi-phase security audits of a codebase, producing independently verified, machine-readable findings. Point your agent at a repo and ask for a security audit.",
+      "improvementClaim": "Makes agent security audits 10x more trustworthy by having independent agents adversarially verify every finding",
+      "install": "npx skills add https://github.com/cloudflare/security-audit-skill --skill security-audit",
+      "language": "Markdown",
+      "name": "cloudflare/security-audit-skill",
+      "stars": 16600,
+      "stepArchetypes": [
+        "review",
+        "orchestrate"
+      ],
+      "url": "https://github.com/cloudflare/security-audit-skill"
+    },
+    {
       "id": "recN1Uu37cj1z2HKg",
       "capabilityTags": [
         "research",
@@ -1182,6 +1350,27 @@
       "url": "https://github.com/Nutlope/hallmark"
     },
     {
+      "id": "recQgglCd6PvD2UH5",
+      "capabilityTags": [
+        "data-etl",
+        "research",
+        "memory"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-21",
+      "description": "Tencent's enterprise-grade open-source LLM knowledge platform: turn raw documents into a queryable RAG system, an autonomous reasoning agent, and a self-maintaining wiki.",
+      "improvementClaim": "Makes private-document Q&A 10x easier to stand up - one docker compose from raw files to RAG + agent + wiki",
+      "install": "git clone + docker compose up -d",
+      "language": "Go",
+      "name": "Tencent/WeKnora",
+      "stars": 26800,
+      "stepArchetypes": [
+        "data-etl",
+        "research"
+      ],
+      "url": "https://github.com/Tencent/WeKnora"
+    },
+    {
       "id": "recQxvcJ5VqgJgyoy",
       "capabilityTags": [
         "orchestration",
@@ -1246,6 +1435,23 @@
       "url": "https://github.com/petergyang/no-ai-slop"
     },
     {
+      "id": "recVgK0qtZ7FTjCog",
+      "capabilityTags": [
+        "data-etl"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-09-21",
+      "description": "An e-ink picture frame for Raspberry Pi that listens for birds in your garden, identifies them by song in real time with fully local AI, and draws the visitors as hand-cut 1800s natural-history illustrations.",
+      "improvementClaim": "Makes ambient nature monitoring 10x more delightful - birdsong becomes a living 19th-century illustration on your wall",
+      "install": "./setup.sh on a Raspberry Pi",
+      "language": "Python",
+      "name": "arnegiacomo/fugleramme",
+      "stepArchetypes": [
+        "data-etl"
+      ],
+      "url": "https://github.com/arnegiacomo/fugleramme"
+    },
+    {
       "id": "recVutiAhKgL5stU1",
       "capabilityTags": [
         "documentation",
@@ -1283,6 +1489,26 @@
         "code"
       ],
       "url": "https://github.com/pytorch/pytorch"
+    },
+    {
+      "id": "recWhVRrezQkB78co",
+      "capabilityTags": [
+        "research",
+        "orchestration"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-21",
+      "description": "alphaXiv's local-first workspace that turns coding agents (Claude Code, Codex, Cursor, OpenCode) into autonomous research agents that propose ideas, run experiments, inspect evidence, and decide next steps.",
+      "improvementClaim": "Makes parallel experiment-driven research 10x more tractable - isolated worktrees and immutable run archives per hypothesis",
+      "install": "curl -LsSf https://openresearch.sh/install.sh | sh && orx up",
+      "language": "Rust",
+      "name": "alphaXiv/OpenResearch",
+      "stars": 5400,
+      "stepArchetypes": [
+        "research",
+        "orchestrate"
+      ],
+      "url": "https://github.com/alphaXiv/OpenResearch"
     },
     {
       "id": "recWzilJLFrG0MKR4",
@@ -1354,6 +1580,24 @@
         "deploy"
       ],
       "url": "https://news.ycombinator.com/item?id=48968606"
+    },
+    {
+      "id": "recXkIzl6el9xfPst",
+      "capabilityTags": [
+        "code-generation",
+        "ui-design"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-09-21",
+      "description": "Single-file web apps that save their data into SQLite: a .capsule file bundles UI, assets, and an embedded database, so tools and their data travel as one document with no servers or subscriptions.",
+      "improvementClaim": "Makes AI-generated micro-apps 10x more durable - app plus data in one portable file instead of a hosted throwaway",
+      "install": "Download the Capsule desktop app, or open .capsule files at withcapsule.app/preview - no install",
+      "language": "JavaScript",
+      "name": "Capsule (withcapsule.app)",
+      "stepArchetypes": [
+        "scaffold"
+      ],
+      "url": "https://withcapsule.app/"
     },
     {
       "id": "recYEE8aRB2Hjk43C",
@@ -1977,6 +2221,28 @@
         "orchestrate"
       ],
       "url": "https://github.com/cactus-compute/needle"
+    },
+    {
+      "id": "recu6zi32KbONJQwW",
+      "capabilityTags": [
+        "documentation",
+        "data-etl",
+        "api-integration"
+      ],
+      "category": "Claude Plugin",
+      "dateFirstSeen": "2026-09-21",
+      "description": "Anthropic's official open-source repo of 11 plugins for knowledge workers in Claude Cowork and Claude Code: sales, legal, finance, data, marketing, support, product, productivity, enterprise search, bio research, and plugin management.",
+      "improvementClaim": "Makes Claude 10x more useful for non-engineering roles out of the box - a specialist per job function, no custom setup",
+      "install": "claude plugin install sales@knowledge-work-plugins",
+      "language": "Markdown",
+      "name": "anthropics/knowledge-work-plugins",
+      "stars": 23900,
+      "stepArchetypes": [
+        "research",
+        "document",
+        "data-etl"
+      ],
+      "url": "https://github.com/anthropics/knowledge-work-plugins"
     },
     {
       "id": "recv3hUXaTkx06f7t",
