@@ -1,7 +1,7 @@
 {
-  "fetchedAt": "2026-09-23T09:23:35.588Z",
-  "updatedAt": "2026-09-23T09:23:35.525Z",
-  "recordCount": 125,
+  "fetchedAt": "2026-09-29T10:47:13.166Z",
+  "updatedAt": "2026-09-29T10:47:13.097Z",
+  "recordCount": 134,
   "records": [
     {
       "id": "rec01yqHvgetnrvGn",
@@ -228,6 +228,25 @@
         "document"
       ],
       "url": "https://github.com/langchain-ai/openwiki"
+    },
+    {
+      "id": "rec58itXbR9xxJ9Dl",
+      "capabilityTags": [
+        "documentation",
+        "api-integration"
+      ],
+      "category": "MCP Server",
+      "dateFirstSeen": "2026-09-28",
+      "description": "A YC F24 MCP server that lets agents edit Microsoft Word (.docx) documents with high fidelity. Converts docx to readable HTML for the agent, then reconciles the edits back into valid OOXML.",
+      "improvementClaim": "Makes agent edits to Word documents ~3x faster and 2x cheaper without corrupting OOXML.",
+      "install": "Add the hosted MCP from app.vespper.com (see docs.vespper.com quickstart)",
+      "language": "Python",
+      "name": "Vespper Docx MCP",
+      "stepArchetypes": [
+        "document",
+        "data-etl"
+      ],
+      "url": "https://www.vespper.com/blog/launching-vespper-docx-mcp"
     },
     {
       "id": "rec59b6FOxR77sCKV",
@@ -563,6 +582,22 @@
       "url": "https://github.com/ailyProject/aily-blockly"
     },
     {
+      "id": "recAL3anYEbQDQkbp",
+      "capabilityTags": [
+        "ui-design"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-09-28",
+      "description": "A browser 'foundry for bastard web fonts' — mix, stretch, and squish two fonts into a cursed hybrid like Times New Bastard, then download a real font file that works everywhere.",
+      "improvementClaim": "Makes generating a working custom hybrid font a 30-second browser task instead of a font-editor project.",
+      "install": "Browse bastardica.mitpit.com — no install",
+      "name": "Bastardica (Times New Bastard)",
+      "stepArchetypes": [
+        "scaffold"
+      ],
+      "url": "https://bastardica.mitpit.com"
+    },
+    {
       "id": "recBciFc70ZIz4Wso",
       "capabilityTags": [
         "browser-automation",
@@ -798,6 +833,24 @@
         "orchestrate"
       ],
       "url": "https://github.com/TencentCloud/TencentDB-Agent-Memory"
+    },
+    {
+      "id": "recFCFGv46EmJxUF0",
+      "capabilityTags": [
+        "orchestration"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-28",
+      "description": "Jev, TypeSafe AI's decision model, autonomously plays Pokémon Red — no scripts, no cheats — and beat the full game in 37h 40m for roughly $1.65 in API costs.",
+      "improvementClaim": "Makes long-horizon game-playing agent evals ~100x cheaper than earlier LLM-plays-Pokémon runs.",
+      "install": "git clone + npm install + npm start (bring your own ROM)",
+      "language": "TypeScript",
+      "name": "christianmat/jev-pokemon",
+      "stepArchetypes": [
+        "orchestrate",
+        "test"
+      ],
+      "url": "https://github.com/christianmat/jev-pokemon"
     },
     {
       "id": "recFQfINWMCq8cWw3",
@@ -1396,6 +1449,26 @@
       "url": "https://github.com/obra/superpowers"
     },
     {
+      "id": "recRApm6OudROax9P",
+      "capabilityTags": [
+        "security",
+        "deployment"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-28",
+      "description": "Drop is a rootless Linux sandbox that 'doesn't get in your way' — isolated environments for running programs and LLM agents that still see your installed tools and dotfiles, but can't touch your real filesystem.",
+      "improvementClaim": "Makes safely running untrusted agent code a one-command habit instead of a container project.",
+      "install": "go install github.com/wrr/drop/cmd/drop@latest",
+      "language": "Go",
+      "name": "wrr/drop",
+      "stars": 50,
+      "stepArchetypes": [
+        "deploy",
+        "test"
+      ],
+      "url": "https://github.com/wrr/drop"
+    },
+    {
       "id": "recRlbAv440pxNgQ6",
       "capabilityTags": [
         "image-generation",
@@ -1413,6 +1486,24 @@
         "orchestrate"
       ],
       "url": "https://github.com/harry0703/MoneyPrinterTurbo"
+    },
+    {
+      "id": "recSonlmBnTG3nWUJ",
+      "capabilityTags": [
+        "code-generation",
+        "research"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-09-28",
+      "description": "Anthropic's new flagship model with 1M-token context at $4/$20 per Mtok — a major price cut alongside a capability bump. Ships with raised 5-hour usage limits on Pro/Max/Team and a bankable rate-limit reset users can save and spend later.",
+      "improvementClaim": "Makes 1M-context agentic coding runs several times cheaper than prior Opus pricing.",
+      "install": "No install — select claude-opus-5-5 in Claude Code or the API",
+      "name": "Anthropic Claude Opus 5.5",
+      "stepArchetypes": [
+        "code",
+        "research"
+      ],
+      "url": "https://www.anthropic.com/claude-opus-5-5"
     },
     {
       "id": "recTk7T1p4eGCK6na",
@@ -1620,6 +1711,25 @@
         "document"
       ],
       "url": "https://github.com/SenteLabsAI/OpenExecutive"
+    },
+    {
+      "id": "recbIhPRdAZsE1nQ3",
+      "capabilityTags": [
+        "research",
+        "memory"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-28",
+      "description": "A byte-level continual-learning language model trained from scratch on an 8GB-VRAM laptop from a batch-1 stream of data. Learns new material over time without catastrophic forgetting; the weights directory on disk IS the model.",
+      "improvementClaim": "Makes from-scratch continual-learning experiments possible on a consumer laptop instead of a GPU cluster.",
+      "install": "git clone + pip install torch numpy pyyaml flask; python3 train.py",
+      "language": "Python",
+      "name": "volotat/mini-AGI",
+      "stepArchetypes": [
+        "research",
+        "code"
+      ],
+      "url": "https://github.com/volotat/mini-AGI"
     },
     {
       "id": "recbgbTdM93fdrZS8",
@@ -2090,6 +2200,25 @@
       "url": "https://github.com/jingyaogong/minimind"
     },
     {
+      "id": "recpn0lNXoM9HX3nL",
+      "capabilityTags": [
+        "ui-design",
+        "documentation"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-28",
+      "description": "A text-based diagram language where you decide where elements go — bridging auto-layout tools like Mermaid and manual drawing apps. Compiles .reladraw files to SVG.",
+      "improvementClaim": "Makes precise, intentional diagrams as fast to write as auto-layout ones.",
+      "install": "npm install -g reladraw",
+      "language": "TypeScript",
+      "name": "reladraw/reladraw",
+      "stars": 809,
+      "stepArchetypes": [
+        "document"
+      ],
+      "url": "https://github.com/reladraw/reladraw"
+    },
+    {
       "id": "recppAWCHmCP8XmyT",
       "capabilityTags": [
         "research",
@@ -2185,6 +2314,22 @@
       "url": "https://ccleaks.com/news/claude-code-2-1-259-managed-mcp-servers-sep-2026"
     },
     {
+      "id": "recsQKIYrygM9ZeFd",
+      "capabilityTags": [
+        "ui-design"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-09-28",
+      "description": "Pixel-art city nights (Tokyo, New York, and 14 more) with endless lofi music that is composed in your browser — a brand-new track every few minutes, not a playlist. A focus-ambience site for working.",
+      "improvementClaim": "Makes infinite non-repeating focus music free and local to the browser tab.",
+      "install": "Browse loficities.com — no install",
+      "name": "Lofi Cities",
+      "stepArchetypes": [
+        "scaffold"
+      ],
+      "url": "https://loficities.com"
+    },
+    {
       "id": "recssajLEV4aWIWWJ",
       "capabilityTags": [
         "research",
@@ -2202,6 +2347,26 @@
         "research"
       ],
       "url": "https://github.com/sickn33/agentic-awesome-skills"
+    },
+    {
+      "id": "rectPqiosfL37WgTm",
+      "capabilityTags": [
+        "review",
+        "ui-design"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-09-28",
+      "description": "Whiteboard (YC W26) is an open-source canvas/IDE for thoughtful software design where humans and AI agents collaborate on architecture. Agents like Claude Code generate reviews, diagrams, and decision logs directly onto the canvas.",
+      "improvementClaim": "Makes reviewing and steering AI-generated architecture visual instead of buried in diffs.",
+      "install": "Download binary from install.dev.fast",
+      "language": "TypeScript",
+      "name": "devdotfast/whiteboard",
+      "stars": 1700,
+      "stepArchetypes": [
+        "review",
+        "document"
+      ],
+      "url": "https://github.com/devdotfast/whiteboard"
     },
     {
       "id": "rectTRCyNlbxCVQSJ",
