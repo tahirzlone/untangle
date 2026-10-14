@@ -1,7 +1,7 @@
 {
-  "fetchedAt": "2026-09-29T10:47:13.166Z",
-  "updatedAt": "2026-09-29T10:47:13.097Z",
-  "recordCount": 134,
+  "fetchedAt": "2026-10-14T09:36:37.733Z",
+  "updatedAt": "2026-10-13T11:57:12.902Z",
+  "recordCount": 144,
   "records": [
     {
       "id": "rec01yqHvgetnrvGn",
@@ -41,6 +41,27 @@
         "research"
       ],
       "url": "https://github.com/The-Swarm-Corporation/AutoHedge"
+    },
+    {
+      "id": "rec0vRVTNYbqd7QnU",
+      "capabilityTags": [
+        "documentation",
+        "api-integration",
+        "ui-design"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-10-12",
+      "description": "Open-source clean-room reimplementation of Microsoft Word in pure Rust. Reads and writes .docx, runs on macOS/Windows/Linux/BSD and in browsers via WebAssembly. Flagship of the storytold 'craft' suite (gridcraft, deckcraft, pdfcraft, filmcraft, cadcraft...) that is flooding today's trending page.",
+      "improvementClaim": "An AI-agent-scriptable, open-source Word: agents can drive a real word processor through MCP instead of generating documents blind.",
+      "install": "Download prebuilt installer, or: git clone + cargo run --release -p wordcraft",
+      "language": "Rust",
+      "name": "storytold/wordcraft",
+      "stars": 8500,
+      "stepArchetypes": [
+        "document",
+        "code"
+      ],
+      "url": "https://github.com/storytold/wordcraft"
     },
     {
       "id": "rec1Ba0AXojMx6pxI",
@@ -169,6 +190,24 @@
         "document"
       ],
       "url": "https://github.com/jamiepine/voicebox"
+    },
+    {
+      "id": "rec2nLdO24WS4CTix",
+      "capabilityTags": [
+        "api-integration",
+        "code-generation"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-10-12",
+      "description": "Anthropic's new small model (released Oct 7): billed as the cheapest, fastest and most capable Haiku ever, at $0.10/$0.50 per million input/output tokens - roughly a 75% price cut vs Haiku 4.5 - and the first Haiku with an adjustable effort setting.",
+      "improvementClaim": "Drops the price of capable high-volume agent substeps ~10x vs frontier models, making always-on background agents economically routine.",
+      "install": "API model id claude-haiku-5-5 - no install",
+      "name": "Anthropic — Claude Haiku 5.5",
+      "stepArchetypes": [
+        "research",
+        "code"
+      ],
+      "url": "https://www.anthropic.com/claude-haiku-5-5"
     },
     {
       "id": "rec3Aj0ofOdFCQ2c7",
@@ -405,6 +444,27 @@
       "url": "https://github.com/elastic/elasticsearch"
     },
     {
+      "id": "rec7lFeRC60XSxXYL",
+      "capabilityTags": [
+        "code-generation",
+        "review",
+        "documentation"
+      ],
+      "category": "Claude Plugin",
+      "dateFirstSeen": "2026-10-12",
+      "description": "Andrej Karpathy's observations about common LLM coding failure modes condensed into four principles - Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution - packaged as a single CLAUDE.md file / Claude Code plugin (Cursor supported via project rules).",
+      "improvementClaim": "One pasted file reportedly cuts the most common Claude Code annoyances - overbuilt abstractions and unrequested edits - across every project.",
+      "install": "/plugin marketplace add forrestchang/andrej-karpathy-skills",
+      "language": "Markdown",
+      "name": "multica-ai/andrej-karpathy-skills",
+      "stepArchetypes": [
+        "code",
+        "review",
+        "document"
+      ],
+      "url": "https://github.com/multica-ai/andrej-karpathy-skills"
+    },
+    {
       "id": "rec8IRupxSpAxupRy",
       "capabilityTags": [
         "browser-automation",
@@ -618,6 +678,28 @@
       "url": "https://github.com/ShawnPana/phone-harness"
     },
     {
+      "id": "recBthk27ZdamCz3n",
+      "capabilityTags": [
+        "ui-design",
+        "image-generation",
+        "documentation"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-10-12",
+      "description": "Claude Code skill that turns a technical idea into a detailed, interactive isometric figure of a real machine: Claude invents a physical object whose operation illustrates the concept (a cache key becomes a pin-tumbler lock) and renders it as SVG with optional WebGL/3D, for docs, articles and landing pages.",
+      "improvementClaim": "Turns hours of manual diagram/illustration work into a single Claude Code prompt that outputs interactive, verified isometric figures.",
+      "install": "npx skills add wheresryan22/anatomy -g -a claude-code",
+      "language": "JavaScript",
+      "name": "wheresryan22/anatomy",
+      "stars": 60,
+      "stepArchetypes": [
+        "document",
+        "code",
+        "browser-verify"
+      ],
+      "url": "https://github.com/wheresryan22/anatomy"
+    },
+    {
       "id": "recC0Ru8AZlf7ZsWC",
       "capabilityTags": [
         "data-etl",
@@ -655,6 +737,27 @@
         "document"
       ],
       "url": "https://blog.sshh.io/p/exploring-claudegpt-knowledge-cutoffs"
+    },
+    {
+      "id": "recCNeALQJEKMwCrB",
+      "capabilityTags": [
+        "ui-design",
+        "code-generation"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-10-12",
+      "description": "Open-source Canva alternative: browser design editor with realtime co-editing, templates, fonts, icons and audio seeding, self-hostable with one Docker command. The HN thread's real story: the commit history starts from a single commit authored by Claude.",
+      "improvementClaim": "One docker compose command gets a team a self-hosted collaborative design tool instead of per-seat Canva subscriptions.",
+      "install": "docker compose up -d --build",
+      "language": "TypeScript",
+      "name": "shaongitbd/doory",
+      "stars": 3,
+      "stepArchetypes": [
+        "scaffold",
+        "code",
+        "deploy"
+      ],
+      "url": "https://github.com/shaongitbd/doory"
     },
     {
       "id": "recCw4nQYDnbiBy3b",
@@ -1044,6 +1147,26 @@
       "url": "https://github.com/JustVugg/colibri"
     },
     {
+      "id": "recIrzWKOuBgIfMnf",
+      "capabilityTags": [
+        "api-integration",
+        "orchestration"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-10-12",
+      "description": "Local proxy that lets you run Claude Code, Codex, Pi, OpenCode and six other coding harnesses for free by routing their requests to 53 providers: free NVIDIA NIM keys, OpenRouter, Groq, Gemini, DeepSeek, GitHub Copilot, ChatGPT sign-in, or local Ollama/LM Studio/llama.cpp.",
+      "improvementClaim": "Cuts the cost of running coding agents to zero by routing Claude Code and friends to free or local model providers with automatic fallback.",
+      "install": "curl -fsSL install.sh | sh, then fcc-claude",
+      "language": "Python",
+      "name": "Alishahryar1/free-claude-code",
+      "stars": 55700,
+      "stepArchetypes": [
+        "code",
+        "orchestrate"
+      ],
+      "url": "https://github.com/Alishahryar1/free-claude-code"
+    },
+    {
       "id": "recIvOwyljFMN5UTu",
       "capabilityTags": [
         "documentation",
@@ -1118,6 +1241,24 @@
         "research"
       ],
       "url": "https://codex-tool-reference.simonw.chatgpt.site/"
+    },
+    {
+      "id": "recKSzO2lrp9vk1e2",
+      "capabilityTags": [
+        "code-generation"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-10-12",
+      "description": "Tool for automatically porting PS5 executables to run on Linux and Windows - with no emulation. v0.1 just shipped and aims to bring PS5 games to PC via binary conversion rather than an emulator.",
+      "improvementClaim": "Could make PS5 games on PC natively playable without the massive overhead of writing a console emulator - conversion instead of emulation.",
+      "install": "Build from source: see docs/dev/BUILD.md, then docs/user/USAGE.md",
+      "language": "C++",
+      "name": "boykopovar/AnyPS5",
+      "stars": 27800,
+      "stepArchetypes": [
+        "code"
+      ],
+      "url": "https://github.com/boykopovar/AnyPS5"
     },
     {
       "id": "recKbE9G0ODQQakKC",
@@ -1830,6 +1971,26 @@
       "url": "https://github.com/deepseek-ai/deepseek-harness"
     },
     {
+      "id": "recfCeep6jiA1MbHr",
+      "capabilityTags": [
+        "code-generation",
+        "testing",
+        "research"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-10-12",
+      "description": "Write-up of letting AI agents decompile a full first-person shooter (readers identify CoD: Modern Warfare 2, 2009) into readable C over ~500B tokens. One of the most-discussed agentic reverse-engineering demos yet.",
+      "improvementClaim": "Shows agent swarms can decompile an entire commercial game binary into verified readable C - work that previously took modding communities a decade.",
+      "install": "Read the blog post - no install",
+      "name": "momo5502 — 500B tokens: AI agents decompile an FPS",
+      "stepArchetypes": [
+        "research",
+        "code",
+        "test"
+      ],
+      "url": "https://momo5502.com/posts/2026-10-09-game-decompilation/"
+    },
+    {
       "id": "recgyXRI8suR1CnVm",
       "capabilityTags": [
         "ui-design",
@@ -2278,6 +2439,27 @@
       "url": "https://github.com/semantica-agi/semantica"
     },
     {
+      "id": "recqjkAqlGCjTCEyq",
+      "capabilityTags": [
+        "security",
+        "research",
+        "code-search"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-10-12",
+      "description": "Agent-driven reverse engineering toolkit: your coding agent calls REA to inspect and trace any target, from app behavior down to native binaries. Supports native executables, JavaScript/Electron apps, .NET assemblies, Android APKs, websites, and firmware.",
+      "improvementClaim": "Makes reverse engineering closed binaries and apps 10-100x faster by letting an AI agent drive disassemblers and tracers instead of a human doing it by hand.",
+      "install": "npx rea-agents setup",
+      "language": "TypeScript",
+      "name": "morluto/rea",
+      "stars": 143700,
+      "stepArchetypes": [
+        "research",
+        "orchestrate"
+      ],
+      "url": "https://github.com/morluto/rea"
+    },
+    {
       "id": "recrNgFnmEK4hsJwC",
       "capabilityTags": [
         "orchestration"
@@ -2467,6 +2649,24 @@
         "document"
       ],
       "url": "https://github.com/bilawalsidhu/gods-eye-view"
+    },
+    {
+      "id": "recxhaeS0zwpffzFo",
+      "capabilityTags": [
+        "code-generation",
+        "research"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-10-12",
+      "description": "The 1997 RTS classic Total Annihilation rebuilt to run natively on modern computers, with dynamic lighting, bloom and modern rendering. Playable demo on the site; no public repo yet.",
+      "improvementClaim": "A template for resurrecting abandoned classic games 10x faster via behavioral static analysis instead of decade-long community reimplementations.",
+      "install": "Download the demo at nanolathe.gg - no install from source",
+      "name": "Nanolathe — Total Annihilation rebuilt",
+      "stepArchetypes": [
+        "research",
+        "code"
+      ],
+      "url": "https://nanolathe.gg"
     },
     {
       "id": "recxjoSkuhuyYKL2J",
