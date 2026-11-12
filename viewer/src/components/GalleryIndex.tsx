@@ -23,6 +23,7 @@ export function GalleryIndex({
       <div className="sg-gallery-grid">
         {entries.map((e) => {
           const maxPain = Math.max(...e.workflow.nodes.map((n) => n.painLevel));
+          const upgrades = e.workflow.suggestions.length;
           return (
             <article key={e.slug} className="sg-card">
               <div className="sg-card-title">{e.workflow.meta.title}</div>
@@ -37,6 +38,18 @@ export function GalleryIndex({
                     {'●'.repeat(maxPain)}
                   </dd>
                 </div>
+                {/* The signpost: how many upgrades OPTIMIZE has waiting behind
+                    this card — "upgrades" is the word the Results Window will
+                    greet them with. A graph the KB matched nothing to gets no
+                    chip at all: the same honesty as the canvas, where the
+                    button itself is absent. The dt is the accessible label,
+                    exactly as it is for the card's other stats. */}
+                {upgrades > 0 ? (
+                  <div>
+                    <dt>{upgrades === 1 ? 'upgrade' : 'upgrades'}</dt>
+                    <dd className="sg-card-upgrades">{upgrades}</dd>
+                  </div>
+                ) : null}
                 <div>
                   <dt>generated</dt>
                   <dd>{e.workflow.meta.generatedAt.slice(0, 10)}</dd>

@@ -2,7 +2,7 @@
   "meta": {
     "task": "An API endpoint started throwing 500s after last night's deploy — take the bug report, find the cause, fix it, and get the fix out safely",
     "title": "Triage and Fix a Production Incident",
-    "generatedAt": "2026-08-05T13:20:00Z",
+    "generatedAt": "2026-08-11T16:30:00Z",
     "model": "claude-fable-5",
     "kbSource": "airtable",
     "promptIntro": "An API endpoint started throwing 500s after last night's deploy — take the bug report, find the cause, fix it, and get the fix out safely. Work it as one pass from the symptoms to a reproduction, to the code that owns the fault, to a fix that ships through review and is not done until the errors are gone and the postmortem is written."
@@ -12,9 +12,10 @@
     { "id": "pull-logs", "label": "Pull logs and traces by hand", "kind": "process", "description": "Tail the error stream, page through a dashboard, ssh to a box, grep the request id across services, and paste stack traces into a scratch file with timestamps in three different zones.", "painLevel": 4 },
     { "id": "reproduce", "label": "Reproduce the failure locally", "kind": "process", "description": "Rebuild the environment, seed data that looks like the customer's, and replay the request over and over, guessing at the payload shape that trips it. Hours, across the terminal, the database, and a browser.", "painLevel": 5 },
     { "id": "reproduced", "label": "Reproduced it?", "kind": "decision", "description": "Does the failure happen on demand now, or is the local run stubbornly healthy?", "painLevel": 2 },
-    { "id": "locate-code", "label": "Trace the fault through the codebase", "kind": "process", "description": "Follow the stack frames into unfamiliar services, grep for the handler, and read file after file to work out which of last night's changes owns the fault.", "painLevel": 4 },
-    { "id": "write-fix", "label": "Write the fix", "kind": "process", "description": "Patch the code path, keeping the change small enough to defend at 2am.", "painLevel": 3 },
-    { "id": "regression-test", "label": "Write a regression test for the exact case", "kind": "process", "description": "Pin the failing input in a test so this bug cannot come back quietly.", "painLevel": 3 },
+    { "id": "follow-stack-frames", "label": "Follow the stack into foreign services", "kind": "process", "description": "Walk each frame of the trace into services you have never read, keeping a mental stack of where you came from.", "painLevel": 4 },
+    { "id": "grep-for-handler", "label": "Grep for the handler and its callers", "kind": "process", "description": "Search across repos for the failing handler, then for everything that calls it, and everything that calls those.", "painLevel": 3 },
+    { "id": "read-owning-code", "label": "Read file after file for the owner", "kind": "process", "description": "Read through last night's changes and the code around them to work out which one actually owns the fault.", "painLevel": 4 },
+    { "id": "write-fix", "label": "Write the fix + regression test", "kind": "process", "description": "Patch the code path, keeping the change small enough to defend at 2am, and pin the failing input in a test so this bug cannot come back quietly.", "painLevel": 3 },
     { "id": "run-suite", "label": "Run the suite", "kind": "process", "description": "Run everything and read the failures.", "painLevel": 2 },
     { "id": "suite-green", "label": "Suite green?", "kind": "decision", "description": "New test passing, and nothing else broken by the patch?", "painLevel": 1 },
     { "id": "self-review-diff", "label": "Re-read the hotfix diff yourself", "kind": "process", "description": "Read the whole diff line by line hunting for the thing you just got wrong under pressure — the second mistake is the one that extends the incident.", "painLevel": 3 },
@@ -29,10 +30,11 @@
     { "from": "pull-logs", "to": "reproduce", "kind": "sequence" },
     { "from": "reproduce", "to": "reproduced", "kind": "sequence" },
     { "from": "reproduced", "to": "pull-logs", "kind": "retry", "label": "no repro — go back for more signal" },
-    { "from": "reproduced", "to": "locate-code", "kind": "branch", "label": "reproduced" },
-    { "from": "locate-code", "to": "write-fix", "kind": "sequence" },
-    { "from": "write-fix", "to": "regression-test", "kind": "sequence" },
-    { "from": "regression-test", "to": "run-suite", "kind": "sequence" },
+    { "from": "reproduced", "to": "follow-stack-frames", "kind": "branch", "label": "reproduced" },
+    { "from": "follow-stack-frames", "to": "grep-for-handler", "kind": "sequence" },
+    { "from": "grep-for-handler", "to": "read-owning-code", "kind": "sequence" },
+    { "from": "read-owning-code", "to": "write-fix", "kind": "sequence" },
+    { "from": "write-fix", "to": "run-suite", "kind": "sequence" },
     { "from": "run-suite", "to": "suite-green", "kind": "sequence" },
     { "from": "suite-green", "to": "write-fix", "kind": "retry", "label": "failures — patch and rerun" },
     { "from": "suite-green", "to": "self-review-diff", "kind": "branch", "label": "green" },
@@ -47,23 +49,23 @@
   ],
   "suggestions": [
     {
-      "nodeId": "locate-code",
+      "nodeId": "follow-stack-frames",
       "airtableRecordId": "rec6ENkJdbb6RmDdj",
       "name": "DeusData/codebase-memory-mcp",
       "url": "https://github.com/DeusData/codebase-memory-mcp",
       "category": "MCP Server",
       "claim": "Sub-millisecond architectural queries over a whole codebase — up to 99% fewer tokens.",
       "install": "curl -fsSL https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh | bash",
-      "promptFragment": "Once the failure reproduces, ask DeusData/codebase-memory-mcp which code owns the failing path instead of following stack frames through unfamiliar services file by file. Query it for the handler and its callers, and take that structure straight into the fix.",
+      "promptFragment": "Once the failure reproduces, ask DeusData/codebase-memory-mcp which code owns the failing path instead of following stack frames through unfamiliar services, grepping for the handler, and reading file after file. Query it for the handler and its callers, and take that structure straight into the fix.",
       "effect": {
         "removeNodes": [],
-        "mergeNodes": ["locate-code"],
-        "replaceWith": { "id": "ask-codebase-memory", "label": "Ask the codebase graph where it breaks", "kind": "process", "description": "One structural query returns the failing handler and its callers — no file-by-file hunt through services you have never read.", "painLevel": 1 },
+        "mergeNodes": ["follow-stack-frames", "grep-for-handler", "read-owning-code"],
+        "replaceWith": { "id": "ask-codebase-memory", "label": "Ask the codebase graph where it breaks", "kind": "process", "description": "One structural query returns the failing handler, its callers, and the change that owns the fault — no frame-by-frame hunt through services you have never read.", "painLevel": 1 },
         "newEdges": [
           { "from": "reproduced", "to": "ask-codebase-memory", "kind": "branch", "label": "reproduced" },
           { "from": "ask-codebase-memory", "to": "write-fix", "kind": "sequence" }
         ],
-        "metrics": { "stepsSaved": 0, "estTimeSavedMin": 30, "estTokensSaved": 6000, "manualInterventionsRemoved": 0 }
+        "metrics": { "stepsSaved": 2, "estTimeSavedMin": 45, "estTokensSaved": 6000, "manualInterventionsRemoved": 0 }
       }
     },
     {

@@ -79,6 +79,14 @@
   color: var(--ember-hot);
   text-shadow: 0 0 8px color-mix(in srgb, var(--ember-hot) 55%, transparent);
 }
+/* The one forward-looking figure on the card: accent, the voice OPTIMIZE
+   itself speaks in, against the pain dots' ember — pain states the problem,
+   this states how many answers are waiting. Qualified like .sg-card-pain
+   above, and for the same specificity reason. */
+.sg-card-meta dd.sg-card-upgrades {
+  color: var(--accent);
+  font-weight: 600;
+}
 
 .sg-card-open {
   margin-top: auto;

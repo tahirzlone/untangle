@@ -2,17 +2,20 @@
   "meta": {
     "task": "Build our weekly engineering digest — pull the week's posts from our feeds, pick the ten that matter, summarize them, and send the issue",
     "title": "Automate a Weekly Newsletter Digest",
-    "generatedAt": "2026-08-05T14:05:00Z",
+    "generatedAt": "2026-08-11T16:30:00Z",
     "model": "claude-fable-5",
     "kbSource": "airtable",
     "promptIntro": "Build our weekly engineering digest: pull the week's posts from our feeds, pick the ten that matter, summarize them, and send the issue. Set the gathering and summarizing up to run unattended, keep the editor's pick and a rendering check in the loop, and leave the whole thing repeating next week without being rebuilt."
   },
   "nodes": [
     { "id": "collect-sources", "label": "Collect the feeds and the house rules", "kind": "input", "description": "Gather the source list, the audience, the send day, the tone, and what actually counts as worth including.", "painLevel": 2 },
-    { "id": "fetch-feeds", "label": "Fetch and parse every source by hand", "kind": "process", "description": "Write the HTTP calls, handle RSS and Atom and the sites with no feed at all, retry the timeouts, and re-fix the parser every time a source changes its markup.", "painLevel": 4 },
+    { "id": "write-fetchers", "label": "Write a fetcher per source", "kind": "process", "description": "Hand-write the HTTP calls and feed parsing for every source: RSS here, Atom there, and screen-scraping for the sites with no feed at all.", "painLevel": 4 },
+    { "id": "wrap-retries", "label": "Wrap every call in retries and timeouts", "kind": "process", "description": "Add the retry logic, the timeouts, and the backoff that keep one slow source from hanging the whole run.", "painLevel": 3 },
+    { "id": "patch-parsers", "label": "Re-fix the parsers that broke this week", "kind": "process", "description": "Find which sources changed their markup since last run and patch each parser before the gathering can even start.", "painLevel": 4 },
     { "id": "dedupe-normalize", "label": "Dedupe and normalize the items", "kind": "process", "description": "The same story arrives from five sources with five titles: strip tracking parameters, match the duplicates, fill in missing authors and dates, and cut to the last seven days.", "painLevel": 3 },
     { "id": "rank-items", "label": "Rank what actually matters this week", "kind": "process", "description": "Judge each item against the house rules and sort the week down to a shortlist worth an editor's time.", "painLevel": 3 },
-    { "id": "summarize-each", "label": "Summarize every shortlisted item", "kind": "loop", "description": "Open each link, read it, and write the two or three sentences that go in the issue — a hundred model calls a week, into rate limits and provider errors that land halfway through the run.", "painLevel": 4 },
+    { "id": "summarize-batch", "label": "Summarize the shortlist, call by call", "kind": "loop", "description": "Open each link, read it, and write the two or three sentences that go in the issue — a hundred model calls a week against a single provider.", "painLevel": 4 },
+    { "id": "babysit-limits", "label": "Babysit rate limits mid-run", "kind": "process", "description": "Watch the run for the rate limits and provider errors that land halfway through, and note where the batch stopped so the gaps can be rerun.", "painLevel": 4 },
     { "id": "calls-succeeded", "label": "Every summary came back?", "kind": "decision", "description": "Did the run finish, or did rate limits and provider errors leave holes in the middle of it?", "painLevel": 2 },
     { "id": "human-pick", "label": "Editor picks the final ten", "kind": "review", "description": "A person reads the shortlist and decides what actually ships — the part nobody wants automated.", "painLevel": 3 },
     { "id": "assemble-issue", "label": "Assemble the issue", "kind": "process", "description": "Pour the picks into the HTML and plain-text templates, escape what needs escaping, and check every link resolves.", "painLevel": 3 },
@@ -23,12 +26,15 @@
     { "id": "digest-shipped", "label": "Digest shipped and scheduled", "kind": "output", "description": "This week's issue is out, and the run repeats on its own next week.", "painLevel": 1 }
   ],
   "edges": [
-    { "from": "collect-sources", "to": "fetch-feeds", "kind": "sequence" },
-    { "from": "fetch-feeds", "to": "dedupe-normalize", "kind": "sequence" },
+    { "from": "collect-sources", "to": "write-fetchers", "kind": "sequence" },
+    { "from": "write-fetchers", "to": "wrap-retries", "kind": "sequence" },
+    { "from": "wrap-retries", "to": "patch-parsers", "kind": "sequence" },
+    { "from": "patch-parsers", "to": "dedupe-normalize", "kind": "sequence" },
     { "from": "dedupe-normalize", "to": "rank-items", "kind": "sequence" },
-    { "from": "rank-items", "to": "summarize-each", "kind": "sequence" },
-    { "from": "summarize-each", "to": "calls-succeeded", "kind": "sequence" },
-    { "from": "calls-succeeded", "to": "summarize-each", "kind": "retry", "label": "rate-limited — rerun the gaps" },
+    { "from": "rank-items", "to": "summarize-batch", "kind": "sequence" },
+    { "from": "summarize-batch", "to": "babysit-limits", "kind": "sequence" },
+    { "from": "babysit-limits", "to": "calls-succeeded", "kind": "sequence" },
+    { "from": "calls-succeeded", "to": "summarize-batch", "kind": "retry", "label": "rate-limited — rerun the gaps" },
     { "from": "calls-succeeded", "to": "human-pick", "kind": "branch", "label": "all summaries in" },
     { "from": "human-pick", "to": "assemble-issue", "kind": "sequence" },
     { "from": "assemble-issue", "to": "send-test", "kind": "sequence" },
@@ -40,7 +46,7 @@
   ],
   "suggestions": [
     {
-      "nodeId": "fetch-feeds",
+      "nodeId": "write-fetchers",
       "airtableRecordId": "recmgzvdwcJgERiXV",
       "name": "modelcontextprotocol/servers",
       "url": "https://github.com/modelcontextprotocol/servers",
@@ -49,17 +55,17 @@
       "promptFragment": "Start the gathering step from modelcontextprotocol/servers rather than writing the fetching plumbing yourself: take the reference server closest to pulling web content and adapt it to the source list. Wire that up before anything is ranked, so every source arrives through one connector instead of a pile of one-off HTTP calls and hand-tuned retries.",
       "effect": {
         "removeNodes": [],
-        "mergeNodes": ["fetch-feeds"],
-        "replaceWith": { "id": "reference-fetch-server", "label": "Pull sources through a reference server", "kind": "process", "description": "A reference MCP server does the fetching; adapting one replaces the hand-rolled HTTP, retry and parser-patching work.", "painLevel": 2 },
+        "mergeNodes": ["write-fetchers", "wrap-retries"],
+        "replaceWith": { "id": "adapt-reference-server", "label": "Adapt a reference fetch server", "kind": "process", "description": "One reference MCP server does the fetching for every source — the HTTP, retry, and timeout plumbing comes with it instead of being written by hand.", "painLevel": 2 },
         "newEdges": [
-          { "from": "collect-sources", "to": "reference-fetch-server", "kind": "sequence" },
-          { "from": "reference-fetch-server", "to": "dedupe-normalize", "kind": "sequence" }
+          { "from": "collect-sources", "to": "adapt-reference-server", "kind": "sequence" },
+          { "from": "adapt-reference-server", "to": "patch-parsers", "kind": "sequence" }
         ],
-        "metrics": { "stepsSaved": 0, "estTimeSavedMin": 40, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
+        "metrics": { "stepsSaved": 1, "estTimeSavedMin": 40, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
       }
     },
     {
-      "nodeId": "summarize-each",
+      "nodeId": "summarize-batch",
       "airtableRecordId": "rec9cRu9Qdk3LlhI9",
       "name": "diegosouzapw/OmniRoute",
       "url": "https://github.com/diegosouzapw/OmniRoute",
@@ -69,13 +75,13 @@
       "promptFragment": "Put the summarizing pass behind diegosouzapw/OmniRoute instead of calling one provider directly and rerunning the batch every time it rate-limits: one endpoint, with its routing and quota fallbacks carrying the run through a provider that stalls. Point the summarizer at it before the first weekly run, so a hundred calls finish unattended rather than being nursed.",
       "effect": {
         "removeNodes": ["calls-succeeded"],
-        "mergeNodes": ["summarize-each"],
-        "replaceWith": { "id": "routed-summaries", "label": "Summarize through one routed endpoint", "kind": "process", "description": "Every summary goes through a single gateway whose quota fallbacks absorb the rate limits that used to halve the batch — nothing to check on afterwards.", "painLevel": 2 },
+        "mergeNodes": ["summarize-batch", "babysit-limits"],
+        "replaceWith": { "id": "routed-summaries", "label": "Summarize through one routed endpoint", "kind": "process", "description": "Every summary goes through a single gateway whose quota fallbacks absorb the rate limits that used to halve the batch — no babysitting, nothing to check on afterwards.", "painLevel": 2 },
         "newEdges": [
           { "from": "rank-items", "to": "routed-summaries", "kind": "sequence" },
           { "from": "routed-summaries", "to": "human-pick", "kind": "sequence" }
         ],
-        "metrics": { "stepsSaved": 1, "estTimeSavedMin": 35, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
+        "metrics": { "stepsSaved": 2, "estTimeSavedMin": 35, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
       }
     }
   ]

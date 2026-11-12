@@ -207,10 +207,29 @@
   100% { box-shadow: 0 0 0 14px transparent; }
 }
 
+/* The way in gets the same ring the way out lands with: a first-open cue on
+   OPTIMIZE, so a newcomer notices the button the whole canvas is pointing at.
+   One iteration here for the same reason as above — and the class itself is
+   one-time: GraphCanvas takes it off at animationend (or at the first press)
+   and never grants it again, so a re-render cannot replay the ring. Its own
+   keyframes rather than a share of sg-results-pulse, because the animationend
+   handler retires the cue BY NAME. A ring, not a repaint: box-shadow leaves
+   hover's background, focus's outline and CANCEL's ember untouched. */
+.sg-optimize--pulse {
+  animation: sg-optimize-pulse 700ms ease-out 1;
+}
+@keyframes sg-optimize-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+  100% { box-shadow: 0 0 0 14px transparent; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sg-optimize { transition: none; }
   /* no pulse: the button simply appears, which is the reduced-motion answer */
   .sg-view-results { animation: none; }
+  /* the backstop — GraphCanvas never grants the class at this setting, since a
+     suppressed animation has no animationend to spend the cue with */
+  .sg-optimize--pulse { animation: none; }
 }
 
 /* Cards are grabbable now — say so before the drag starts. */

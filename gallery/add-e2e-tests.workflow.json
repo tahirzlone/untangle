@@ -2,9 +2,10 @@
   "meta": {
     "task": "Add end-to-end tests to an existing web app",
     "title": "Add E2E Tests to an Existing Web App",
-    "generatedAt": "2026-07-28T18:26:12Z",
+    "generatedAt": "2026-08-11T16:30:00Z",
     "model": "claude-fable-5",
-    "kbSource": "none"
+    "kbSource": "airtable",
+    "promptIntro": "Add end-to-end tests to this existing web app, covering the flows that matter most. Take the suite the whole way: a test plan mapped from the app itself, specs that run green locally and in CI with the flakes chased down rather than waited out, and a human review before the suite gates a merge."
   },
   "nodes": [
     {
@@ -15,10 +16,17 @@
       "painLevel": 2
     },
     {
-      "id": "map-user-flows",
-      "label": "Map user flows from the codebase",
+      "id": "spelunk-repo-for-flows",
+      "label": "Spelunk the repo for the user flows",
       "kind": "process",
-      "description": "Read package.json, the router, and page components by hand to trace each critical journey screen by screen. No sitemap, no docs — just spelunking through the repo and writing down a test plan: URLs, form fields, expected outcomes per flow.",
+      "description": "Read package.json, the router, and page components by hand to trace each critical journey screen by screen. No sitemap, no docs — just the repo and a growing scratch file.",
+      "painLevel": 4
+    },
+    {
+      "id": "write-test-plan",
+      "label": "Write the test plan by hand",
+      "kind": "process",
+      "description": "Turn the spelunking into a plan: URLs, form fields, and expected outcomes per flow, written down before any framework is installed.",
       "painLevel": 3
     },
     {
@@ -64,10 +72,24 @@
       "painLevel": 1
     },
     {
-      "id": "debug-flaky",
-      "label": "Debug flaky selectors & timing races",
+      "id": "rerun-to-reproduce",
+      "label": "Re-run specs to reproduce the flake",
       "kind": "process",
-      "description": "The worst part. Re-run single specs over and over to reproduce intermittent failures, compare failure screenshots against the live page, chase races with animations and late-loading data, swap brittle selectors, add and tune explicit waits. A single flake can burn a whole session across editor, terminal, and browser.",
+      "description": "Run the failing spec over and over until the intermittent failure shows itself again — minutes per attempt, with no guarantee it fires this time.",
+      "painLevel": 4
+    },
+    {
+      "id": "compare-screenshots",
+      "label": "Compare failure screenshots by hand",
+      "kind": "process",
+      "description": "Put the failure screenshot beside the live page and hunt for what differed: a spinner, a late render, an animation caught mid-frame.",
+      "painLevel": 4
+    },
+    {
+      "id": "tune-selectors-waits",
+      "label": "Swap selectors & tune explicit waits",
+      "kind": "process",
+      "description": "Swap the brittle selector, add a wait, tune its timeout, and hope — the cycle that burns a whole session across editor, terminal, and browser.",
       "painLevel": 5
     },
     {
@@ -78,18 +100,11 @@
       "painLevel": 3
     },
     {
-      "id": "watch-ci",
-      "label": "Push & babysit CI runs",
-      "kind": "process",
-      "description": "Push the branch, then wait out each CI run — minutes per attempt — refreshing the web UI and reading raw logs to see what happened. Every tweak means another push and another wait; feedback loops are measured in coffee breaks.",
-      "painLevel": 4
-    },
-    {
       "id": "ci-green",
-      "label": "CI green?",
+      "label": "Push & wait — CI green?",
       "kind": "decision",
-      "description": "Did the suite pass on the CI machine? Runs that were green locally routinely fail here: headless-only timing, slower hardware, cold caches, missing env vars.",
-      "painLevel": 2
+      "description": "Push the branch and wait out each CI run — minutes per attempt, refreshing the web UI and reading raw logs. Green on the CI machine, or a failure that never happens locally: headless-only timing, slower hardware, cold caches, missing env vars?",
+      "painLevel": 3
     },
     {
       "id": "human-review",
@@ -107,22 +122,86 @@
     }
   ],
   "edges": [
-    { "from": "gather-requirements", "to": "map-user-flows", "kind": "sequence" },
-    { "from": "map-user-flows", "to": "install-framework", "kind": "sequence" },
+    { "from": "gather-requirements", "to": "spelunk-repo-for-flows", "kind": "sequence" },
+    { "from": "spelunk-repo-for-flows", "to": "write-test-plan", "kind": "sequence" },
+    { "from": "write-test-plan", "to": "install-framework", "kind": "sequence" },
     { "from": "install-framework", "to": "boot-app-babysit", "kind": "sequence" },
     { "from": "boot-app-babysit", "to": "hunt-selectors", "kind": "sequence" },
     { "from": "hunt-selectors", "to": "write-specs", "kind": "sequence" },
     { "from": "write-specs", "to": "run-suite", "kind": "sequence" },
     { "from": "run-suite", "to": "suite-green", "kind": "sequence" },
+    { "from": "suite-green", "to": "rerun-to-reproduce", "kind": "branch", "label": "failures or flakes" },
+    { "from": "rerun-to-reproduce", "to": "compare-screenshots", "kind": "sequence" },
+    { "from": "compare-screenshots", "to": "tune-selectors-waits", "kind": "sequence" },
+    { "from": "tune-selectors-waits", "to": "run-suite", "kind": "retry", "label": "fix in hand — re-run" },
     { "from": "suite-green", "to": "wire-ci", "kind": "branch", "label": "all green locally" },
-    { "from": "suite-green", "to": "debug-flaky", "kind": "branch", "label": "failures or flakes" },
-    { "from": "debug-flaky", "to": "run-suite", "kind": "retry", "label": "flaky selector / timing race — fix and re-run" },
-    { "from": "wire-ci", "to": "watch-ci", "kind": "sequence" },
-    { "from": "watch-ci", "to": "ci-green", "kind": "sequence" },
+    { "from": "wire-ci", "to": "ci-green", "kind": "sequence" },
+    { "from": "ci-green", "to": "rerun-to-reproduce", "kind": "retry", "label": "CI-only flake: headless timing, slower machine" },
     { "from": "ci-green", "to": "human-review", "kind": "branch", "label": "CI green" },
-    { "from": "ci-green", "to": "debug-flaky", "kind": "retry", "label": "CI-only flake: headless timing, slower machine" },
     { "from": "human-review", "to": "write-specs", "kind": "retry", "label": "changes requested: more coverage, tighter asserts" },
     { "from": "human-review", "to": "e2e-delivered", "kind": "sequence", "label": "approved — merge" }
   ],
-  "suggestions": []
+  "suggestions": [
+    {
+      "nodeId": "spelunk-repo-for-flows",
+      "airtableRecordId": "rec9WCKMascIoC9Dx",
+      "name": "safishamsi/graphify",
+      "url": "https://github.com/safishamsi/graphify",
+      "category": "Claude Skill",
+      "claim": "Turns a codebase into a queryable knowledge graph so agents reason over structure instead of grepping.",
+      "promptFragment": "Learn the app under test with safishamsi/graphify before any framework is set up: query its knowledge graph for the routes, pages, and components behind each critical flow instead of reading the router and page files by hand. Draft the test plan straight from what the queries return.",
+      "effect": {
+        "removeNodes": [],
+        "mergeNodes": ["spelunk-repo-for-flows", "write-test-plan"],
+        "replaceWith": { "id": "query-app-structure", "label": "Query the app's structure for the plan", "kind": "process", "description": "graphify answers the routes, screens, and components per flow in one query — the test plan falls out of the answer.", "painLevel": 1 },
+        "newEdges": [
+          { "from": "gather-requirements", "to": "query-app-structure", "kind": "sequence" },
+          { "from": "query-app-structure", "to": "install-framework", "kind": "sequence" }
+        ],
+        "metrics": { "stepsSaved": 1, "estTimeSavedMin": 40, "estTokensSaved": 6000, "manualInterventionsRemoved": 0 }
+      }
+    },
+    {
+      "nodeId": "write-specs",
+      "airtableRecordId": "recQxvcJ5VqgJgyoy",
+      "name": "obra/superpowers",
+      "url": "https://github.com/obra/superpowers",
+      "category": "Claude Skill",
+      "claim": "A full engineering methodology (brainstorm→plan→TDD→review) that turns one-shot vibe coding into disciplined shipping.",
+      "install": "/plugin install superpowers",
+      "promptFragment": "Write the specs under obra/superpowers once the selectors are in hand: work its disciplined loop — one flow, one spec, run it, prove it — instead of scripting every flow in one pass and untangling the pile of failures afterwards. Let its review step read the suite before CI ever sees it.",
+      "effect": {
+        "removeNodes": [],
+        "mergeNodes": ["write-specs"],
+        "replaceWith": { "id": "disciplined-spec-loop", "label": "Specs via superpowers' TDD loop", "kind": "process", "description": "One spec at a time, run and proven as it lands — boilerplate and guessed-at cases stop piling up between specs.", "painLevel": 2 },
+        "newEdges": [
+          { "from": "hunt-selectors", "to": "disciplined-spec-loop", "kind": "sequence" },
+          { "from": "disciplined-spec-loop", "to": "run-suite", "kind": "sequence" },
+          { "from": "human-review", "to": "disciplined-spec-loop", "kind": "retry", "label": "changes requested: more coverage, tighter asserts" }
+        ],
+        "metrics": { "stepsSaved": 0, "estTimeSavedMin": 30, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
+      }
+    },
+    {
+      "nodeId": "tune-selectors-waits",
+      "airtableRecordId": "rec8IRupxSpAxupRy",
+      "name": "ChromeDevTools/chrome-devtools-mcp",
+      "url": "https://github.com/ChromeDevTools/chrome-devtools-mcp",
+      "category": "MCP Server",
+      "claim": "Gives Claude live eyes on a real browser — debugging, performance traces, and page inspection in one MCP.",
+      "install": "claude mcp add chrome-devtools -- npx chrome-devtools-mcp@latest",
+      "promptFragment": "When a spec fails or flakes, debug it with ChromeDevTools/chrome-devtools-mcp instead of re-running blind and comparing failure screenshots by hand: drive the page it failed on, watch the console and network live, and inspect the DOM the selector actually missed. Fix the selector or the wait against what the live page shows, then re-run.",
+      "effect": {
+        "removeNodes": [],
+        "mergeNodes": ["rerun-to-reproduce", "compare-screenshots", "tune-selectors-waits"],
+        "replaceWith": { "id": "live-debug-the-flake", "label": "Debug the flake on the live page", "kind": "process", "description": "chrome-devtools-mcp drives the failing page with console, network, and DOM in view — the fix comes from evidence, not reruns.", "painLevel": 2 },
+        "newEdges": [
+          { "from": "suite-green", "to": "live-debug-the-flake", "kind": "branch", "label": "failures or flakes" },
+          { "from": "live-debug-the-flake", "to": "run-suite", "kind": "retry", "label": "fix in hand — re-run" },
+          { "from": "ci-green", "to": "live-debug-the-flake", "kind": "retry", "label": "CI-only flake: headless timing, slower machine" }
+        ],
+        "metrics": { "stepsSaved": 2, "estTimeSavedMin": 60, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
+      }
+    }
+  ]
 }

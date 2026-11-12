@@ -44,6 +44,46 @@ it('reads max pain as ember dots, one per level', () => {
   }
 });
 
+// The signpost Task 1's re-authoring earns: every committed graph has upgrades
+// waiting, and the card says how many before anyone opens it. dt + dd is the
+// accessible label, the same grammar as the card's other stats.
+it('counts the upgrades waiting behind every committed card', () => {
+  const { container } = render(
+    <GalleryIndex entries={galleryEntries} onOpen={vi.fn()} onDropFile={vi.fn()} />,
+  );
+  const counts = [...container.querySelectorAll('.sg-card-upgrades')];
+  expect(counts.length).toBe(galleryEntries.length);
+  // the multi-suggestion case is genuinely on the grid, not vacuously covered
+  expect(galleryEntries.some((e) => e.workflow.suggestions.length > 1)).toBe(true);
+  for (const [i, dd] of counts.entries()) {
+    const n = galleryEntries[i].workflow.suggestions.length;
+    expect(n).toBeGreaterThan(0);
+    expect(dd.textContent).toBe(String(n));
+    expect(dd.parentElement?.querySelector('dt')?.textContent).toBe(n === 1 ? 'upgrade' : 'upgrades');
+  }
+});
+
+// The grid can still be handed graphs the committed gallery no longer contains:
+// a chip must read singular at one, and stay silent — not crash, not claim "0
+// upgrades" as if that were a feature — on a graph with nothing to apply.
+it('reads singular at one upgrade, and omits the chip at zero', () => {
+  const donor = galleryEntries[0].workflow;
+  const single = { slug: 'single', workflow: { ...donor, suggestions: donor.suggestions.slice(0, 1) } };
+  const none = { slug: 'none', workflow: { ...donor, suggestions: [] } };
+  const { container } = render(
+    <GalleryIndex entries={[single, none]} onOpen={vi.fn()} onDropFile={vi.fn()} />,
+  );
+  const counts = [...container.querySelectorAll('.sg-card-upgrades')];
+  expect(counts.length).toBe(1);
+  expect(counts[0].textContent).toBe('1');
+  expect(counts[0].parentElement?.querySelector('dt')?.textContent).toBe('upgrade');
+  // the zero card renders whole — title, stats, its OPEN button — minus the chip
+  const cards = [...container.querySelectorAll('article.sg-card')];
+  expect(cards.length).toBe(2);
+  expect(cards[1].querySelector('.sg-card-upgrades')).toBeNull();
+  expect(cards[1].textContent).not.toMatch(/upgrade/);
+});
+
 it('shows the drop target invitation', () => {
   render(<GalleryIndex entries={galleryEntries} onOpen={vi.fn()} onDropFile={vi.fn()} />);
   expect(screen.getByText(/drop a \.workflow\.json/i)).toBeInTheDocument();

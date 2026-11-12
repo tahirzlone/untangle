@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type AnimationEvent,
   type CSSProperties,
   type KeyboardEvent,
 } from 'react';
@@ -347,6 +348,16 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
    */
   const [tourEnded, setTourEnded] = useState<GraphSession | null>(null);
   /**
+   * The one-time cue on OPTIMIZE: a graph that opens with something to apply
+   * announces the way in with a single ring, because a first-time viewer has no
+   * other signal that this button is where the story starts. Spent by whichever
+   * comes first — the ring's own single iteration ending, or the user pressing
+   * the button it points at — and never re-granted, so no re-render replays it.
+   * Never granted at all when motion is unwanted: the cue is decorative, and
+   * with the animation suppressed there would be no animationend to spend it.
+   */
+  const [optimizePulse, setOptimizePulse] = useState(() => !prefersReducedMotion());
+  /**
    * The applied rows whose install the user has ticked OUT of the deliverable.
    *
    * Owned here rather than by the window so the choice survives the window
@@ -409,6 +420,9 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     setExcludeInstalls(NOTHING_EXCLUDED);
     setResultsOpen(false);
     setTourEnded(null);
+    // A new graph is a fresh open, so its OPTIMIZE gets the one-time cue back —
+    // under the same motion condition the mount read.
+    setOptimizePulse(!prefersReducedMotion());
   }
 
   const { session } = opened;
@@ -1080,8 +1094,21 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
     // RESULTS goes too — the run about to start supersedes the one it spoke for.
     closeDrawer();
     setTourEnded(null);
+    // The press is the interaction the one-time cue was asking for — spent for
+    // good, so it does not come back when CANCEL hands the slot back to OPTIMIZE.
+    setOptimizePulse(false);
     start();
   }, [closeDrawer, start]);
+
+  /**
+   * The cue's single ring has run its course — spent, so a re-render cannot
+   * replay it. Filtered by name, not out of present need (the pulse is the only
+   * animation this button carries) but so a decoration added to it later cannot
+   * silently become a second thing that retires the cue.
+   */
+  const onOptimizePulseEnd = useCallback((e: AnimationEvent<HTMLButtonElement>) => {
+    if (e.animationName === 'sg-optimize-pulse') setOptimizePulse(false);
+  }, []);
 
   /**
    * Lands focus on VIEW RESULTS the moment a run puts it up.
@@ -1570,11 +1597,17 @@ export function GraphCanvas({ workflow }: { workflow: Workflow }) {
             // would put the stop control somewhere the eye has not been. Absent
             // while the wipe is open — a tour would morph the live half of a
             // comparison someone is in the middle of reading.
+            //
+            // The pulse never dresses CANCEL: startTour spends it in the same
+            // commit that sets the run going, and the guard states that.
             <button
               type="button"
-              className={`sg-optimize${running ? ' sg-optimize--cancel' : ''}`}
+              className={`sg-optimize${running ? ' sg-optimize--cancel' : ''}${
+                optimizePulse && !running ? ' sg-optimize--pulse' : ''
+              }`}
               data-testid="optimize-btn"
               onClick={running ? cancel : startTour}
+              onAnimationEnd={onOptimizePulseEnd}
             >
               {running ? 'CANCEL' : 'OPTIMIZE'}
             </button>

@@ -22,7 +22,11 @@ import { GraphCanvas } from './GraphCanvas';
  * what is under test here is the wiring.
  */
 
-const plain = fixture(gallery, 'gallery');
+/** A graph with no KB behind it: the gallery graph, suggestions stripped. */
+const plain = fixture(
+  { ...gallery, meta: { ...gallery.meta, kbSource: 'none' }, suggestions: [] },
+  'gallery',
+);
 const enriched = fixture(enrichedDoc, 'enriched');
 
 const RESEARCH = 'Research the libraries & read the docs';

@@ -2,7 +2,7 @@
   "meta": {
     "task": "Pull the pricing pages of our six closest competitors and build a comparison we can take into the pricing meeting",
     "title": "Scrape Competitor Pricing into a Comparison",
-    "generatedAt": "2026-08-05T14:20:00Z",
+    "generatedAt": "2026-08-11T16:30:00Z",
     "model": "claude-fable-5",
     "kbSource": "airtable",
     "promptIntro": "Pull the pricing pages of our six closest competitors and build the comparison we are taking into the pricing meeting. Take every figure off the live page, put the plans on one comparable basis, and keep each number traceable back to the page it came from."
@@ -10,7 +10,9 @@
   "nodes": [
     { "id": "list-competitors", "label": "List the competitors and what to compare", "kind": "input", "description": "Agree the six companies, which plans count, which currency and billing period, and the dimensions the meeting actually cares about.", "painLevel": 2 },
     { "id": "find-pricing-pages", "label": "Find each pricing page", "kind": "process", "description": "Hunt down the real pricing URL per company through marketing sites, regional redirects, and /plans pages that moved last quarter.", "painLevel": 3 },
-    { "id": "open-each-page", "label": "Read the prices off each page by hand", "kind": "loop", "description": "Open every page, dismiss the cookie wall, flip the monthly/annual toggle and the currency switcher, wait for the table to render, and copy each cell into a scratch file — six sites, several plans each.", "painLevel": 5 },
+    { "id": "open-dismiss-walls", "label": "Open each page & get past the walls", "kind": "loop", "description": "Open every pricing page and fight through the cookie banners, region redirects, and newsletter popups before the table is even visible.", "painLevel": 4 },
+    { "id": "work-the-toggles", "label": "Work the toggles & wait for renders", "kind": "process", "description": "Flip the monthly/annual toggle and the currency switcher on each page, and wait for the table to re-render after every flip.", "painLevel": 4 },
+    { "id": "copy-cells", "label": "Copy every cell into a scratch file", "kind": "process", "description": "Read each plan's price off the screen and type it into a scratch file — six sites, several plans each, one mistype from a wrong number in the meeting.", "painLevel": 5 },
     { "id": "page-usable", "label": "Page actually rendered?", "kind": "decision", "description": "Did the prices load, or is this a bot wall, an empty JavaScript shell, or a 'contact us' tier with no number on it at all?", "painLevel": 3 },
     { "id": "normalize-prices", "label": "Normalize the plans into comparable rows", "kind": "process", "description": "Reconcile per-seat against usage pricing, strip annual discounts back to a common basis, and decide which differently-named features are the same feature.", "painLevel": 4 },
     { "id": "verify-figures", "label": "Check every figure against the page again", "kind": "process", "description": "Re-open each page and confirm each number in the sheet, because one wrong price is the only thing anyone will remember from the meeting.", "painLevel": 4 },
@@ -22,13 +24,15 @@
   ],
   "edges": [
     { "from": "list-competitors", "to": "find-pricing-pages", "kind": "sequence" },
-    { "from": "find-pricing-pages", "to": "open-each-page", "kind": "sequence" },
-    { "from": "open-each-page", "to": "page-usable", "kind": "sequence" },
-    { "from": "page-usable", "to": "open-each-page", "kind": "retry", "label": "bot wall or nothing rendered" },
+    { "from": "find-pricing-pages", "to": "open-dismiss-walls", "kind": "sequence" },
+    { "from": "open-dismiss-walls", "to": "work-the-toggles", "kind": "sequence" },
+    { "from": "work-the-toggles", "to": "copy-cells", "kind": "sequence" },
+    { "from": "copy-cells", "to": "page-usable", "kind": "sequence" },
+    { "from": "page-usable", "to": "open-dismiss-walls", "kind": "retry", "label": "bot wall or nothing rendered" },
     { "from": "page-usable", "to": "normalize-prices", "kind": "branch", "label": "page usable" },
     { "from": "normalize-prices", "to": "verify-figures", "kind": "sequence" },
     { "from": "verify-figures", "to": "figures-match", "kind": "sequence" },
-    { "from": "figures-match", "to": "open-each-page", "kind": "retry", "label": "figure moved — re-read the page" },
+    { "from": "figures-match", "to": "open-dismiss-walls", "kind": "retry", "label": "figure moved — re-read the page" },
     { "from": "figures-match", "to": "build-table", "kind": "branch", "label": "figures match" },
     { "from": "build-table", "to": "sanity-review", "kind": "sequence" },
     { "from": "sanity-review", "to": "normalize-prices", "kind": "retry", "label": "wrong basis — re-normalize" },
@@ -37,7 +41,7 @@
   ],
   "suggestions": [
     {
-      "nodeId": "open-each-page",
+      "nodeId": "copy-cells",
       "airtableRecordId": "rec8IRupxSpAxupRy",
       "name": "ChromeDevTools/chrome-devtools-mcp",
       "url": "https://github.com/ChromeDevTools/chrome-devtools-mcp",
@@ -47,15 +51,15 @@
       "promptFragment": "Read the pricing pages with ChromeDevTools/chrome-devtools-mcp instead of opening each one and copying cells by hand: let it drive a real browser past the cookie wall and the monthly/annual toggle, then inspect the pricing table once the page has settled. Do that for every competitor before you normalize anything, so each figure comes off a page that actually rendered.",
       "effect": {
         "removeNodes": [],
-        "mergeNodes": ["open-each-page"],
-        "replaceWith": { "id": "drive-pricing-pages", "label": "Drive the pricing pages in a real browser", "kind": "process", "description": "chrome-devtools-mcp loads each page, works the toggles, and reads the rendered pricing table — no cell copied by hand.", "painLevel": 2 },
+        "mergeNodes": ["open-dismiss-walls", "work-the-toggles", "copy-cells"],
+        "replaceWith": { "id": "drive-pricing-pages", "label": "Drive the pricing pages in a real browser", "kind": "process", "description": "chrome-devtools-mcp loads each page, dismisses the walls, works the toggles, and reads the rendered pricing table — no cell copied by hand.", "painLevel": 2 },
         "newEdges": [
           { "from": "find-pricing-pages", "to": "drive-pricing-pages", "kind": "sequence" },
           { "from": "drive-pricing-pages", "to": "page-usable", "kind": "sequence" },
           { "from": "page-usable", "to": "drive-pricing-pages", "kind": "retry", "label": "bot wall or nothing rendered" },
           { "from": "figures-match", "to": "drive-pricing-pages", "kind": "retry", "label": "figure moved — re-read the page" }
         ],
-        "metrics": { "stepsSaved": 0, "estTimeSavedMin": 70, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
+        "metrics": { "stepsSaved": 2, "estTimeSavedMin": 70, "estTokensSaved": 0, "manualInterventionsRemoved": 0 }
       }
     },
     {
