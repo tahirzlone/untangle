@@ -1,7 +1,7 @@
 {
-  "fetchedAt": "2026-10-21T09:26:50.132Z",
-  "updatedAt": "2026-10-20T09:31:09.993Z",
-  "recordCount": 157,
+  "fetchedAt": "2026-11-18T13:13:25.144Z",
+  "updatedAt": "2026-11-17T13:39:10.922Z",
+  "recordCount": 172,
   "records": [
     {
       "id": "rec01yqHvgetnrvGn",
@@ -20,6 +20,26 @@
         "document"
       ],
       "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3"
+    },
+    {
+      "id": "rec05TFXDpVb7BVIu",
+      "capabilityTags": [
+        "research",
+        "data-etl"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-11-16",
+      "description": "Curated collection of dozens of Claude skills for equity investors: CANSLIM/VCP/FinViz/dividend screeners, sector rotation, market breadth, backtesting, options strategies, position sizing, and portfolio management. Outputs structured Markdown/JSON reports for human review.",
+      "improvementClaim": "Turns systematic stock screening and backtesting into plain-language requests inside Claude.",
+      "install": "Clone repo; copy skill folders into Claude Code",
+      "language": "Markdown (Agent Skills)",
+      "name": "tradermonty/claude-trading-skills",
+      "stars": 5240,
+      "stepArchetypes": [
+        "research",
+        "data-etl"
+      ],
+      "url": "https://github.com/tradermonty/claude-trading-skills"
     },
     {
       "id": "rec0LEP4SJVJgxc4R",
@@ -208,6 +228,22 @@
         "document"
       ],
       "url": "https://github.com/jamiepine/voicebox"
+    },
+    {
+      "id": "rec2kzq4hH4TogYCP",
+      "capabilityTags": [
+        "browser-automation"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-11-16",
+      "description": "A browser built for agents 'that stays out of your way' — a minimal agent-first browsing tool pitched on Show HN the same day Vercel's agent-browser topped GitHub Trending, underlining the agent-browser wave.",
+      "improvementClaim": "Strips the browser down to what an agent actually needs, cutting automation overhead.",
+      "install": "git clone — see README",
+      "name": "paul-nameless/agweb",
+      "stepArchetypes": [
+        "browser-verify"
+      ],
+      "url": "https://github.com/paul-nameless/agweb"
     },
     {
       "id": "rec2nLdO24WS4CTix",
@@ -711,6 +747,22 @@
       "url": "https://bastardica.mitpit.com"
     },
     {
+      "id": "recBJWeyRYwLQIwOi",
+      "capabilityTags": [
+        "api-integration"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-11-16",
+      "description": "Anthropic launched a developer portal for Claude plugins: submit a plugin, track its review status, and see usage stats. Positions plugins — which package MCP servers and skills together — as the primary way to build for Claude.",
+      "improvementClaim": "Gives plugin builders a real submission, review, and usage-analytics pipeline instead of flying blind.",
+      "install": "No install — developer portal announcement",
+      "name": "Claude plugin developer portal (Anthropic)",
+      "stepArchetypes": [
+        "document"
+      ],
+      "url": "https://x.com/ClaudeDevs/status/2103577007938228300"
+    },
+    {
       "id": "recBciFc70ZIz4Wso",
       "capabilityTags": [
         "browser-automation",
@@ -948,6 +1000,26 @@
         "review"
       ],
       "url": "https://github.com/JetBrains/go-modern-guidelines"
+    },
+    {
+      "id": "recEu0naCebVTxjlV",
+      "capabilityTags": [
+        "documentation",
+        "code-generation"
+      ],
+      "category": "Claude Skill",
+      "dateFirstSeen": "2026-11-16",
+      "description": "Anthropic's canonical public repository for Agent Skills: the spec, a skill template, example skills across design/dev/enterprise categories, and the source-available document skills (docx, pdf, pptx, xlsx) that power Claude's document handling.",
+      "improvementClaim": "One install gives Claude production-grade document creation and a template for packaging any expertise as a skill.",
+      "install": "/plugin marketplace add anthropics/skills",
+      "language": "Python",
+      "name": "anthropics/skills",
+      "stars": 187500,
+      "stepArchetypes": [
+        "document",
+        "code"
+      ],
+      "url": "https://github.com/anthropics/skills"
     },
     {
       "id": "recEu9MmTRYaa3qqx",
@@ -1635,6 +1707,26 @@
       "url": "https://github.com/Nutlope/hallmark"
     },
     {
+      "id": "recPhgD3VUH3EVQP3",
+      "capabilityTags": [
+        "ui-design",
+        "api-integration"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-11-16",
+      "description": "'The Office Harness for AI Agents': an open-source SDK that embeds spreadsheets, docs, slides, canvas, relational tables, and PDF in one runtime. Lets products — and agents — create and edit office documents programmatically with human review on top.",
+      "improvementClaim": "Gives agents a real office runtime with reviewable drafts instead of brittle file-format hacks.",
+      "install": "npm i @univerjs/presets @univerjs/preset-sheets-core",
+      "language": "TypeScript",
+      "name": "dream-num/univer",
+      "stars": 22800,
+      "stepArchetypes": [
+        "code",
+        "document"
+      ],
+      "url": "https://github.com/dream-num/univer"
+    },
+    {
       "id": "recPsalqc0VcIO5ku",
       "capabilityTags": [
         "api-integration",
@@ -1775,6 +1867,46 @@
         "review"
       ],
       "url": "https://github.com/petergyang/no-ai-slop"
+    },
+    {
+      "id": "recUg4V1XMdpHCiaj",
+      "capabilityTags": [
+        "code-generation",
+        "documentation",
+        "research"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-11-16",
+      "description": "Agent skills stewarded by Chrome, Edge, Firefox, and MDN that give AI coding agents current web-platform knowledge so they stop writing 2019-era code. Covers ~250 web features and 203 use cases across CSS, DOM, JS APIs, performance, accessibility, PWAs, and built-in AI.",
+      "improvementClaim": "Stops agents from shipping legacy web patterns by putting current best practice one offline search away.",
+      "install": "npx modern-web-guidance@latest install",
+      "name": "GoogleChrome/modern-web-guidance-src",
+      "stars": 6789,
+      "stepArchetypes": [
+        "code",
+        "document",
+        "research"
+      ],
+      "url": "https://github.com/GoogleChrome/modern-web-guidance-src"
+    },
+    {
+      "id": "recVbqneCu0vGetHu",
+      "capabilityTags": [
+        "research",
+        "code-generation"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-11-16",
+      "description": "DeepSeek V3's architecture reimplemented in roughly 200 lines of pure JAX — a readable, single-file take on a frontier open model, in the tradition of minGPT-style educational rewrites.",
+      "improvementClaim": "Makes a frontier MoE architecture something you can actually read and understand in one sitting.",
+      "install": "git clone + pip install jax",
+      "language": "Python",
+      "name": "Vaibhaav-Tiwari/deepseek-v3-jax",
+      "stepArchetypes": [
+        "research",
+        "code"
+      ],
+      "url": "https://github.com/Vaibhaav-Tiwari/deepseek-v3-jax"
     },
     {
       "id": "recVgK0qtZ7FTjCog",
@@ -1983,6 +2115,28 @@
       "url": "https://github.com/SenteLabsAI/OpenExecutive"
     },
     {
+      "id": "recZq2hI0c82PvDRy",
+      "capabilityTags": [
+        "orchestration",
+        "review",
+        "testing"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-11-16",
+      "description": "Tencent's MIT-licensed workflow layer that governs how coding agents deliver work: clarify requirements, design, implement, run an independent review, then test and deliver. Targets scope creep, self-review bias, and lost context after disconnects.",
+      "improvementClaim": "Gives agent-written code an auditable, multi-stage delivery process instead of a single unreviewed diff.",
+      "install": "npx -y loopforge-cli@latest install claude-code",
+      "language": "Python",
+      "name": "Tencent/LoopForge",
+      "stars": 2300,
+      "stepArchetypes": [
+        "orchestrate",
+        "review",
+        "test"
+      ],
+      "url": "https://github.com/Tencent/LoopForge"
+    },
+    {
       "id": "recbIhPRdAZsE1nQ3",
       "capabilityTags": [
         "research",
@@ -2000,6 +2154,26 @@
         "code"
       ],
       "url": "https://github.com/volotat/mini-AGI"
+    },
+    {
+      "id": "recbgZ6pOuejR61dp",
+      "capabilityTags": [
+        "orchestration",
+        "api-integration"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-11-16",
+      "description": "Free, Apache-2.0 open-source alternative to Grok Bot: run Claude Code, Codex, Grok, OpenCode and other engines as persistent AI bots with their own roles, memory, and threads. Bots share Rooms, a Chief-of-Staff bot delegates work, and Burst mode fans large jobs into parallel subtasks.",
+      "improvementClaim": "Turns one Claude/Codex subscription into a persistent, delegating team of bots instead of one chat window.",
+      "install": "npx openmausbot",
+      "language": "TypeScript",
+      "name": "milind-soni/OpenMausBot",
+      "stars": 18228,
+      "stepArchetypes": [
+        "orchestrate",
+        "code"
+      ],
+      "url": "https://github.com/milind-soni/OpenMausBot"
     },
     {
       "id": "recbgbTdM93fdrZS8",
@@ -2120,6 +2294,25 @@
       "url": "https://github.com/ruvnet/ruflo"
     },
     {
+      "id": "recdyIMahc2qt6GeK",
+      "capabilityTags": [
+        "memory",
+        "orchestration"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-11-16",
+      "description": "Context-compression plugin/proxy for coding agents that claims days-long sessions on a 100K-token window with ~5x fewer tokens. Compresses consumed conversation into layered summaries that can be decompressed on demand.",
+      "improvementClaim": "Lets a single agent session run for days on a small context window instead of dying at the limit.",
+      "install": "npm install -g billion-context",
+      "language": "TypeScript",
+      "name": "ranxianglei/billion-context",
+      "stars": 5129,
+      "stepArchetypes": [
+        "orchestrate"
+      ],
+      "url": "https://github.com/ranxianglei/billion-context"
+    },
+    {
       "id": "recfA0GlYy2pyeTim",
       "capabilityTags": [
         "orchestration",
@@ -2183,6 +2376,26 @@
       "url": "https://github.com/xerj-org/xerj"
     },
     {
+      "id": "recgbRFTcayUQFw0b",
+      "capabilityTags": [
+        "review",
+        "ui-design"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-11-16",
+      "description": "Local, browser-based review workspace for AI coding agents: annotate plans, markdown, HTML, and code diffs, then send structured feedback straight back to the agent. Supports Claude Code, Codex, Copilot CLI, Gemini CLI, OpenCode and more.",
+      "improvementClaim": "Makes reviewing an agent's plan as easy as commenting on a doc instead of reading walls of terminal text.",
+      "install": "curl -fsSL https://plannotator.ai/install.sh | bash",
+      "language": "TypeScript",
+      "name": "backnotprop/plannotator",
+      "stars": 9600,
+      "stepArchetypes": [
+        "review",
+        "orchestrate"
+      ],
+      "url": "https://github.com/backnotprop/plannotator"
+    },
+    {
       "id": "recgyXRI8suR1CnVm",
       "capabilityTags": [
         "ui-design",
@@ -2238,6 +2451,23 @@
       "url": "https://github.com/NVIDIA/SkillSpector"
     },
     {
+      "id": "rechjOC18odLsIf5h",
+      "capabilityTags": [
+        "security",
+        "browser-automation"
+      ],
+      "category": "Other",
+      "dateFirstSeen": "2026-11-16",
+      "description": "GitHub issue reporting that Claude Code sends the user's email address to third-party websites during agentic browsing/fetching. Became the dominant HN story of the day and the top cluster in today's /last30days discovery sweep.",
+      "improvementClaim": "Forces a clearer standard for what identity data agent tools may attach to outbound requests.",
+      "install": "No install — read the issue/HN thread",
+      "name": "anthropics/claude-code — issue #107757 (email privacy)",
+      "stepArchetypes": [
+        "research"
+      ],
+      "url": "https://github.com/anthropics/claude-code/issues/107757"
+    },
+    {
       "id": "reciqTJt4oVGwVPHy",
       "capabilityTags": [
         "code-search",
@@ -2254,6 +2484,25 @@
         "orchestrate"
       ],
       "url": "https://github.com/K-Dense-AI/claude-skills-mcp"
+    },
+    {
+      "id": "recjEOGf8ZuBM6L6c",
+      "capabilityTags": [
+        "research",
+        "security"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-11-16",
+      "description": "Hunts a username across roughly 400 social networks and reports where accounts exist. A long-standing OSINT staple used by investigators, security researchers, and the privacy-curious to map someone's online footprint from one query.",
+      "improvementClaim": "Turns hours of manual account-hunting across hundreds of sites into one command.",
+      "install": "pipx install sherlock-project",
+      "language": "Python",
+      "name": "sherlock-project/sherlock",
+      "stars": 103430,
+      "stepArchetypes": [
+        "research"
+      ],
+      "url": "https://github.com/sherlock-project/sherlock"
     },
     {
       "id": "recjGQzcyhAe6tiQT",
@@ -2819,6 +3068,26 @@
       "url": "https://github.blog/changelog/2026-07-30-stacked-pull-requests-are-now-in-public-preview/"
     },
     {
+      "id": "recwvGQZF0yPKwH5Z",
+      "capabilityTags": [
+        "browser-automation",
+        "testing"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-11-16",
+      "description": "Vercel's browser-automation CLI built for AI agents: opens pages as accessibility-tree text and lets the agent act on elements by reference (@e1), one short shell command at a time, with the browser staying open between commands.",
+      "improvementClaim": "Replaces flaky screenshot-and-click automation with fast, deterministic text-based browser control for agents.",
+      "install": "npm install -g agent-browser && agent-browser install",
+      "language": "Rust",
+      "name": "vercel-labs/agent-browser",
+      "stars": 47569,
+      "stepArchetypes": [
+        "browser-verify",
+        "test"
+      ],
+      "url": "https://github.com/vercel-labs/agent-browser"
+    },
+    {
       "id": "recwyOjHlBFW1UoZg",
       "capabilityTags": [
         "security",
@@ -2859,6 +3128,26 @@
         "document"
       ],
       "url": "https://github.com/bilawalsidhu/gods-eye-view"
+    },
+    {
+      "id": "recxJQqbyFXgWWCrQ",
+      "capabilityTags": [
+        "deployment",
+        "orchestration"
+      ],
+      "category": "GitHub Trending",
+      "dateFirstSeen": "2026-11-16",
+      "description": "NVIDIA Kubernetes Engine (NVKE): a preview management plane for platform teams to create and operate Kubernetes clusters on bare-metal NVIDIA GPU infrastructure — a 'self-hosting factory for Kubernetes clusters' rather than a distribution.",
+      "improvementClaim": "Turns bare-metal GPU fleets into customer-ready Kubernetes clusters without building a bespoke control plane.",
+      "install": "git clone + make build (see local quickstart)",
+      "language": "Go",
+      "name": "dsx-ai-factory/nvke",
+      "stars": 840,
+      "stepArchetypes": [
+        "deploy",
+        "orchestrate"
+      ],
+      "url": "https://github.com/dsx-ai-factory/nvke"
     },
     {
       "id": "recxhaeS0zwpffzFo",
